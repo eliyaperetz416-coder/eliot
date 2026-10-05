@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff1b8"/><stop offset=".55" stop-color="#ffc43d"/><stop offset="1" stop-color="#d98a12"/>
+    </linearGradient>
+    <linearGradient id="b" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff9dc"/><stop offset=".5" stop-color="#7df9ff"/><stop offset="1" stop-color="#2fb4ff"/>
+    </linearGradient>
+  </defs>
+  <path transform="translate(22 -4) scale(0.78)" fill="url(#b)" d="M146 6 L104 62 H126 L110 104 L158 44 H134 Z"/>
+  <g transform="translate(0 14)" fill="url(#g)">
+    <!-- shoulders / drape -->
+    <path d="M44 256 C48 230 80 220 102 214 L128 238 L154 214 C176 220 208 230 212 256 Z"/>
+    <!-- hair -->
+    <path d="M90 156 C74 126 84 92 128 86 C172 92 182 126 166 156 C170 128 152 108 128 108 C104 108 86 128 90 156 Z"/>
+    <path d="M92 108 C78 112 70 128 74 146 C80 136 86 130 94 128 Z"/>
+    <path d="M164 108 C178 112 186 128 182 146 C176 136 170 130 162 128 Z"/>
+    <!-- face -->
+    <path d="M98 142 C98 116 112 106 128 106 C144 106 158 116 158 142 C158 164 150 180 128 192 C106 180 98 164 98 142 Z"/>
+    <!-- beard -->
+    <path d="M92 150 C88 192 106 222 128 236 C150 222 168 192 164 150 C160 172 150 182 128 182 C106 182 96 172 92 150 Z"/>
+  </g>
+  <g transform="translate(0 14)" fill="#0a0b12">
+    <path d="M103 140 L123 144 L122 148 L106 146 Z"/>
+    <path d="M153 140 L133 144 L134 148 L150 146 Z"/>
+    <path d="M104 130 L124 132 L123 135 L106 134 Z" opacity=".0"/>
+    <path d="M100 128 L126 134 L126 138 L102 134 Z"/>
+    <path d="M156 128 L130 134 L130 138 L154 134 Z"/>
+    <path d="M127 148 L121 168 L135 168 Z" opacity=".45"/>
+    <path d="M110 180 C118 172 128 177 128 177 C128 177 138 172 146 180 C138 184 130 182 128 182 C126 182 118 184 110 180 Z"/>
+  </g>
+</svg>

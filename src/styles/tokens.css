@@ -1,0 +1,51 @@
+/* Design tokens. OUR DESIGN. */
+@font-face { font-family: "Heebo"; font-weight: 400; font-display: swap;
+  src: url("../../assets/fonts/heebo-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Heebo"; font-weight: 400; font-display: swap;
+  src: url("../../assets/fonts/heebo-hebrew-400-normal.woff2") format("woff2");
+  unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+@font-face { font-family: "Heebo"; font-weight: 700; font-display: swap;
+  src: url("../../assets/fonts/heebo-latin-700-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Heebo"; font-weight: 700; font-display: swap;
+  src: url("../../assets/fonts/heebo-hebrew-700-normal.woff2") format("woff2");
+  unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+@font-face { font-family: "Cinzel"; font-weight: 700; font-display: swap;
+  src: url("../../assets/fonts/cinzel-latin-700-normal.woff2") format("woff2"); }
+
+:root {
+  --bg: #0a0b12;
+  --surface-1: #11131f;
+  --surface-2: #171a2a;
+  --surface-3: #20243a;
+  --line: rgb(255 255 255 / .09);
+  --text: #f4f5fa;
+  --text-dim: #b0b5cc;
+  --text-mute: #8a90ab;
+
+  --accent-rgb: 255 196 61;            /* follows overall rank later */
+  --accent: rgb(var(--accent-rgb));
+  --accent-soft: rgb(var(--accent-rgb) / .14);
+  --accent-glow: rgb(var(--accent-rgb) / .38);
+  --accent-ink: #1a1305;
+  --danger: #ff5577;
+  --ok: #4fe3a0;
+
+  --font-body: "Heebo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Cinzel", "Heebo", Georgia, serif;
+
+  --r-sm: 10px; --r-md: 16px; --r-lg: 24px; --r-pill: 999px;
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 24px; --s-6: 32px; --s-7: 48px;
+  --tap: 44px;
+  --tabbar-h: 64px;
+  --gutter: 16px;
+
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --dur-1: 120ms; --dur-2: 220ms; --dur-3: 380ms;
+
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+}
