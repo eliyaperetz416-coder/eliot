@@ -1,6 +1,7 @@
 import { DIR, LANGS, detectLanguage, setDictionaries, setLanguage, t } from './core/i18n.mjs';
 import { buildScreens } from './ui/screens.js';
 import { tabBar, showToast } from './ui/components.js';
+import { loadData } from './ui/data.js';
 import { loadSettings, saveSettings, requestPersistence } from './ui/storage.js';
 
 const TABS = [
@@ -20,14 +21,15 @@ function applyDocument() {
 }
 
 function route() {
-  const id = (location.hash.replace(/^#\//, '') || 'workout').split('?')[0];
-  return screens[id] ? id : 'workout';
+  const [id, param] = (location.hash.replace(/^#\//, '') || 'workout').split('?')[0].split('/');
+  return screens[id] ? { id, param } : { id: 'workout' };
 }
 
 function render() {
-  const id = route();
-  app.replaceChildren(screens[id]());
-  nav.replaceChildren(TABS.some((x) => x.id === id) ? tabBar({ tabs: TABS, current: id }) : '');
+  const { id, param } = route();
+  app.replaceChildren(screens[id](param));
+  const tab = id === 'exercise' ? 'exercises' : id;
+  nav.replaceChildren(TABS.some((x) => x.id === tab) ? tabBar({ tabs: TABS, current: tab }) : '');
   window.scrollTo(0, 0);
 }
 
@@ -44,6 +46,7 @@ async function boot() {
   const [he, en] = await Promise.all(LANGS.map((l) => fetch(`src/data/i18n/${l}.json`).then((r) => r.json())));
   setDictionaries({ he, en });
   settings = await loadSettings();
+  await loadData();
   const lang = settings.lang ?? detectLanguage(navigator.language);
   setLanguage(lang);
   document.documentElement.lang = lang;

@@ -3,6 +3,8 @@ import { icon } from './icons.js';
 import { t, getLanguage } from '../core/i18n.mjs';
 import { button, card, emptyState, list, listRow, numberField, openSheet, segmented, showToast } from './components.js';
 import { APP_VERSION } from '../version.js';
+import { exercisesScreen, exerciseDetailScreen } from './exercises.js';
+import { ranksPreviewScreen } from './ranks-preview.js';
 
 const head = (titleKey, withMark = true) =>
   h('header', { class: 'screen-head' }, withMark ? icon('bolt', 'mark') : null, h('h1', { text: t(titleKey) }));
@@ -70,7 +72,9 @@ function kit() {
 export function buildScreens(ctx) {
   return {
     workout: emptyScreen('workout', 'workout'),
-    exercises: emptyScreen('exercises', 'exercises'),
+    exercises: () => exercisesScreen(),
+    exercise: (id) => exerciseDetailScreen(id),
+    'ranks-preview': ranksPreviewScreen,
     ranks: emptyScreen('ranks', 'ranks'),
     shop: emptyScreen('shop', 'shop'),
     profile: () => profile(ctx),

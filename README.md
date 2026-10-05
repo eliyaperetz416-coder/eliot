@@ -21,3 +21,8 @@ Push to `main`. Vercel (free plan, framework "Other", no build command, output =
 
 ## Languages
 `src/data/i18n/he.json` and `en.json`. A test fails if a key exists in only one. No UI strings in code.
+
+## Data pipeline (Stage 2)
+`scripts/curation/*.mjs` hold our hand-curated list (ids, Hebrew names and steps, family, ratio). `scripts/build-exercises.mjs` joins it with
+free-exercise-db into `src/data/exercises.json`; `scripts/process-images.mjs` makes the WebP images; `scripts/extract-muscles.mjs` extracted the muscle polygons.
+Retuning the rank curves: edit `src/data/calibration.json` and rerun the build (see `docs/NOTES.md`).

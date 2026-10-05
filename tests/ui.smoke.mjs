@@ -1,15 +1,15 @@
-// Playwright smoke test at 390x844, Hebrew + English. Saves screenshots to docs/stage-1/.
+// Playwright smoke test at 390x844, Hebrew + English. Saves screenshots to docs/stage-N/ (STAGE env, default 2).
 import { chromium } from 'playwright';
 import { serve } from './serve.mjs';
 import { mkdirSync } from 'node:fs';
 import assert from 'node:assert/strict';
 
-const shots = new URL('../docs/stage-1/', import.meta.url).pathname;
+const shots = new URL(`../docs/stage-${process.env.STAGE ?? 2}/`, import.meta.url).pathname;
 mkdirSync(shots, { recursive: true });
 const server = await serve(0);
 const base = `http://localhost:${server.address().port}/`;
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-const ROUTES = ['workout', 'exercises', 'ranks', 'shop', 'profile', 'kit'];
+const ROUTES = ['workout', 'exercises', 'exercise/barbell-bench-press-medium-grip', 'exercise/standing-calf-raises', 'exercise/plank', 'ranks', 'shop', 'profile', 'kit', 'ranks-preview'];
 const errors = [];
 let failed = 0;
 const check = (name, fn) => fn().then(() => console.log('ok  ', name), (e) => { failed++; console.error('FAIL', name, '-', e.message); });
@@ -40,8 +40,57 @@ for (const lang of ['he', 'en']) {
         .map((el) => el.getBoundingClientRect()).filter((b) => b.width && (b.height < 43.5 || (b.width < 43.5 && !b.width))).length);
       assert.equal(small, 0);
     });
-    await page.screenshot({ path: `${shots}${lang}-${r}.png` });
+    await page.screenshot({ path: `${shots}${lang}-${r.replace(/\//g, '_')}.png`, fullPage: r.includes('preview') });
   }
+
+  await check(`${lang}: exercise library lists 300 and searches`, async () => {
+    await page.goto(`${base}#/exercises`);
+    await page.waitForSelector('.ex-row');
+    assert.equal(await page.locator('.ex-row').count(), 300);
+    await page.fill('.search-input', lang === 'he' ? 'דדליפט רומני' : 'romanian');
+    await page.waitForTimeout(400);
+    const n = await page.locator('.ex-row').count();
+    assert.ok(n >= 1 && n < 20, `rows after search: ${n}`);
+    await page.fill('.search-input', 'zzzzqq');
+    await page.waitForTimeout(400);
+    assert.equal(await page.locator('.ex-row').count(), 0);
+    await page.screenshot({ path: `${shots}${lang}-exercises-empty-search.png` });
+    await page.fill('.search-input', '');
+    await page.waitForTimeout(400);
+  });
+
+  await check(`${lang}: filters narrow the list`, async () => {
+    await page.goto(`${base}#/exercises`);
+    await page.waitForSelector('.ex-row');
+    await page.click('.filter-btn');
+    await page.waitForSelector('.sheet');
+    await page.locator('.sheet .chip-select').nth(2).click(); // shoulders
+    await page.waitForTimeout(200);
+    await page.screenshot({ path: `${shots}${lang}-filters.png` });
+    await page.keyboard.press('Escape');
+    const n = await page.locator('.ex-row').count();
+    assert.ok(n > 20 && n < 60, `shoulder rows ${n}`);
+  });
+
+  await check(`${lang}: exercise detail shows map, image toggle, steps`, async () => {
+    await page.goto(`${base}#/exercise/barbell-bench-press-medium-grip`);
+    await page.waitForSelector('.mmap svg');
+    assert.equal(await page.locator('.mmap svg').count(), 2);
+    assert.equal(await page.locator('.mmap-label').count(), 2);
+    assert.ok(await page.locator('.mm-primary').count() >= 1);
+    assert.ok(await page.locator('.steps li').count() >= 3);
+    const before = await page.getAttribute('.ex-photo img', 'src');
+    await page.click('.ex-photo');
+    assert.notEqual(await page.getAttribute('.ex-photo img', 'src'), before);
+    await page.click('.mm[data-muscle="chest"] polygon');
+    assert.ok((await page.textContent('.mmap-info')).length > 3);
+  });
+
+  await check(`${lang}: ranks-preview shows 9 tiers x 5 divisions + Greek God`, async () => {
+    await page.goto(`${base}#/ranks-preview`);
+    await page.waitForSelector('.emblem');
+    assert.equal(await page.locator('.emblem').count(), 9 * 5 + 1);
+  });
 
   await check(`${lang}: tab bar navigates`, async () => {
     await page.goto(`${base}#/workout`);
@@ -77,6 +126,8 @@ for (const lang of ['he', 'en']) {
 
   await check(`${lang}: works offline after first load`, async () => {
     await ctx.setOffline(true);
+    await page.goto(`${base}#/exercise/barbell-bench-press-medium-grip`);
+    await page.waitForSelector('.mmap svg', { timeout: 5000 });
     await page.goto(`${base}#/shop`);
     await page.waitForSelector('.screen h1', { timeout: 5000 });
     await page.reload();

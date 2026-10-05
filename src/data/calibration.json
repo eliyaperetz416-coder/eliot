@@ -1,0 +1,759 @@
+{
+ "families": {
+  "bench-flat": {
+   "R": 225,
+   "note": "Barbell bench press (seed anchor)",
+   "nameEn": "Barbell bench press",
+   "nameHe": "לחיצת חזה עם מוט"
+  },
+  "bench-incline": {
+   "R": 190,
+   "note": "Incline barbell bench (seed anchor)",
+   "nameEn": "Incline barbell press",
+   "nameHe": "לחיצת חזה משופעת עם מוט"
+  },
+  "db-bench": {
+   "R": 90,
+   "perHand": true,
+   "note": "Dumbbell bench press (seed anchor)",
+   "nameEn": "Dumbbell bench press",
+   "nameHe": "לחיצת חזה עם משקולות"
+  },
+  "db-incline": {
+   "R": 78,
+   "perHand": true,
+   "note": "Incline dumbbell press (seed anchor)",
+   "nameEn": "Incline dumbbell press",
+   "nameHe": "לחיצת חזה משופעת עם משקולות"
+  },
+  "chest-machine": {
+   "R": 215,
+   "note": "Machine chest press (seed anchor)",
+   "nameEn": "Machine chest press",
+   "nameHe": "לחיצת חזה במכונה"
+  },
+  "chest-cable-press": {
+   "R": 118,
+   "note": "Cable chest press: about 0.55 of the machine press",
+   "nameEn": "Cable chest press",
+   "nameHe": "לחיצת חזה בכבלים"
+  },
+  "fly-db": {
+   "R": 38,
+   "perHand": true,
+   "note": "Dumbbell fly: about 0.42 of the dumbbell press",
+   "nameEn": "Dumbbell fly",
+   "nameHe": "פרפר עם משקולות"
+  },
+  "fly-cable": {
+   "R": 70,
+   "note": "Cable fly / crossover, weight shown per side",
+   "nameEn": "Cable fly",
+   "nameHe": "פרפר בכבלים"
+  },
+  "pec-deck": {
+   "R": 150,
+   "note": "Pec deck / butterfly machine",
+   "nameEn": "Pec deck",
+   "nameHe": "פרפר במכונה"
+  },
+  "dip": {
+   "R": 200,
+   "bwFactor": 0.95,
+   "note": "Dips (seed anchor)",
+   "nameEn": "Dips",
+   "nameHe": "מקבילים"
+  },
+  "pushup": {
+   "R": 220,
+   "bwFactor": 0.64,
+   "note": "Push-up (seed anchor)",
+   "nameEn": "Push-up",
+   "nameHe": "שכיבות סמיכה"
+  },
+  "pullover-db": {
+   "R": 70,
+   "perHand": true,
+   "note": "Dumbbell pullover (one dumbbell, both hands)",
+   "nameEn": "Dumbbell pullover",
+   "nameHe": "פולאובר עם משקולת"
+  },
+  "pullover-bb": {
+   "R": 85,
+   "note": "Barbell pullover",
+   "nameEn": "Barbell pullover",
+   "nameHe": "פולאובר עם מוט"
+  },
+  "deadlift": {
+   "R": 330,
+   "note": "Deadlift (seed anchor)",
+   "nameEn": "Deadlift",
+   "nameHe": "דדליפט"
+  },
+  "rack-pull": {
+   "R": 360,
+   "note": "Rack pull: partial range, heavier than the floor deadlift",
+   "nameEn": "Rack pull",
+   "nameHe": "רק פול"
+  },
+  "hyperextension": {
+   "R": 170,
+   "bwFactor": 0.4,
+   "note": "Back extension: bodyweight share plus added plate",
+   "nameEn": "Back extension",
+   "nameHe": "פשיטת גב"
+  },
+  "row-barbell": {
+   "R": 200,
+   "note": "Barbell row (seed anchor)",
+   "nameEn": "Barbell row",
+   "nameHe": "חתירה עם מוט"
+  },
+  "row-db": {
+   "R": 95,
+   "perHand": true,
+   "note": "Dumbbell row (seed anchor)",
+   "nameEn": "Dumbbell row",
+   "nameHe": "חתירה עם משקולת"
+  },
+  "row-cable": {
+   "R": 190,
+   "note": "Seated cable row (seed anchor)",
+   "nameEn": "Seated cable row",
+   "nameHe": "חתירה בכבל"
+  },
+  "row-machine": {
+   "R": 200,
+   "note": "Plate/stack row machine",
+   "nameEn": "Machine row",
+   "nameHe": "חתירה במכונה"
+  },
+  "row-bodyweight": {
+   "R": 200,
+   "bwFactor": 0.55,
+   "note": "Inverted / suspended row",
+   "nameEn": "Inverted row",
+   "nameHe": "חתירה הפוכה"
+  },
+  "pulldown": {
+   "R": 190,
+   "note": "Lat pulldown (seed anchor)",
+   "nameEn": "Lat pulldown",
+   "nameHe": "משיכת פולי עליון"
+  },
+  "straight-arm": {
+   "R": 90,
+   "note": "Straight-arm pulldown",
+   "nameEn": "Straight-arm pulldown",
+   "nameHe": "משיכה בזרועות ישרות"
+  },
+  "pullup": {
+   "R": 260,
+   "bwFactor": 1,
+   "note": "Pull-up (seed anchor)",
+   "nameEn": "Pull-up",
+   "nameHe": "מתח"
+  },
+  "chinup": {
+   "R": 270,
+   "bwFactor": 1,
+   "note": "Chin-up (seed anchor)",
+   "nameEn": "Chin-up",
+   "nameHe": "מתח באחיזה הפוכה"
+  },
+  "shrug-bb": {
+   "R": 240,
+   "note": "Barbell shrug",
+   "nameEn": "Barbell shrug",
+   "nameHe": "משיכות כתפיים עם מוט"
+  },
+  "shrug-db": {
+   "R": 110,
+   "perHand": true,
+   "note": "Dumbbell shrug",
+   "nameEn": "Dumbbell shrug",
+   "nameHe": "משיכות כתפיים עם משקולות"
+  },
+  "clean": {
+   "R": 150,
+   "note": "Power clean / hang clean",
+   "nameEn": "Power clean",
+   "nameHe": "פאוור קלין"
+  },
+  "ohp": {
+   "R": 140,
+   "note": "Overhead press (seed anchor)",
+   "nameEn": "Overhead press",
+   "nameHe": "לחיצת כתפיים עם מוט"
+  },
+  "db-press-shoulder": {
+   "R": 65,
+   "perHand": true,
+   "note": "Dumbbell shoulder press (seed anchor)",
+   "nameEn": "Dumbbell shoulder press",
+   "nameHe": "לחיצת כתפיים עם משקולות"
+  },
+  "machine-shoulder": {
+   "R": 150,
+   "note": "Machine shoulder press (seed anchor)",
+   "nameEn": "Machine shoulder press",
+   "nameHe": "לחיצת כתפיים במכונה"
+  },
+  "cable-press-shoulder": {
+   "R": 85,
+   "note": "Cable shoulder press",
+   "nameEn": "Cable shoulder press",
+   "nameHe": "לחיצת כתפיים בכבלים"
+  },
+  "push-press": {
+   "R": 160,
+   "note": "Push press: about 1.15 of the strict press",
+   "nameEn": "Push press",
+   "nameHe": "פוש פרס"
+  },
+  "lateral-raise": {
+   "R": 40,
+   "perHand": true,
+   "note": "Lateral raise (seed anchor)",
+   "nameEn": "Lateral raise",
+   "nameHe": "הרמות צד"
+  },
+  "front-raise": {
+   "R": 40,
+   "perHand": true,
+   "note": "Front raise",
+   "nameEn": "Front raise",
+   "nameHe": "הרמות קדמיות"
+  },
+  "rear-delt-db": {
+   "R": 30,
+   "perHand": true,
+   "note": "Dumbbell rear delt raise",
+   "nameEn": "Rear delt raise",
+   "nameHe": "הרמה לכתף אחורית"
+  },
+  "rear-delt-machine": {
+   "R": 110,
+   "note": "Reverse fly machine",
+   "nameEn": "Reverse fly machine",
+   "nameHe": "פרפר הפוך במכונה"
+  },
+  "rear-delt-cable": {
+   "R": 55,
+   "note": "Cable rear delt fly",
+   "nameEn": "Cable rear delt fly",
+   "nameHe": "פרפר הפוך בכבלים"
+  },
+  "face-pull": {
+   "R": 130,
+   "note": "Face pull (seed anchor)",
+   "nameEn": "Face pull",
+   "nameHe": "פייס פול"
+  },
+  "upright-row": {
+   "R": 130,
+   "note": "Upright row",
+   "nameEn": "Upright row",
+   "nameHe": "משיכה לסנטר"
+  },
+  "curl-bb": {
+   "R": 115,
+   "note": "Barbell curl (seed anchor)",
+   "nameEn": "Barbell curl",
+   "nameHe": "כפיפת מרפקים עם מוט"
+  },
+  "curl-db": {
+   "R": 52,
+   "perHand": true,
+   "note": "Dumbbell curl (seed anchor)",
+   "nameEn": "Dumbbell curl",
+   "nameHe": "כפיפת מרפקים עם משקולות"
+  },
+  "hammer": {
+   "R": 55,
+   "perHand": true,
+   "note": "Hammer curl (seed anchor)",
+   "nameEn": "Hammer curl",
+   "nameHe": "כפיפות פטיש"
+  },
+  "curl-cable": {
+   "R": 105,
+   "note": "Cable curl",
+   "nameEn": "Cable curl",
+   "nameHe": "כפיפת מרפקים בכבל"
+  },
+  "curl-machine": {
+   "R": 120,
+   "note": "Machine / preacher machine curl",
+   "nameEn": "Machine curl",
+   "nameHe": "כפיפת מרפקים במכונה"
+  },
+  "pushdown": {
+   "R": 130,
+   "note": "Triceps pushdown (seed anchor)",
+   "nameEn": "Triceps pushdown",
+   "nameHe": "פשיטת מרפקים בפולי"
+  },
+  "skull": {
+   "R": 115,
+   "note": "Skull crusher (seed anchor)",
+   "nameEn": "Skull crusher",
+   "nameHe": "סקאל קראשר"
+  },
+  "overhead": {
+   "R": 75,
+   "note": "Overhead triceps extension (seed anchor)",
+   "nameEn": "Overhead triceps extension",
+   "nameHe": "פשיטת מרפקים מעל הראש"
+  },
+  "tri-kickback": {
+   "R": 28,
+   "perHand": true,
+   "note": "Dumbbell kickback",
+   "nameEn": "Triceps kickback",
+   "nameHe": "בעיטה לאחור"
+  },
+  "close-grip": {
+   "R": 190,
+   "note": "Close-grip bench (seed anchor)",
+   "nameEn": "Close-grip bench",
+   "nameHe": "לחיצת חזה באחיזה צרה"
+  },
+  "tri-machine": {
+   "R": 140,
+   "note": "Seated triceps machine",
+   "nameEn": "Triceps machine",
+   "nameHe": "מכונת תלת ראשי"
+  },
+  "bench-dip": {
+   "R": 170,
+   "bwFactor": 0.4,
+   "note": "Bench dip: partial bodyweight plus lap weight",
+   "nameEn": "Bench dip",
+   "nameHe": "מקבילים על ספסל"
+  },
+  "squat": {
+   "R": 290,
+   "note": "Back squat (seed anchor)",
+   "nameEn": "Back squat",
+   "nameHe": "סקוואט"
+  },
+  "front-squat": {
+   "R": 240,
+   "note": "Front squat (seed anchor)",
+   "nameEn": "Front squat",
+   "nameHe": "סקוואט קדמי"
+  },
+  "leg-press": {
+   "R": 650,
+   "note": "Leg press (seed anchor)",
+   "nameEn": "Leg press",
+   "nameHe": "לחיצת רגליים"
+  },
+  "hack-machine": {
+   "R": 420,
+   "note": "Hack squat (seed anchor)",
+   "nameEn": "Hack squat",
+   "nameHe": "האק סקוואט"
+  },
+  "leg-extension": {
+   "R": 190,
+   "note": "Leg extension (seed anchor)",
+   "nameEn": "Leg extension",
+   "nameHe": "פשיטת ברכיים"
+  },
+  "lunge-bb": {
+   "R": 200,
+   "note": "Barbell lunge: about 0.7 of the squat",
+   "nameEn": "Barbell lunge",
+   "nameHe": "מכרעים עם מוט"
+  },
+  "lunge-db": {
+   "R": 85,
+   "perHand": true,
+   "note": "Dumbbell lunge",
+   "nameEn": "Dumbbell lunge",
+   "nameHe": "מכרעים עם משקולות"
+  },
+  "stepup-db": {
+   "R": 80,
+   "perHand": true,
+   "note": "Dumbbell step-up / split squat",
+   "nameEn": "Dumbbell step-up",
+   "nameHe": "עליות על ספסל עם משקולות"
+  },
+  "rdl": {
+   "R": 300,
+   "note": "Romanian deadlift (seed anchor)",
+   "nameEn": "Romanian deadlift",
+   "nameHe": "דדליפט רומני"
+  },
+  "leg-curl": {
+   "R": 140,
+   "note": "Leg curl (seed anchor)",
+   "nameEn": "Leg curl",
+   "nameHe": "כפיפת ברכיים"
+  },
+  "glute-ham": {
+   "R": 190,
+   "bwFactor": 0.5,
+   "note": "Glute-ham raise: half the bodyweight plus plate",
+   "nameEn": "Glute-ham raise",
+   "nameHe": "גלוט האם רייז"
+  },
+  "good-morning": {
+   "R": 180,
+   "note": "Good morning",
+   "nameEn": "Good morning",
+   "nameHe": "גוד מורנינג"
+  },
+  "hip-thrust": {
+   "R": 350,
+   "note": "Hip thrust (seed anchor)",
+   "nameEn": "Hip thrust",
+   "nameHe": "היפ טראסט"
+  },
+  "cable-glute": {
+   "R": 60,
+   "note": "Cable kickback, weight on the stack per leg",
+   "nameEn": "Cable kickback",
+   "nameHe": "בעיטה לאחור בכבל"
+  },
+  "pull-through": {
+   "R": 130,
+   "note": "Cable pull-through",
+   "nameEn": "Cable pull-through",
+   "nameHe": "משיכה בין הרגליים בכבל"
+  },
+  "hip-abduction": {
+   "R": 200,
+   "note": "Hip abduction machine",
+   "nameEn": "Hip abduction",
+   "nameHe": "הרחקת ירכיים"
+  },
+  "reverse-hyper": {
+   "R": 220,
+   "note": "Reverse hyperextension machine",
+   "nameEn": "Reverse hyperextension",
+   "nameHe": "היפראקסטנשן הפוך"
+  },
+  "calf-standing": {
+   "R": 320,
+   "note": "Standing calf raise (seed anchor)",
+   "nameEn": "Standing calf raise",
+   "nameHe": "הרמות תאומים בעמידה"
+  },
+  "calf-seated": {
+   "R": 200,
+   "note": "Seated calf raise",
+   "nameEn": "Seated calf raise",
+   "nameHe": "הרמות תאומים בישיבה"
+  },
+  "calf-press": {
+   "R": 450,
+   "note": "Calf press on a leg press",
+   "nameEn": "Calf press",
+   "nameHe": "לחיצת תאומים"
+  },
+  "cable-crunch": {
+   "R": 150,
+   "note": "Cable crunch (seed anchor)",
+   "nameEn": "Cable crunch",
+   "nameHe": "כפיפות בטן בכבל"
+  },
+  "ab-machine": {
+   "R": 160,
+   "note": "Ab crunch machine",
+   "nameEn": "Ab machine",
+   "nameHe": "מכונת בטן"
+  },
+  "cable-rotation": {
+   "R": 80,
+   "note": "Cable wood chop / twist / lift",
+   "nameEn": "Cable rotation",
+   "nameHe": "סיבוב בכבל"
+  },
+  "side-bend-db": {
+   "R": 60,
+   "perHand": true,
+   "note": "Dumbbell side bend",
+   "nameEn": "Dumbbell side bend",
+   "nameHe": "כפיפה לצד עם משקולת"
+  },
+  "side-bend-bb": {
+   "R": 120,
+   "note": "Barbell side bend",
+   "nameEn": "Barbell side bend",
+   "nameHe": "כפיפה לצד עם מוט"
+  },
+  "pallof": {
+   "R": 70,
+   "note": "Pallof press",
+   "nameEn": "Pallof press",
+   "nameHe": "פאלוף פרס"
+  }
+ },
+ "ratios": {
+  "barbell-bench-press-medium-grip": 1,
+  "wide-grip-barbell-bench-press": 0.95,
+  "barbell-incline-bench-press-medium-grip": 1,
+  "decline-barbell-bench-press": 1.05,
+  "wide-grip-decline-barbell-bench-press": 1,
+  "barbell-guillotine-bench-press": 0.75,
+  "neck-press": 0.7,
+  "smith-machine-bench-press": 1,
+  "smith-machine-incline-bench-press": 1,
+  "smith-machine-decline-press": 1.05,
+  "dumbbell-bench-press": 1,
+  "dumbbell-bench-press-with-neutral-grip": 1,
+  "one-arm-dumbbell-bench-press": 1.1,
+  "incline-dumbbell-press": 1,
+  "incline-dumbbell-bench-with-palms-facing-in": 0.97,
+  "hammer-grip-incline-db-bench-press": 0.97,
+  "decline-dumbbell-bench-press": 1.05,
+  "machine-bench-press": 1,
+  "leverage-chest-press": 1,
+  "leverage-incline-chest-press": 0.95,
+  "leverage-decline-chest-press": 1.05,
+  "cable-chest-press": 1,
+  "standing-cable-chest-press": 0.9,
+  "incline-cable-chest-press": 0.9,
+  "dumbbell-flyes": 1,
+  "incline-dumbbell-flyes": 0.92,
+  "decline-dumbbell-flyes": 1,
+  "flat-bench-cable-flyes": 0.9,
+  "incline-cable-flye": 0.85,
+  "cable-crossover": 1,
+  "low-cable-crossover": 0.9,
+  "butterfly": 1,
+  "dips-chest-version": 1,
+  "pushups": 1,
+  "push-ups-with-feet-elevated": 0.9,
+  "push-up-wide": 0.95,
+  "straight-arm-dumbbell-pullover": 0.9,
+  "bent-arm-dumbbell-pullover": 1,
+  "barbell-deadlift": 1,
+  "sumo-deadlift": 0.97,
+  "trap-bar-deadlift": 1.05,
+  "deficit-deadlift": 0.9,
+  "rack-pulls": 1,
+  "leverage-deadlift": 0.85,
+  "power-clean": 1,
+  "hang-clean": 0.95,
+  "hyperextensions-back-extensions": 1,
+  "hyperextensions-with-no-hyperextension-bench": 0.9,
+  "pullups": 1,
+  "chin-up": 1,
+  "weighted-pull-ups": 1,
+  "mixed-grip-chin": 0.97,
+  "v-bar-pullup": 1.05,
+  "wide-grip-rear-pull-up": 0.9,
+  "wide-grip-lat-pulldown": 1,
+  "close-grip-front-lat-pulldown": 1,
+  "full-range-of-motion-lat-pulldown": 1,
+  "v-bar-pulldown": 1.05,
+  "underhand-cable-pulldowns": 1,
+  "one-arm-lat-pulldown": 0.55,
+  "wide-grip-pulldown-behind-the-neck": 0.9,
+  "straight-arm-pulldown": 1,
+  "rope-straight-arm-pulldown": 0.95,
+  "bent-over-barbell-row": 1,
+  "reverse-grip-bent-over-rows": 1,
+  "bent-over-one-arm-long-bar-row": 0.75,
+  "t-bar-row-with-handle": 0.95,
+  "lying-t-bar-row": 0.95,
+  "smith-machine-bent-over-row": 0.95,
+  "bent-over-two-dumbbell-row": 1,
+  "one-arm-dumbbell-row": 1.05,
+  "dumbbell-incline-row": 0.95,
+  "seated-cable-rows": 1,
+  "seated-one-arm-cable-pulley-rows": 0.55,
+  "elevated-cable-rows": 0.9,
+  "kneeling-high-pulley-row": 0.9,
+  "leverage-high-row": 1,
+  "leverage-iso-row": 1,
+  "inverted-row-with-straps": 1,
+  "suspended-row": 1,
+  "incline-bench-pull": 0.8,
+  "barbell-shrug": 1,
+  "dumbbell-shrug": 1,
+  "cable-shrugs": 0.7,
+  "leverage-shrug": 1,
+  "smith-machine-behind-the-back-shrug": 0.95,
+  "barbell-shoulder-press": 1,
+  "standing-military-press": 1,
+  "seated-barbell-military-press": 0.95,
+  "push-press": 1,
+  "standing-barbell-press-behind-neck": 0.8,
+  "dumbbell-shoulder-press": 1,
+  "seated-dumbbell-press": 1,
+  "standing-dumbbell-press": 0.95,
+  "dumbbell-one-arm-shoulder-press": 1.05,
+  "arnold-dumbbell-press": 0.92,
+  "standing-palms-in-dumbbell-press": 0.97,
+  "leverage-shoulder-press": 1,
+  "machine-shoulder-military-press": 1,
+  "smith-machine-overhead-shoulder-press": 1.05,
+  "cable-shoulder-press": 1,
+  "seated-cable-shoulder-press": 1,
+  "side-lateral-raise": 1,
+  "seated-side-lateral-raise": 0.9,
+  "one-arm-side-laterals": 1,
+  "cable-seated-lateral-raise": 0.75,
+  "standing-low-pulley-deltoid-raise": 0.75,
+  "lying-one-arm-lateral-raise": 0.85,
+  "one-arm-incline-lateral-raise": 0.85,
+  "front-dumbbell-raise": 1,
+  "front-cable-raise": 0.9,
+  "standing-front-barbell-raise-over-head": 1.7,
+  "front-plate-raise": 1.1,
+  "reverse-flyes": 1,
+  "reverse-machine-flyes": 1,
+  "cable-rear-delt-fly": 1,
+  "bent-over-dumbbell-rear-delt-raise-with-head-on-bench": 0.95,
+  "seated-bent-over-rear-delt-raise": 1,
+  "face-pull": 1,
+  "cable-rope-rear-delt-rows": 1,
+  "barbell-rear-delt-row": 1.8,
+  "upright-barbell-row": 1,
+  "standing-dumbbell-upright-row": 0.8,
+  "upright-cable-row": 0.9,
+  "smith-machine-one-arm-upright-row": 0.6,
+  "barbell-curl": 1,
+  "wide-grip-standing-barbell-curl": 0.95,
+  "close-grip-standing-barbell-curl": 0.95,
+  "ez-bar-curl": 0.95,
+  "close-grip-ez-bar-curl": 0.9,
+  "preacher-curl": 0.9,
+  "reverse-barbell-curl": 0.7,
+  "drag-curl": 0.85,
+  "dumbbell-bicep-curl": 1,
+  "dumbbell-alternate-bicep-curl": 1,
+  "seated-dumbbell-curl": 0.97,
+  "hammer-curls": 1,
+  "alternate-hammer-curl": 1,
+  "cross-body-hammer-curl": 0.95,
+  "incline-dumbbell-curl": 0.88,
+  "incline-hammer-curls": 0.88,
+  "concentration-curls": 0.92,
+  "zottman-curl": 0.85,
+  "one-arm-dumbbell-preacher-curl": 0.95,
+  "spider-curl": 0.8,
+  "standing-biceps-cable-curl": 1,
+  "cable-hammer-curls-rope-attachment": 0.95,
+  "high-cable-curls": 0.65,
+  "cable-preacher-curl": 0.9,
+  "machine-preacher-curls": 1,
+  "machine-bicep-curl": 1,
+  "reverse-cable-curl": 0.7,
+  "triceps-pushdown": 1,
+  "triceps-pushdown-rope-attachment": 0.95,
+  "triceps-pushdown-v-bar-attachment": 1.05,
+  "reverse-grip-triceps-pushdown": 0.75,
+  "triceps-overhead-extension-with-rope": 1.1,
+  "cable-one-arm-tricep-extension": 0.45,
+  "cable-lying-triceps-extension": 0.75,
+  "ez-bar-skullcrusher": 1,
+  "decline-ez-bar-triceps-extension": 0.95,
+  "incline-barbell-triceps-extension": 0.9,
+  "standing-overhead-barbell-triceps-extension": 1.2,
+  "lying-dumbbell-tricep-extension": 0.5,
+  "standing-dumbbell-triceps-extension": 1,
+  "seated-triceps-press": 1,
+  "dumbbell-one-arm-triceps-extension": 0.55,
+  "tricep-dumbbell-kickback": 1,
+  "close-grip-barbell-bench-press": 1,
+  "close-grip-dumbbell-press": 0.9,
+  "smith-machine-close-grip-bench-press": 1,
+  "jm-press": 1.3,
+  "machine-triceps-extension": 1,
+  "dip-machine": 1.2,
+  "dips-triceps-version": 1,
+  "parallel-bar-dip": 1,
+  "bench-dips": 1,
+  "weighted-bench-dip": 1,
+  "barbell-squat": 1,
+  "barbell-full-squat": 1,
+  "wide-stance-barbell-squat": 0.95,
+  "narrow-stance-squats": 0.9,
+  "front-barbell-squat": 1,
+  "front-barbell-squat-to-a-bench": 0.9,
+  "barbell-squat-to-a-bench": 0.95,
+  "box-squat": 0.95,
+  "zercher-squats": 0.8,
+  "overhead-squat": 0.55,
+  "smith-machine-squat": 1.05,
+  "dumbbell-squat": 0.9,
+  "plie-dumbbell-squat": 1.3,
+  "hack-squat": 1,
+  "narrow-stance-hack-squats": 0.9,
+  "barbell-hack-squat": 0.8,
+  "leg-press": 1,
+  "narrow-stance-leg-press": 0.9,
+  "smith-machine-leg-press": 0.9,
+  "lying-machine-squat": 1.1,
+  "leg-extensions": 1,
+  "single-leg-leg-extension": 0.55,
+  "barbell-lunge": 1,
+  "barbell-walking-lunge": 0.95,
+  "dumbbell-lunges": 1,
+  "one-leg-barbell-squat": 0.4,
+  "weighted-sissy-squat": 0.2,
+  "jefferson-squats": 0.8,
+  "dumbbell-squat-to-a-bench": 0.9,
+  "dumbbell-rear-lunge": 1,
+  "elevated-back-lunge": 0.9,
+  "barbell-step-ups": 0.95,
+  "dumbbell-step-ups": 1,
+  "split-squat-with-dumbbells": 1,
+  "smith-single-leg-split-squat": 0.6,
+  "barbell-hip-thrust": 1,
+  "barbell-glute-bridge": 0.94,
+  "one-legged-cable-kickback": 1,
+  "pull-through": 1,
+  "stiff-leg-barbell-good-morning": 0.9,
+  "good-morning-off-pins": 0.8,
+  "hanging-bar-good-morning": 0.6,
+  "barbell-side-split-squat": 0.45,
+  "romanian-deadlift": 1,
+  "romanian-deadlift-from-deficit": 0.9,
+  "stiff-legged-barbell-deadlift": 0.92,
+  "stiff-legged-dumbbell-deadlift": 0.36,
+  "smith-machine-stiff-legged-deadlift": 0.95,
+  "good-morning": 1,
+  "seated-good-mornings": 0.7,
+  "wide-stance-stiff-legs": 0.9,
+  "cable-deadlifts": 0.65,
+  "lying-leg-curls": 1,
+  "seated-leg-curl": 1,
+  "standing-leg-curl": 0.55,
+  "glute-ham-raise": 1,
+  "natural-glute-ham-raise": 0.85,
+  "reverse-hyperextension": 1,
+  "standing-calf-raises": 1,
+  "seated-calf-raise": 1,
+  "calf-press": 0.9,
+  "calf-press-on-the-leg-press-machine": 1,
+  "standing-barbell-calf-raise": 0.6,
+  "barbell-seated-calf-raise": 0.8,
+  "smith-machine-calf-raise": 0.8,
+  "standing-dumbbell-calf-raise": 0.4,
+  "donkey-calf-raises": 0.85,
+  "dumbbell-seated-one-leg-calf-raise": 0.25,
+  "rocking-standing-calf-raise": 0.55,
+  "calf-raise-on-a-dumbbell": 0.3,
+  "cable-crunch": 1,
+  "cable-seated-crunch": 0.8,
+  "rope-crunch": 0.95,
+  "standing-rope-crunch": 0.9,
+  "ab-crunch-machine": 1,
+  "cable-reverse-crunch": 0.6,
+  "standing-cable-wood-chop": 1,
+  "standing-cable-lift": 0.9,
+  "cable-russian-twists": 0.7,
+  "pallof-press": 1,
+  "barbell-side-bend": 1,
+  "dumbbell-side-bend": 1,
+  "one-arm-high-pulley-cable-side-bends": 1.1
+ }
+}
