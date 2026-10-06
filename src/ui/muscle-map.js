@@ -26,6 +26,7 @@ export function muscleMap({ muscles, mode = 'exercise', exercise, paint, onSelec
       const p = NEUTRAL_ONLY.has(m.id) ? { fill: MAP_COLORS.neutral } : paintOf(m.id);
       const g = svgEl('g', { class: `mm ${p.role ? 'mm-' + p.role : ''}`, 'data-muscle': m.id });
       g.style.fill = p.fill;
+      if (p.glow) { g.style.setProperty('--glow', p.fill); g.classList.add('mm-glow'); }
       for (const pts of m.polygons) g.append(svgEl('polygon', { points: pts }));
       if (!NEUTRAL_ONLY.has(m.id) && m.id !== 'knees') {
         g.addEventListener('click', () => {

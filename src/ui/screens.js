@@ -8,6 +8,9 @@ import { startScreen } from './workout.js';
 import { liveScreen } from './live.js';
 import { resultScreen } from './post-ui.js';
 import { historyScreen, historyDetailScreen } from './history.js';
+import { ranksScreen } from './ranks.js';
+import { progressScreen } from './progress.js';
+import { cardScreen } from './card-export.js';
 import { store } from './store.js';
 import { ranksPreviewScreen } from './ranks-preview.js';
 
@@ -60,7 +63,9 @@ export function buildScreens(ctx) {
     exercises: () => exercisesScreen(),
     exercise: (id) => exerciseDetailScreen(id),
     'ranks-preview': ranksPreviewScreen,
-    ranks: emptyScreen('ranks', 'ranks'),
+    ranks: ranksScreen,
+    progress: (id) => progressScreen(id),
+    card: cardScreen,
     shop: emptyScreen('shop', 'shop'),
     profile: () => profileScreen(ctx),
     kit,

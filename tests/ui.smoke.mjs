@@ -9,7 +9,7 @@ mkdirSync(shots, { recursive: true });
 const server = await serve(0);
 const base = `http://localhost:${server.address().port}/`;
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-const ROUTES = ['workout', 'exercises', 'exercise/barbell-bench-press-medium-grip', 'exercise/plank', 'ranks', 'shop', 'profile', 'history', 'kit', 'ranks-preview'];
+const ROUTES = ['workout', 'exercises', 'exercise/barbell-bench-press-medium-grip', 'exercise/plank', 'ranks', 'progress', 'card', 'shop', 'profile', 'history', 'kit', 'ranks-preview'];
 const errors = [];
 let failed = 0;
 const check = (name, fn) => fn().then(() => console.log('ok  ', name), (e) => { failed++; console.error('FAIL', name, '-', e.message.split('\n')[0]); });
@@ -58,6 +58,27 @@ async function logSet(page, cardIndex, weight, reps) {
   await row.locator('.set-input').nth(1).fill(String(reps));
   await row.locator('.set-v').click();
   await page.waitForTimeout(150);
+}
+
+
+async function postThree(page) {
+  await page.goto(`${base}#/workout`);
+  await page.waitForSelector('main .btn-primary');
+  await page.click('main .btn-primary');
+  await addExercise(page, 'barbell bench press');
+  await logSet(page, 0, 100, 5);
+  await page.click('.live-actions .btn-secondary');
+  await addExercise(page, 'barbell squat');
+  await logSet(page, 1, 140, 5);
+  await page.click('.live-actions .btn-secondary');
+  await addExercise(page, 'barbell deadlift');
+  await logSet(page, 2, 180, 5);
+  await page.click('.live-head .btn');
+  await page.waitForSelector('.sheet .btn-primary');
+  await page.click('.sheet .btn-primary');
+  await page.waitForSelector('.rankup', { timeout: 5000 });
+  await page.click('.rankup button');
+  await page.waitForSelector('.stats-grid');
 }
 
 for (const lang of ['he', 'en']) {
@@ -201,6 +222,71 @@ for (const lang of ['he', 'en']) {
     await page.click('.sheet .btn-danger');
     await page.waitForSelector('.live-head', { state: 'detached' });
     await page.waitForSelector('main .btn-primary');
+  });
+
+  await check(`${lang}: ranks tab with data (map, groups, table, need sheet, recovery), progress, card, exercise best`, async () => {
+    await postThree(page);
+    await page.goto(`${base}#/ranks`);
+    await page.waitForSelector('.mmap svg');
+    assert.equal(await page.locator('.rank-card .lp').count(), 1);
+    assert.equal(await page.locator('.mmap svg').count(), 2);
+    assert.ok(await page.locator('.mm-glow').count() >= 3, 'ranked muscles glow in their tier colour');
+    await page.click('.mm[data-muscle="chest"] polygon');
+    assert.match(await page.textContent('.mmap-info'), /Platinum|Diamond|Gold|Silver/);
+    await page.waitForSelector('.mmap-panel .row');
+    assert.equal(await page.locator('.group-row').count(), 10);
+    assert.ok(await page.locator('.ex-rank-row').count() >= 3);
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: `${shots}${lang}-ranks-data.png`, fullPage: true });
+    const o = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
+    assert.ok(o.sw <= o.cw, 'no horizontal overflow with data');
+    // sort
+    const first = await page.locator('.ex-rank-row .row-title').first().textContent();
+    await page.locator('.seg').nth(1).locator('button').nth(1).click(); // sort by name
+    await page.waitForSelector('.ex-rank-row');
+    const names = await page.locator('.ex-rank-row .row-title').allTextContents();
+    assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b)));
+    assert.ok(first.length > 0);
+    // what do I need
+    await page.locator('.ex-rank-row').first().click();
+    await page.waitForSelector('.need-card');
+    const kg1 = await page.locator('.need-load').first().textContent();
+    await page.locator('.stepper .icon-btn').nth(1).click();
+    await page.locator('.stepper .icon-btn').nth(1).click();
+    await page.locator('.stepper .icon-btn').nth(1).click();
+    assert.notEqual(await page.locator('.need-load').first().textContent(), kg1, 'load changes with reps');
+    await page.screenshot({ path: `${shots}${lang}-need.png` });
+    await page.keyboard.press('Escape');
+    // recovery mode
+    await page.locator('.seg').first().locator('button').nth(1).click();
+    await page.waitForSelector('.recov-bar');
+    await page.click('.mm[data-muscle="chest"] polygon');
+    assert.match(await page.textContent('.mmap-info'), /%/);
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: `${shots}${lang}-recovery.png`, fullPage: true });
+    // progress
+    await page.goto(`${base}#/progress`);
+    await page.waitForSelector('.chart');
+    assert.equal(await page.locator('.chart').count(), 3);
+    assert.ok(await page.locator('.chart-dot').count() >= 1 && await page.locator('.chart-bar').count() >= 12);
+    const o2 = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
+    assert.ok(o2.sw <= o2.cw);
+    await page.screenshot({ path: `${shots}${lang}-progress.png`, fullPage: true });
+    // exercise detail shows the best card
+    await page.goto(`${base}#/exercise/barbell-bench-press-medium-grip`);
+    await page.waitForSelector('.mmap svg');
+    await page.getByRole('button', { name: L(lang, 'כמה צריך להרים?', 'What do I need?') }).click();
+    await page.waitForSelector('.need-card');
+    await page.keyboard.press('Escape');
+    // player card
+    await page.goto(`${base}#/card`);
+    await page.waitForSelector('.card-preview canvas');
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: `${shots}${lang}-card.png`, fullPage: true });
+    const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: L(lang, 'שמירה כתמונה', 'Save as picture') }).click()]);
+    assert.match(dl.suggestedFilename(), /^demigod-.*\.png$/);
+    const px = await page.evaluate(() => { const c = document.querySelector('.card-preview canvas'); const d = c.getContext('2d').getImageData(540, 600, 1, 1).data; return [c.width, c.height, d[3]]; });
+    assert.deepEqual([px[0], px[1]], [1080, 1350]); assert.equal(px[2], 255);
   });
 
   await check(`${lang}: sheet + toast + language toggle + tab bar`, async () => {

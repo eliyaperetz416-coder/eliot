@@ -55,7 +55,7 @@ function render() {
   const el = screens[id](param);
   dispose = el._dispose ?? null;
   app.replaceChildren(el);
-  const tab = ['exercise'].includes(id) ? 'exercises' : ['history', 'result'].includes(id) ? (id === 'result' ? 'workout' : 'profile') : id;
+  const tab = { exercise: 'exercises', history: 'profile', result: 'workout', progress: 'ranks', card: 'ranks' }[id] ?? id;
   nav.replaceChildren(TABS.some((x) => x.id === tab) ? tabBar({ tabs: TABS, current: tab }) : '');
   keepAwake(!!store.draft);
   window.scrollTo(0, 0);

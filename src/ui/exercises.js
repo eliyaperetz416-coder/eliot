@@ -5,6 +5,12 @@ import { searchExercises } from '../core/search.mjs';
 import { emptyState, openSheet, segmented } from './components.js';
 import { loadData, data } from './data.js';
 import { muscleMap } from './muscle-map.js';
+import { store } from './store.js';
+import { e1rmSeries } from '../core/charts.mjs';
+import { tierFor } from '../core/ranks.mjs';
+import { openNeedSheet } from './need.js';
+import { button } from './components.js';
+import { formatKg, formatNum } from './format.js';
 
 const GROUPS = ['chest', 'back', 'shoulders', 'biceps', 'triceps', 'quads', 'hamstrings', 'glutes', 'calves', 'abs', 'other'];
 const EQUIPMENT = ['barbell', 'dumbbell', 'machine', 'cable', 'ez-bar', 'bodyweight', 'other'];
@@ -133,7 +139,22 @@ export function exerciseDetailScreen(id) {
     h('div', { class: 'section-label', text: t('exercise.curve') }),
     h('section', { class: 'card' }, curve),
     h('div', { class: 'section-label', text: t('exercise.best') }),
-    h('section', { class: 'card' }, h('p', { text: t('exercise.best.empty') })));
+    bestCard(ex));
+}
+
+function bestCard(ex) {
+  const series = e1rmSeries(store.workouts, ex.id, data().byId);
+  if (!series.length) return h('section', { class: 'card' }, h('p', { text: t('exercise.best.empty') }));
+  const best = Math.max(...series.map((p) => p.v));
+  const b = store.bests[ex.id];
+  const unit = ex.type === 'weight' || ex.ranked ? ` ${t('unit.kg')}` : ex.type === 'time' || ex.type === 'cardio' ? ` ${t('col.sec.short')}` : '';
+  const kids = [h('div', { class: 'bw-now display num', text: `${formatNum(best, 1)}${unit}` }),
+    h('p', { class: 'row-sub', text: ex.ranked ? t('exercise.best.e1rm') : t('exercise.best.metric') })];
+  if (b) { const tr = tierFor(b.rating); kids.push(h('p', { text: `${t(`tier.${tr.tier}`)}${tr.division ? ' ' + tr.division : ''} · ${formatNum(b.rating, 0)} · ${formatKg(b.weight ?? 0)}×${b.reps}` })); }
+  kids.push(h('div', { class: 'stack', style: 'padding-block-start:8px' },
+    ex.ranked ? button({ label: t('need.title'), variant: 'secondary', block: true, onClick: () => openNeedSheet(ex) }) : null,
+    h('a', { class: 'btn btn-secondary btn-block', href: `#/progress/${ex.id}` }, t('progress.title'))));
+  return h('section', { class: 'card' }, kids);
 }
 
 export { loadData };

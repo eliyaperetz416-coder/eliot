@@ -26,7 +26,7 @@
 .row + .row { border-block-start: 1px solid var(--line); }
 .row-icon { width: 36px; height: 36px; border-radius: 12px; background: var(--surface-3); display: grid; place-items: center; color: var(--accent); flex: none; }
 .row-icon svg { width: 20px; height: 20px; }
-.row-main { flex: 1; min-width: 0; }
+.row-main { flex: 1; min-width: 0; display: grid; }
 .row-title { font-weight: 500; }
 .row-sub { font-size: 13px; color: var(--text-mute); }
 .row-end { color: var(--text-dim); display: flex; align-items: center; gap: var(--s-2); }
@@ -309,3 +309,37 @@ button.chip { cursor: pointer; min-height: var(--tap); padding-inline: 14px; fon
 .profile-head { display: grid; gap: var(--s-3); }
 .bw-row { display: flex; justify-content: space-between; align-items: center; gap: var(--s-3); }
 .bw-now { font-size: 30px; }
+
+/* ---------- ranks tab ---------- */
+.mm-glow { filter: drop-shadow(0 0 1.6px var(--glow)); }
+.mmap-panel { margin-block-start: var(--s-2); }
+.recov-legend { padding-block-start: var(--s-3); display: grid; gap: 4px; }
+.recov-bar { height: 10px; border-radius: 6px; background: linear-gradient(90deg, #ff3b4e, #ffb02e, #3ad682); }
+.recov-ends { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-mute); }
+.group-row { min-height: 60px; }
+.group-row .emblem { flex: none; }
+.rank-chip { display: grid; justify-items: end; text-align: end; font-weight: 700; }
+.ex-rank-row .row-main { min-width: 0; }
+.stepper { display: flex; align-items: center; justify-content: center; gap: var(--s-4); }
+.stepper .icon-btn { font-size: 24px; font-weight: 700; width: 52px; height: 52px; color: var(--text); }
+.stepper-v { display: grid; justify-items: center; min-width: 72px; }
+.stepper-v .display { font-size: 40px; color: var(--accent); }
+.need-card { display: flex; gap: var(--s-3); align-items: center; background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-md); padding: var(--s-3); }
+.need-card .emblem { flex: none; }
+.need-main { display: grid; gap: 2px; min-width: 0; }
+.need-load { font-size: 24px; color: var(--accent); }
+.need-top { text-align: center; color: var(--accent); font-weight: 700; }
+
+/* ---------- charts ---------- */
+.chart-card { display: grid; gap: var(--s-2); }
+.chart { width: 100%; height: auto; display: block; color: var(--accent); direction: ltr; }
+.chart-grid { stroke: var(--line); stroke-width: 1; }
+.chart-tick { fill: var(--text-mute); font-size: 10px; font-family: var(--font-body); }
+.chart-line { stroke: var(--accent); stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
+.chart-dot { fill: var(--bg); stroke: var(--accent); stroke-width: 2; }
+.chart-last { fill: var(--text); font-size: 11px; font-weight: 700; font-family: var(--font-body); }
+.chart-bar { fill: var(--accent); opacity: .9; }
+.chart-bar.zero { opacity: .25; }
+.chart-empty { padding-block: var(--s-4); text-align: center; }
+.card-preview { background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-lg); padding: var(--s-2); min-height: 200px; }
+.card-preview canvas { width: 100%; height: auto; display: block; border-radius: 14px; }

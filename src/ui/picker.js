@@ -9,7 +9,7 @@ import { data } from './data.js';
 const GROUPS = ['chest', 'back', 'shoulders', 'biceps', 'triceps', 'quads', 'hamstrings', 'glutes', 'calves', 'abs', 'other'];
 const nameOf = (ex) => (getLanguage() === 'he' ? ex.nameHe : ex.nameEn);
 
-export function openExercisePicker({ title, multi = true, onPick }) {
+export function openExercisePicker({ title, multi = true, ids = null, onPick }) {
   const chosen = new Map();
   let group = null, q = '';
   const list = h('div', { class: 'pick-list' });
@@ -26,7 +26,7 @@ export function openExercisePicker({ title, multi = true, onPick }) {
     } }, t(`group.${g}`))));
 
   function update() {
-    let items = data().exercises;
+    let items = ids ? ids.map((id) => data().byId[id]).filter(Boolean) : data().exercises;
     if (group) items = items.filter((e) => e.muscleGroup === group);
     items = searchExercises(items, q, (ex) => { const f = data().families[ex.family]; return [ex.nameEn, ex.nameHe, t(`equipment.${ex.equipment}`), f?.nameEn, f?.nameHe]; }).slice(0, 80);
     list.replaceChildren(...items.map((ex) => {
