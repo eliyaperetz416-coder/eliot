@@ -2,7 +2,7 @@ import { DIR, LANGS, detectLanguage, setDictionaries, setLanguage, t } from './c
 import { TIER_COLORS } from './core/ranks.mjs';
 import { buildScreens } from './ui/screens.js';
 import { tabBar, showToast } from './ui/components.js';
-import { loadSettings, saveSettings, requestPersistence } from './ui/storage.js';
+import { loadSettings, requestPersistence, getSettings, updateSettings, onSettings } from './ui/storage.js';
 import { loadData } from './ui/data.js';
 import { initStore, store, saveProfile, subscribe, onAchievements } from './ui/store.js';
 import { onboarding } from './ui/onboarding.js';
@@ -15,7 +15,6 @@ const TABS = [
 ];
 const app = document.getElementById('app');
 const nav = document.getElementById('nav-root');
-let settings;
 let screens;
 let dispose = null;
 
@@ -26,7 +25,7 @@ function hexToRgb(hex) { const n = parseInt(hex.slice(1), 16); return `${(n >> 1
 function applyAccent() {
   const root = document.documentElement.style;
   let hex = '#ffc43d';
-  if (settings.accentMode === 'rank' && !store.overall.pending) {
+  if (getSettings().accentMode === 'rank' && !store.overall.pending) {
     const tier = ['wood', 'bronze', 'silver', 'gold', 'platinum', 'diamond', 'champion', 'titan', 'olympian', 'greekgod'];
     for (const id of tier) if (store.overall.rating >= ({ wood: 1, bronze: 200, silver: 300, gold: 400, platinum: 500, diamond: 600, champion: 700, titan: 800, olympian: 900, greekgod: 1000 })[id]) hex = TIER_COLORS[id];
   }
@@ -36,7 +35,7 @@ function applyAccent() {
 function applyDocument() {
   const lang = document.documentElement.lang;
   document.documentElement.dir = DIR[lang];
-  document.documentElement.dataset.motion = settings.reducedMotion ? 'reduce' : '';
+  document.documentElement.dataset.motion = getSettings().reducedMotion ? 'reduce' : '';
   document.title = t('app.name');
 }
 
@@ -56,7 +55,7 @@ function render() {
   const el = screens[id](param);
   dispose = el._dispose ?? null;
   app.replaceChildren(el);
-  const tab = { exercise: 'exercises', custom: 'exercises', history: 'profile', achievements: 'profile', result: 'workout', routines: 'workout', routine: 'workout', plans: 'workout', plan: 'workout', progress: 'ranks', card: 'ranks' }[id] ?? id;
+  const tab = { exercise: 'exercises', custom: 'exercises', history: 'profile', achievements: 'profile', settings: 'profile', numbers: 'profile', result: 'workout', routines: 'workout', routine: 'workout', plans: 'workout', plan: 'workout', progress: 'ranks', card: 'ranks' }[id] ?? id;
   nav.replaceChildren(TABS.some((x) => x.id === tab) ? tabBar({ tabs: TABS, current: tab }) : '');
   keepAwake(!!store.draft);
   window.scrollTo(0, 0);
@@ -65,11 +64,10 @@ function render() {
 async function changeLanguage(lang) {
   setLanguage(lang);
   document.documentElement.lang = lang;
-  settings = { ...settings, lang };
   applyDocument();
   render();
   refreshRestTimer();
-  saveSettings(settings);
+  updateSettings({ lang });
 }
 
 async function finishOnboarding({ profile, weight }) {
@@ -82,7 +80,7 @@ async function finishOnboarding({ profile, weight }) {
 async function boot() {
   const [he, en] = await Promise.all(LANGS.map((l) => fetch(`src/data/i18n/${l}.json`).then((r) => r.json())));
   setDictionaries({ he, en });
-  settings = await loadSettings();
+  const settings = await loadSettings();
   await loadData();
   await initStore();
   const lang = settings.lang ?? store.profile?.lang ?? detectLanguage(navigator.language);
@@ -98,6 +96,10 @@ async function boot() {
   subscribe(() => {
     applyAccent();
     if (!!store.draft !== hadDraft) { hadDraft = !!store.draft; if (store.profile && route().id === 'workout') render(); }
+  });
+  onSettings((next) => {
+    if (next.lang && next.lang !== document.documentElement.lang) { setLanguage(next.lang); document.documentElement.lang = next.lang; refreshRestTimer(); }
+    applyDocument(); applyAccent();
   });
   window.addEventListener('hashchange', render);
   document.documentElement.dataset.ready = '1';

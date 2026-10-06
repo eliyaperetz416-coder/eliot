@@ -10,7 +10,7 @@ mkdirSync(shots, { recursive: true });
 const server = await serve(0);
 const base = `http://localhost:${server.address().port}/`;
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-const ROUTES = ['workout', 'exercises', 'exercise/barbell-bench-press-medium-grip', 'exercise/plank', 'ranks', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'profile', 'history', 'kit', 'ranks-preview'];
+const ROUTES = ['workout', 'exercises', 'exercise/barbell-bench-press-medium-grip', 'exercise/plank', 'ranks', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'profile', 'history', 'kit', 'ranks-preview'];
 const errors = [];
 let failed = 0;
 const ONLY = process.env.ONLY;
@@ -566,6 +566,108 @@ for (const lang of ['he', 'en']) {
     await page.waitForSelector('.streak-card');
     assert.match(await page.textContent('.streak-card'), /12/);
     assert.equal(await page.locator('.streak-broken').count(), 0);
+  });
+
+  await check(`${lang}: settings, backup export + restore, reminder, numbers page, reset`, async () => {
+    const T = (he, en) => L(lang, he, en);
+    if (ONLY) await postThree(page);
+    await page.goto(`${base}#/settings`);
+    await page.waitForSelector('.screen h1');
+    await page.screenshot({ path: `${shots}${lang}-settings.png`, fullPage: true });
+    // accent + reduced motion
+    await page.getByRole('button', { name: T('תמיד זהב', 'Always gold') }).click();
+    await page.getByRole('button', { name: T('פעיל', 'On'), exact: true }).click();
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.motion), 'reduce');
+    await page.getByRole('button', { name: T('לפי המכשיר', 'Follow device') }).click();
+    await page.getByRole('button', { name: T('לפי הדרגה שלי', 'Follows my rank') }).click();
+    // export
+    const before = await page.evaluate(async () => { const { dbAll } = await import('./src/ui/db.js'); return (await dbAll('workouts')).length; });
+    assert.ok(before > 0, 'workouts exist from earlier checks');
+    const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('.row', { hasText: T('ייצוא גיבוי', 'Export backup') }).click()]);
+    assert.match(dl.suggestedFilename(), /^demigod-backup-\d{4}-\d{2}-\d{2}\.json$/);
+    const path = await dl.path();
+    const { readFileSync, writeFileSync } = await import('node:fs');
+    const text = readFileSync(path, 'utf8');
+    const parsed = JSON.parse(text);
+    assert.equal(parsed.format, 'demigod-backup');
+    assert.equal(parsed.data.workouts.length, before);
+    await page.waitForSelector('.toast');
+    assert.ok(await page.evaluate(() => JSON.parse(localStorage.getItem('dg.settings')).lastExportAt > 0), 'export time saved');
+    // damaged file is refused and nothing changes
+    const bad = JSON.parse(text); bad.data.game.xp += 1;
+    const badPath = `${path}.bad.json`; writeFileSync(badPath, JSON.stringify(bad));
+    await page.locator('[data-testid="import-file"]').setInputFiles(badPath);
+    await page.waitForSelector('.toast');
+    assert.equal(await page.locator('.sheet').count(), 0);
+    assert.equal(await page.evaluate(async () => { const { dbAll } = await import('./src/ui/db.js'); return (await dbAll('workouts')).length; }), before);
+    // not a backup at all
+    const junkPath = `${path}.junk.json`; writeFileSync(junkPath, '{"hello":1}');
+    await page.locator('[data-testid="import-file"]').setInputFiles(junkPath);
+    await page.waitForTimeout(400);
+    assert.equal(await page.locator('.sheet').count(), 0);
+    // merge into existing data changes nothing (same ids)
+    await page.locator('[data-testid="import-file"]').setInputFiles(path);
+    await page.waitForSelector('.sheet');
+    await page.screenshot({ path: `${shots}${lang}-import-sheet.png` });
+    await page.locator('.sheet .row', { hasText: T('מיזוג', 'Merge') }).click();
+    await page.waitForLoadState('load');
+    await page.waitForSelector('.tabbar');
+    assert.equal(await page.evaluate(async () => { const { dbAll } = await import('./src/ui/db.js'); return (await dbAll('workouts')).length; }), before);
+    // reminder card: pretend the last backup was 40 days ago
+    await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('dg.settings')); s.lastExportAt = Date.now() - 40 * 86400000; s.reminderSnoozedUntil = null; localStorage.setItem('dg.settings', JSON.stringify(s)); });
+    await page.goto(`${base}#/workout`); await page.reload();
+    await page.waitForSelector('.backup-reminder');
+    await page.screenshot({ path: `${shots}${lang}-backup-reminder.png` });
+    await page.locator('.backup-reminder .btn-secondary').click();
+    assert.equal(await page.locator('.backup-reminder').count(), 0);
+    await page.reload(); await page.waitForSelector('main .btn-primary');
+    assert.equal(await page.locator('.backup-reminder').count(), 0, 'snoozed');
+    // numbers page
+    await page.goto(`${base}#/numbers`);
+    await page.waitForSelector('.numbers .card');
+    assert.ok((await page.locator('.numbers .card').count()) >= 6);
+    assert.match(await page.textContent('.numbers'), lang === 'he' ? /Liftoff|דרגות/ : /Verified about Liftoff/);
+    await page.screenshot({ path: `${shots}${lang}-numbers.png`, fullPage: true });
+    // reset needs the typed word, then restore from the backup on the first screen
+    await page.goto(`${base}#/settings`);
+    await page.locator('.row', { hasText: T('איפוס האפליקציה', 'Reset the app') }).click();
+    await page.waitForSelector('.sheet input');
+    assert.ok(await page.locator('.sheet .btn-danger').isDisabled());
+    await page.fill('.sheet input', T('לא', 'nope'));
+    assert.ok(await page.locator('.sheet .btn-danger').isDisabled());
+    await page.fill('.sheet input', T('איפוס', 'RESET'));
+    await page.locator('.sheet .btn-danger').click();
+    await page.waitForSelector('.ob-step', { timeout: 8000 });
+    assert.equal(await page.evaluate(async () => { const { dbAll } = await import('./src/ui/db.js'); return (await dbAll('workouts')).length; }), 0);
+    await page.screenshot({ path: `${shots}${lang}-after-reset.png` });
+    const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.getByRole('button', { name: T('יש לי כבר גיבוי', 'I already have a backup') }).click()]);
+    await chooser.setFiles(path);
+    await page.waitForSelector('.sheet');
+    await page.locator('.sheet .row', { hasText: T('מיזוג', 'Merge') }).click();
+    await page.waitForSelector('.tabbar', { timeout: 8000 });
+    const after = await page.evaluate(async () => { const { dbAll, dbGet } = await import('./src/ui/db.js'); return { w: (await dbAll('workouts')).length, p: (await dbGet('profile', 'me'))?.name, g: (await dbGet('game', 'me'))?.xp }; });
+    assert.equal(after.w, before);
+    assert.equal(after.p, parsed.data.profile.name);
+    assert.equal(after.g, parsed.data.game.xp);
+  });
+
+  await check(`${lang}: accessibility basics (names, labels, language, landmarks)`, async () => {
+    for (const r of ['workout', 'exercises', 'ranks', 'shop', 'profile', 'settings', 'numbers', 'history']) {
+      await page.goto(`${base}#/${r}`);
+      await page.waitForSelector('main h1');
+      const bad = await page.evaluate(() => {
+        const out = [];
+        const name = (el) => (el.getAttribute('aria-label') || el.getAttribute('aria-labelledby') || el.textContent || el.getAttribute('title') || '').trim();
+        document.querySelectorAll('button, a[href]').forEach((el) => { if (!name(el) && !el.querySelector('img[alt]:not([alt=""])')) out.push(`unnamed ${el.tagName}.${el.className}`); });
+        document.querySelectorAll('input:not([type=hidden]), select, textarea').forEach((el) => { if (!el.getAttribute('aria-label') && !el.id && !el.closest('label') && !el.getAttribute('aria-labelledby')) out.push(`unlabelled input.${el.className}`); });
+        document.querySelectorAll('img').forEach((el) => { if (!el.hasAttribute('alt')) out.push('img without alt'); });
+        if (!document.documentElement.lang) out.push('no lang');
+        if (!document.querySelector('main')) out.push('no main');
+        if (document.querySelectorAll('h1').length !== 1) out.push(`h1 count ${document.querySelectorAll('h1').length}`);
+        return out;
+      });
+      assert.deepEqual(bad, [], `route ${r}`);
+    }
   });
 
   await check(`${lang}: sheet + toast + language toggle + tab bar`, async () => {

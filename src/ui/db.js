@@ -1,7 +1,7 @@
 // IndexedDB wrapper. One database, versioned stores. Every call is promise based and may reject (private mode etc.).
 const NAME = 'demigod';
 const VERSION = 4;
-const STORES = { kv: undefined, profile: undefined, bodyweight: 'dateKeyTime', workouts: 'id', bests: undefined, draft: undefined, routines: 'id', folders: 'id', plans: 'id', custom: 'id', blobs: undefined, game: undefined };
+export const STORES = { kv: undefined, profile: undefined, bodyweight: 'dateKeyTime', workouts: 'id', bests: undefined, draft: undefined, routines: 'id', folders: 'id', plans: 'id', custom: 'id', blobs: undefined, game: undefined };
 
 let dbp = null;
 export function openDb() {
@@ -32,7 +32,7 @@ export async function dbDelete(store, key) {
   const db = await openDb();
   return new Promise((res, rej) => { const tx = db.transaction(store, 'readwrite'); tx.objectStore(store).delete(key); tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
 }
-/** Several writes in one transaction (all or nothing). ops: [['put', store, value, key?] | ['delete', store, key]] */
+/** Several writes in one transaction (all or nothing). ops: [['put', store, value, key?] | ['delete', store, key] | ['clear', store]] */
 export async function dbBatch(ops) {
   const db = await openDb();
   const names = [...new Set(ops.map((o) => o[1]))];
@@ -40,7 +40,7 @@ export async function dbBatch(ops) {
     const tx = db.transaction(names, 'readwrite');
     for (const [kind, store, a, b] of ops) {
       const os = tx.objectStore(store);
-      if (kind === 'put') os.put(a, b); else os.delete(a);
+      if (kind === 'put') os.put(a, b); else if (kind === 'clear') os.clear(); else os.delete(a);
     }
     tx.oncomplete = res; tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
   });

@@ -15,3 +15,7 @@
 - Stage 6: new IndexedDB store `game` (database version 4): XP, level, drachmas, streak, quest claims, inventory, achievements. Each saved workout keeps its own `rewards` record.
 - Stage 6: no clawback. Deleting or editing a workout never takes XP, drachmas or achievements back. An XP Shake waits for the next valid workout (3+ done working sets) and is not used up by an invalid one.
 - Stage 6: all numbers (XP, prices, quests, streak rules) are OUR DESIGN, listed in `docs/ASSUMPTIONS.md`.
+- Stage 7: settings live in `getSettings()/updateSettings()` (src/ui/storage.js); main.js re-applies language, accent and motion on every change. Backup = `src/core/backup.mjs` + `src/ui/backup.js`; import is one IndexedDB transaction (`dbBatch` got a `clear` op). The first onboarding screen has "I already have a backup" so a new or wiped phone can restore.
+- Stage 7: `docs/ASSUMPTIONS.he.md` is the Hebrew copy of the assumptions. Keep both files in step, then run `npm run numbers`.
+- Stage 7 not done: Lighthouse could not be run in the sandbox (Chrome showed an interstitial for localhost). We checked manifest, service worker, offline, install icons, overflow, 44 px touch targets and accessible names with our own Playwright checks instead. Real-iPhone items still unverified: Wake Lock, audio after lock, Web Share of the backup file, install to home screen.
+- Outside scope, noticed: the exercise list still renders 300 rows at once (content-visibility keeps it smooth); worth virtualising only if it feels slow on an older phone.

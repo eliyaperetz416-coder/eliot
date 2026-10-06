@@ -16,6 +16,8 @@ import { plansScreen, planScreen } from './plans.js';
 import { customFormScreen } from './custom.js';
 import { shopScreen } from './shop.js';
 import { achievementsScreen } from './game-ui.js';
+import { settingsScreen } from './settings.js';
+import { numbersScreen } from './numbers.js';
 import { store } from './store.js';
 import { ranksPreviewScreen } from './ranks-preview.js';
 
@@ -79,6 +81,8 @@ export function buildScreens(ctx) {
     shop: shopScreen,
     achievements: achievementsScreen,
     profile: () => profileScreen(ctx),
+    settings: () => settingsScreen(ctx),
+    numbers: numbersScreen,
     kit,
   };
 }

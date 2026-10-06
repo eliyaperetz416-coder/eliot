@@ -435,3 +435,15 @@ a.btn { text-decoration: none; }
 @keyframes xpfloat { from { opacity: 1; transform: translate(-50%, 0); } to { opacity: 0; transform: translate(-50%, -48px); } }
 .dust { position: absolute; top: -10px; width: 6px; height: 6px; border-radius: 50%; background: #ffd76a; box-shadow: 0 0 8px #ffc43d; animation: dustfall linear infinite; }
 @keyframes dustfall { to { transform: translateY(110vh); opacity: .2; } }
+
+/* Stage 7: settings, numbers, backup reminder */
+.numbers .card { margin-block-start: 12px; }
+.numbers summary { font-weight: 700; font-size: 1rem; min-block-size: 44px; display: flex; align-items: center; cursor: pointer; }
+.numbers details[open] > summary { margin-block-end: 8px; }
+.numbers p, .numbers li { color: var(--text-dim); line-height: 1.55; }
+.numbers p { margin: 0 0 8px; }
+.numbers strong { color: var(--text); }
+.numbers code { font-size: .85em; background: var(--surface-3); padding: 1px 5px; border-radius: 6px; overflow-wrap: anywhere; }
+.numbers-list { margin: 0; padding-inline-start: 1.2em; display: grid; gap: 8px; }
+.backup-reminder { margin-block-end: 12px; }
+.backup-reminder h2 { margin: 0 0 4px; font-size: 1rem; }

@@ -6,6 +6,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   accentMode: 'rank',    // 'rank' | 'fixed'
   reducedMotion: false,
   lastExportAt: null,
+  reminderSnoozedUntil: null, // export reminder hidden until this time
 });
 
 const migrations = {

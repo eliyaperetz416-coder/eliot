@@ -2,6 +2,7 @@ import { h } from './dom.js';
 import { icon } from './icons.js';
 import { t, getLanguage } from '../core/i18n.mjs';
 import { button, numberField, segmented } from './components.js';
+import { pickBackupFile } from './settings.js';
 import { emblem } from './emblem.js';
 import { validateProfile, makeProfile } from '../core/profile.mjs';
 
@@ -28,7 +29,7 @@ export function onboarding({ onLanguage, onDone }) {
       h('p', { class: 'ob-lead', text: t('app.tagline') }),
       h('div', { class: 'section-label', text: t('ob.lang.title') }),
       h('div', { class: 'stack' }, opt('he', t('lang.he')), opt('en', t('lang.en'))),
-      h('div', { class: 'ob-actions' }, button({ label: t('common.continue'), block: true, onClick: () => { step = 1; render(); } })));
+      h('div', { class: 'ob-actions' }, button({ label: t('common.continue'), block: true, onClick: () => { step = 1; render(); } }), button({ label: t('ob.restore'), variant: 'ghost', icon: 'upload', block: true, onClick: pickBackupFile })));
   }
 
   function stepYou() {

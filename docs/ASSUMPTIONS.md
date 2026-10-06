@@ -69,3 +69,11 @@ seasons and leaderboards exist (server features, not built here), about 600 exer
 - **Shop:** 15 cosmetics (6 backgrounds, 5 frames, 4 effects, 100-1000 drachmas) drawn with canvas code, no external assets. Cosmetics only; they never change a rank. Equipped items appear on the player card, and Golden Dust also falls on the rank-up screen.
 - **Achievements:** 27 in `src/data/achievements.json`, each with a small drachma reward, unlocked once (workouts, streaks, PRs, overall tiers Bronze to Greek God, total volume, exercises tried, first custom exercise, first generated plan). The highest overall rank ever reached is remembered, so an achievement is never lost.
 - **Not rolled back:** deleting or editing a past workout does not take away XP, drachmas, streak days or achievements it already paid (there is no server to cheat against, and it keeps things predictable).
+
+## Stage 7 (backup, settings, polish)
+**OUR DESIGN:**
+- **Backup:** one JSON file (`demigod-backup-YYYY-MM-DD.json`) with a schema version, app version, export time and checksum. It holds profile, bodyweight, workouts, saved workouts, folders, plans, custom exercises (with their photos), game state and preferences. It does not hold a workout in progress. The checksum detects a damaged or hand-edited file; it is not protection against forgery.
+- **Import:** the file is validated before anything is touched. **Replace** wipes everything on the phone and restores the backup. **Merge** keeps what you have and adds what is missing (matched by id). In a merge the profile and game progress (XP, drachmas, streak) stay as on this phone, except achievements (union) and the best rank reached; if the phone has no workouts yet, the backup's profile and game are taken as they are. The import is one database transaction: everything goes in or nothing changes.
+- **Backup reminder:** after 28 days without a backup (or 28 days after the first workout if you never backed up) a card appears on the workout screen. "Later" hides it for 3 days.
+- **Reset:** deletes all data on the device and needs a typed confirmation word.
+- **Storage:** the app asks the browser for persistent storage. iOS may clear sites that were not opened for seven days when the app is not on the home screen, so a backup is the safety net.
