@@ -110,6 +110,7 @@ export function liveScreen() {
     unlockAudio();
     const bw = bodyweightKg();
     completeSet({ workout: w, entryId: entry.id, idx: s.idx, now: Date.now(), bodyweightKg: bw, sex: store.profile.sex, workouts: store.workouts, byId });
+    if (s.type !== 'warmup') floatXp(entry.id, s.idx, 10 + (s.prWeekly || s.prAllTime ? 25 : 0));
     if (entry.target?.find && s.type !== 'warmup' && s.weight > 0) for (const x of entry.sets) if (!x.done && x.weight == null) x.weight = s.weight; // first working set sets the weight for the rest
     const idx = w.entries.indexOf(entry);
     const next = w.entries[idx + 1];
@@ -126,6 +127,17 @@ export function liveScreen() {
     else if (fb.pr.weekly) bits.push(h('span', { class: 'pr-badge pr-week', text: t('fb.pr.week') }));
     else if (fb.pr.first) bits.push(h('span', { class: 'pr-badge pr-first', text: t('fb.pr.first') }));
     return h('div', { class: 'set-fb' }, bits);
+  }
+
+  function floatXp(entryId, idx, xp) {
+    setTimeout(() => {
+      const btn = [...document.querySelectorAll('.ent-card')][w.entries.findIndex((e) => e.id === entryId)]?.querySelectorAll('.set-v')[idx];
+      if (!btn) return;
+      const r = btn.getBoundingClientRect();
+      const f = h('span', { class: 'xp-float num', 'aria-hidden': 'true', style: `left:${Math.round(r.left + r.width / 2)}px;top:${Math.round(r.top)}px`, text: `+${xp} XP` });
+      document.body.append(f);
+      setTimeout(() => f.remove(), 1100);
+    }, 30);
   }
 
   function targetLine(tg) {

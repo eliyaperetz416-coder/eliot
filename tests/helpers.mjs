@@ -29,3 +29,21 @@ export function session(plan, workouts, now, bw = 80, sex = 'm') {
   const d = draftWith(plan, workouts, now, bw);
   return postWorkout({ draft: d, workouts, now: now + HOUR, byId, sex }).workouts;
 }
+
+import { readFileSync as _read } from 'node:fs';
+import { applyPost, newGame } from '../src/core/gamestate.mjs';
+import { rankIndex } from '../src/core/post.mjs';
+export const pool = JSON.parse(_read(new URL('../src/data/quests.json', import.meta.url), 'utf8'));
+export const achievements = JSON.parse(_read(new URL('../src/data/achievements.json', import.meta.url), 'utf8'));
+export const shop = JSON.parse(_read(new URL('../src/data/shop.json', import.meta.url), 'utf8'));
+export { newGame };
+
+/** Posts a plan and applies the game rules, the way the app does. Returns { workouts, game, rewards, workout }. */
+export function playSession(plan, workouts, game, now, { bw = 80, extra = {} } = {}) {
+  const draft = draftWith(plan, workouts, now, bw);
+  const r = postWorkout({ draft, workouts, now: now + HOUR, byId, sex: 'm' });
+  const rankIdx = r.summary.overallAfter.pending ? -1 : rankIndex(r.summary.overallAfter.rating);
+  const res = applyPost({ game, workout: r.workout, workouts: r.workouts, byId, now: now + HOUR, overallRankIndex: rankIdx, achievements, pool, ...extra });
+  return { workouts: r.workouts, game: res.game, rewards: res.rewards, workout: r.workout };
+}
+export const THREE = [['bench', 100, 5], ['bench', 100, 5], ['bench', 100, 5]]; // a valid workout (3 working sets)

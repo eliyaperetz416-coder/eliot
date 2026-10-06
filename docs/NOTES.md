@@ -12,3 +12,6 @@
 - Stage 5: new IndexedDB stores `routines`, `folders`, `plans`, `custom`, `blobs` (database version 3). Custom exercises are merged into the in-memory library at start-up, with their photo turned into an object URL.
 - Stage 5: "Start workout" now opens the "Which workout today?" sheet instead of an empty workout (an empty workout is one tap away in the same sheet).
 - Not done on purpose: Hebrew names for custom exercises are the same text as the English field (one name field); templates are generated with the current library, so exercise choices vary a little between creations.
+- Stage 6: new IndexedDB store `game` (database version 4): XP, level, drachmas, streak, quest claims, inventory, achievements. Each saved workout keeps its own `rewards` record.
+- Stage 6: no clawback. Deleting or editing a workout never takes XP, drachmas or achievements back. An XP Shake waits for the next valid workout (3+ done working sets) and is not used up by an invalid one.
+- Stage 6: all numbers (XP, prices, quests, streak rules) are OUR DESIGN, listed in `docs/ASSUMPTIONS.md`.

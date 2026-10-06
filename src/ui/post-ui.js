@@ -3,7 +3,9 @@ import { h } from './dom.js';
 import { icon } from './icons.js';
 import { t, getLanguage } from '../core/i18n.mjs';
 import * as W from '../core/workout.mjs';
-import { postWorkout } from '../core/post.mjs';
+import { postWorkout, rankIndex } from '../core/post.mjs';
+import { applyPost } from '../core/gamestate.mjs';
+import { rewardsCard } from './game-ui.js';
 import { tierFor } from '../core/ranks.mjs';
 import { button, emptyState, openSheet } from './components.js';
 import { data } from './data.js';
@@ -37,9 +39,12 @@ export function openFinishSheet() {
   } else {
     body.append(button({ label: t('fin.post'), block: true, onClick: async (e) => {
       e.currentTarget.disabled = true;
-      const result = postWorkout({ draft: w, workouts: store.workouts, now: Date.now(), byId, sex: store.profile.sex });
-      await commitPost(result);
-      lastResult = result;
+      const now = Date.now();
+      const result = postWorkout({ draft: w, workouts: store.workouts, now, byId, sex: store.profile.sex });
+      const after = result.summary.overallAfter;
+      const g = applyPost({ game: store.game, workout: result.workout, workouts: result.workouts, byId, now, overallRankIndex: after.pending ? -1 : rankIndex(after.rating), customCount: store.custom.length, plansCount: store.plans.length, achievements: data().achievements, pool: data().quests });
+      await commitPost(result, g.game);
+      lastResult = { ...result, game: g.game, rewards: g.rewards };
       skipRest(); keepAwake(false);
       sh.close();
       location.hash = '#/result';
@@ -71,6 +76,7 @@ export function openRankUp({ change, before, after }) {
       h('div', { class: 'ru-tier display', text: to.tier === 'greekgod' ? t('tier.greekgod') : `${t(`tier.${to.tier}`)} ${to.division}` }),
       num,
       button({ label: t('ru.continue'), block: true, onClick: close })));
+  if (store.game.inventory.equipped.effect === 'fx_dust' && !reducedMotion()) for (let i = 0; i < 36; i++) ov.append(h('span', { class: 'dust', style: `left:${Math.round(Math.random() * 100)}%;animation-delay:${(Math.random() * 2).toFixed(2)}s;animation-duration:${(2 + Math.random() * 2).toFixed(2)}s` }));
   document.getElementById('overlay-root').append(ov);
   document.getElementById('app').inert = true;
   ov.querySelector('button').focus();
@@ -96,6 +102,8 @@ export function resultScreen() {
     h('div', { class: 'stats-grid' },
       statTile(t('fin.duration'), formatDuration(s.stats.durationSec)), statTile(t('fin.sets'), String(s.stats.workingSets)),
       statTile(t('fin.volume'), `${formatNum(s.stats.volume, 0)} ${t('unit.kg')}`), statTile(t('fin.prs'), String(s.stats.prs))),
+    h('div', { class: 'section-label', text: t('rewards.title') }),
+    rewardsCard(r.rewards, r.game),
     h('div', { class: 'section-label', text: t('res.overall') }),
     rankCard(s.overallAfter, { title: false }),
   ];
@@ -105,7 +113,7 @@ export function resultScreen() {
       h('div', { class: 'list' }, s.ratingChanges.map((c) => {
         const tr = tierFor(c.after);
         return h('div', { class: 'row' }, h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: nameOf(byId[c.exerciseId]) }),
-          h('span', { class: 'row-sub num', text: `${c.before ? formatNum(c.before, 0) : '–'} → ${formatNum(c.after, 0)} · ${t(`tier.${tr.tier}`)}${tr.division ? ` ${tr.division}` : ''}` })), icon('bolt', 'up-icon'));
+          h('span', { class: 'row-sub' }, h('bdi', { class: 'num', text: `${c.before ? formatNum(c.before, 0) : '–'} → ${formatNum(c.after, 0)} · ${t(`tier.${tr.tier}`)}${tr.division ? ` ${tr.division}` : ''}` }))), icon('bolt', 'up-icon'));
       })));
   }
   if (s.prs.length) {

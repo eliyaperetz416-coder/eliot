@@ -3,10 +3,12 @@ import { icon } from './icons.js';
 import { t, getLanguage } from '../core/i18n.mjs';
 import { button, list, listRow, numberField, openSheet, segmented, showToast } from './components.js';
 import { store, saveProfile, bodyweightKg } from './store.js';
+import { data } from './data.js';
 import { validateProfile } from '../core/profile.mjs';
 import { rankCard } from './rank-card.js';
 import { formatDate, formatKg, formatNum } from './format.js';
 import { APP_VERSION } from '../version.js';
+import { levelBar, gameStrip } from './game-ui.js';
 
 const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 
@@ -63,6 +65,8 @@ export function profileScreen({ onLanguage }) {
     const kids = [
       h('header', { class: 'screen-head' }, icon('bolt', 'mark'), h('h1', { text: p.name })),
       rankCard(store.overall),
+      h('section', { class: 'card' }, levelBar(), h('div', { style: 'padding-block-start:10px' }, gameStrip())),
+      list([listRow({ title: t('ach.title'), sub: t('ach.count', { n: Object.keys(store.game.achievements.unlocked).length, total: data().achievements.length }), icon: 'trophy', onClick: () => { location.hash = '#/achievements'; } }), listRow({ title: t('tab.shop'), sub: t('game.drachmas'), icon: 'coin', end: h('span', { class: 'num', text: formatNum(store.game.drachmas, 0) }), onClick: () => { location.hash = '#/shop'; } })]),
       h('div', { class: 'section-label', text: t('profile.you') }),
       list([
         listRow({ title: t('ob.curve'), icon: 'profile', end: t(p.sex === 'm' ? 'ob.curve.m' : 'ob.curve.f') }),

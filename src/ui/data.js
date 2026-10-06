@@ -3,8 +3,8 @@ let cache = null;
 export async function loadData() {
   if (cache) return cache;
   const get = (p) => fetch(p).then((r) => r.json());
-  const [ex, cal, muscles] = await Promise.all([get('src/data/exercises.json'), get('src/data/calibration.json'), get('src/data/muscles.json')]);
-  cache = { exercises: ex.exercises, byId: Object.fromEntries(ex.exercises.map((e) => [e.id, e])), families: cal.families, ratios: cal.ratios, muscles };
+  const [ex, cal, muscles, quests, shop, achievements] = await Promise.all([get('src/data/exercises.json'), get('src/data/calibration.json'), get('src/data/muscles.json'), get('src/data/quests.json'), get('src/data/shop.json'), get('src/data/achievements.json')]);
+  cache = { exercises: ex.exercises, byId: Object.fromEntries(ex.exercises.map((e) => [e.id, e])), families: cal.families, ratios: cal.ratios, muscles, quests, shop, achievements };
   return cache;
 }
 export const data = () => cache;

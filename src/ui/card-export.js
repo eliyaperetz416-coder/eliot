@@ -5,9 +5,11 @@ import { t, getLanguage } from '../core/i18n.mjs';
 import { cardModel, cardFileName } from '../core/card.mjs';
 import { TIER_COLORS } from '../core/ranks.mjs';
 import { button } from './components.js';
-import { store } from './store.js';
+import { store, todayKey } from './store.js';
+import { data } from './data.js';
 import { emblem } from './emblem.js';
 import { formatNum } from './format.js';
+import { paintBackground, paintFrame, paintEffect } from './cosmetics.js';
 
 const W = 1080, H = 1350;
 
@@ -27,11 +29,15 @@ export async function renderCard(model) {
   const g = c.getContext('2d');
   g.direction = rtl ? 'rtl' : 'ltr'; g.textAlign = 'center';
   const accent = model.tier ? TIER_COLORS[model.tier] : '#ffc43d';
-  // background
+  // background (an equipped one replaces the plain dark card)
+  const [bgItem, frItem, fxItem] = model.slots;
   g.fillStyle = '#0a0b12'; g.fillRect(0, 0, W, H);
+  if (bgItem) { paintBackground(g, bgItem.art, W, H); g.fillStyle = 'rgba(8,9,16,.35)'; g.fillRect(0, 0, W, H); }
   const glow = g.createRadialGradient(W / 2, 470, 40, W / 2, 470, 720);
   glow.addColorStop(0, `${accent}55`); glow.addColorStop(1, '#0a0b1200');
   g.fillStyle = glow; g.fillRect(0, 0, W, H);
+  const ecx = W / 2, ecy = 290 + (400 * (168 / 160)) / 2, erad = 230;
+  if (fxItem) paintEffect(g, fxItem.art, ecx, ecy, erad, W, H, accent);
   g.strokeStyle = `${accent}88`; g.lineWidth = 6; g.beginPath(); g.roundRect(30, 30, W - 60, H - 60, 56); g.stroke();
   // title and name
   g.fillStyle = accent; g.font = '700 54px Cinzel, serif'; g.fillText('DEMIGOD', W / 2, 130);
@@ -41,6 +47,7 @@ export async function renderCard(model) {
   const img = await svgToImage(em.querySelector('svg'));
   const eh = 400 * (168 / 160);
   g.drawImage(img, (W - 400) / 2, 290, 400, eh);
+  if (frItem) paintFrame(g, frItem.art, ecx, ecy, erad, W, H, accent);
   // rank text
   const ty = 290 + eh + 85;
   g.fillStyle = '#f4f5fa'; g.font = '700 76px Cinzel, serif';
@@ -68,7 +75,7 @@ export async function renderCard(model) {
   const items = [[t('card.level'), model.level], [t('card.streak'), model.streak], [t('card.achievements'), model.achievements]];
   (rtl ? items.reverse() : items).forEach(([label, v], i) => stat(xs[i], label, v));
   g.strokeStyle = '#3a3f5e'; g.setLineDash([10, 10]); g.lineWidth = 4;
-  model.slots.forEach((_, i) => { g.beginPath(); g.arc(W / 2 + (i - 1) * 150, H - 120, 42, 0, Math.PI * 2); g.stroke(); });
+  model.slots.forEach((slot, i) => { g.beginPath(); g.arc(W / 2 + (i - 1) * 150, H - 120, 42, 0, Math.PI * 2); if (slot) { g.fillStyle = '#11131f'; g.fill(); g.setLineDash([]); g.strokeStyle = accent; g.stroke(); g.fillStyle = accent; g.font = '700 18px Heebo, system-ui, sans-serif'; g.fillText((getLanguage() === 'he' ? slot.nameHe : slot.nameEn).split(' ')[0].slice(0, 8), W / 2 + (i - 1) * 150, H - 112); g.strokeStyle = '#3a3f5e'; g.setLineDash([10, 10]); } else g.stroke(); });
   g.setLineDash([]);
   return c;
 }
@@ -89,7 +96,7 @@ export async function saveCard(canvas, name) {
 }
 
 export function cardScreen() {
-  const model = cardModel({ profile: store.profile, overall: store.overall, workoutsCount: store.workouts.length });
+  const model = cardModel({ profile: store.profile, overall: store.overall, workoutsCount: store.workouts.length, game: store.game, todayKey: todayKey(), shop: data().shop });
   const box = h('div', { class: 'card-preview', 'aria-busy': 'true' });
   const msg = h('p', { class: 'row-sub center', role: 'status' });
   let canvas = null;

@@ -14,6 +14,7 @@ import { list, listRow } from './components.js';
 import { openChooseWorkout, startFromRoutine, startFromPlanDay, activePlan } from './routines.js';
 import { nextPlanDay, planProgress } from '../core/generator.mjs';
 import { planDayLabel } from './plan-names.js';
+import { gameStrip, questsCard, streakCard } from './game-ui.js';
 
 const nameOf = (ex) => (getLanguage() === 'he' ? ex.nameHe : ex.nameEn);
 
@@ -42,6 +43,7 @@ export function startScreen() {
   const next = plan ? nextPlanDay(plan) : null;
   const kids = [
     h('header', { class: 'screen-head' }, icon('bolt', 'mark'), h('h1', { text: t('workout.title') })),
+    gameStrip(),
     rankCard(store.overall),
     h('div', { class: 'stack', style: 'padding-block:16px' }, button({ label: t('wk.start'), icon: 'workout', block: true, onClick: openChooseWorkout })),
   ];
@@ -52,6 +54,10 @@ export function startScreen() {
       h('div', { class: 'row-sub', text: `${t('choose.plan.sub', { week: next.week, day: next.day })} · ${planProgress(plan).done}/${planProgress(plan).total}` }),
       h('div', { class: 'stack', style: 'padding-block-start:8px' }, button({ label: t('routines.start'), block: true, onClick: () => startFromPlanDay(plan, next) }))));
   }
+  const questBox = h('div', {});
+  const redraw = () => { questBox.replaceChildren(streakCard(redraw), questsCard(redraw)); };
+  redraw();
+  kids.push(questBox);
   kids.push(h('div', { class: 'section-label', text: t('choose.mine') }));
   if (store.routines.length) {
     kids.push(list(store.routines.slice(-4).reverse().map((r) => h('div', { class: 'row routine-row' },

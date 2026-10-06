@@ -6,8 +6,13 @@ import { overallRating } from '../core/ranks.mjs';
 import { latestBodyweight, bodyweightEntry } from '../core/profile.mjs';
 import { data, registerCustom, unregisterCustom } from './data.js';
 import { markPlanDone } from '../core/generator.mjs';
+import { newGame, migrateGame, evaluateAchievements } from '../core/gamestate.mjs';
+import { dateKey } from '../core/workout.mjs';
 
-export const store = { profile: null, bwLog: [], workouts: [], draft: null, bests: {}, overall: { pending: true, remaining: 3, rating: 0 }, routines: [], folders: [], plans: [], custom: [] };
+export const store = { profile: null, bwLog: [], workouts: [], draft: null, bests: {}, overall: { pending: true, remaining: 3, rating: 0 }, routines: [], folders: [], plans: [], custom: [], game: newGame() };
+export const todayKey = () => dateKey(Date.now());
+let achievementListener = null;
+export const onAchievements = (fn) => { achievementListener = fn; };
 const listeners = new Set();
 export const subscribe = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
 const emit = () => listeners.forEach((fn) => fn());
@@ -32,10 +37,11 @@ async function loadCustom() {
 }
 
 export async function initStore() {
-  const [profile, bw, workouts, draftDb, routines, folders, plans] = await Promise.all([
+  const [profile, bw, workouts, draftDb, routines, folders, plans, gameRaw] = await Promise.all([
     dbGet('profile', 'me').catch(() => null), dbAll('bodyweight').catch(() => []), dbAll('workouts').catch(() => []), dbGet('draft', 'current').catch(() => null),
-    dbAll('routines').catch(() => []), dbAll('folders').catch(() => []), dbAll('plans').catch(() => []),
+    dbAll('routines').catch(() => []), dbAll('folders').catch(() => []), dbAll('plans').catch(() => []), dbGet('game', 'me').catch(() => null),
   ]);
+  store.game = migrateGame(gameRaw);
   store.routines = routines.sort((a, b) => a.createdMs - b.createdMs); store.folders = folders; store.plans = plans.sort((a, b) => a.createdMs - b.createdMs);
   await loadCustom();
   store.profile = profile ?? null;
@@ -85,8 +91,23 @@ addEventListener('visibilitychange', () => { if (document.visibilityState === 'h
 addEventListener('pagehide', flushDraft);
 
 /** Commit a posted workout (result of postWorkout). Atomic: workout + cleared draft in one transaction. */
-export async function commitPost(result) {
+export async function saveGame(g) {
+  store.game = g;
+  await dbPut('game', g, 'me').catch(() => {});
+  emit();
+}
+/** Achievements that can be earned outside a workout (custom exercise, generated plan). */
+export async function awardAchievements() {
+  const r = evaluateAchievements({ game: store.game, achievements: data().achievements, workouts: store.workouts, customCount: store.custom.length, plansCount: store.plans.length, dayKey: todayKey() });
+  if (!r.unlocked.length) return [];
+  await saveGame(r.game);
+  achievementListener?.(r.unlocked, r.reward);
+  return r.unlocked;
+}
+
+export async function commitPost(result, game = null) {
   store.workouts = result.workouts;
+  if (game) store.game = game;
   const ops = [];
   const pid = result.workout.planDayId;
   if (pid) {
@@ -97,6 +118,7 @@ export async function commitPost(result) {
   clearTimeout(timer);
   store.draft = null;
   try { localStorage.removeItem(LS_DRAFT); } catch { /* ignore */ }
+  if (game) ops.push(['put', 'game', game, 'me']);
   await dbBatch([...ops, ...result.workouts.map((w) => ['put', 'workouts', w]), ['delete', 'draft', 'current']]);
   emit();
 }
@@ -132,6 +154,7 @@ export async function savePlan(p) {
   const i = store.plans.findIndex((x) => x.id === p.id);
   if (i >= 0) store.plans[i] = p; else store.plans.push(p);
   await dbPut('plans', p); emit();
+  await awardAchievements();
 }
 export async function deletePlan(id) { store.plans = store.plans.filter((p) => p.id !== id); await dbDelete('plans', id); emit(); }
 
@@ -147,6 +170,7 @@ export async function saveCustom(ex, blob = null) {
   if (ex.imageBlobId) { const b = blob ?? await dbGet('blobs', ex.imageBlobId).catch(() => null); if (b) { url = URL.createObjectURL(b); urls.set(ex.id, url); } }
   const rec = registerCustom(ex, url);
   emit();
+  await awardAchievements();
   return rec;
 }
 /** Where a custom exercise is used: blocks deleting it. */

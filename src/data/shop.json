@@ -1,0 +1,25 @@
+{
+  "consumables": [
+    { "id": "super", "price": 150, "nameEn": "Super restore", "nameHe": "שחזור סופר", "descEn": "Brings back a broken streak of up to 30 days", "descHe": "מחזיר רצף שנשבר באורך של עד 30 ימים" },
+    { "id": "mega", "price": 300, "nameEn": "Mega restore", "nameHe": "שחזור מגה", "descEn": "Brings back a broken streak of up to 60 days", "descHe": "מחזיר רצף שנשבר באורך של עד 60 ימים" },
+    { "id": "revive", "price": 500, "nameEn": "Revive", "nameHe": "החייאה", "descEn": "Brings back a broken streak of any length", "descHe": "מחזיר רצף שנשבר בכל אורך" },
+    { "id": "xpshake", "price": 100, "nameEn": "XP Shake", "nameHe": "שייק XP", "descEn": "Doubles the XP of your next posted workout", "descHe": "מכפיל את ה-XP של האימון הבא שתפרסמו" }
+  ],
+  "cosmetics": [
+    { "id": "bg_storm", "kind": "background", "price": 100, "art": "storm", "nameEn": "Storm Clouds", "nameHe": "עננים סוערים", "descEn": "Thunder rolling in", "descHe": "רעמים מתקרבים" },
+    { "id": "bg_garden", "kind": "background", "price": 200, "art": "garden", "nameEn": "Laurel Garden", "nameHe": "גן הדפנה", "descEn": "Quiet green under laurel leaves", "descHe": "ירוק שקט תחת עלי דפנה" },
+    { "id": "bg_marble", "kind": "background", "price": 250, "art": "marble", "nameEn": "Marble Hall", "nameHe": "אולם השיש", "descEn": "Cold stone and gold veins", "descHe": "אבן קרה ורידי זהב" },
+    { "id": "bg_dawn", "kind": "background", "price": 300, "art": "dawn", "nameEn": "Olympus Dawn", "nameHe": "שחר באולימפוס", "descEn": "The sun rises over the summit", "descHe": "השמש זורחת מעל הפסגה" },
+    { "id": "bg_forge", "kind": "background", "price": 400, "art": "forge", "nameEn": "Forge", "nameHe": "הנפחייה", "descEn": "Embers from the divine anvil", "descHe": "גחלים מהסדן האלוהי" },
+    { "id": "bg_stars", "kind": "background", "price": 500, "art": "stars", "nameEn": "Starfield", "nameHe": "שדה כוכבים", "descEn": "A sky full of constellations", "descHe": "שמיים מלאי קבוצות כוכבים" },
+    { "id": "fr_laurel", "kind": "frame", "price": 300, "art": "laurel", "nameEn": "Laurel Wreath", "nameHe": "זר דפנה", "descEn": "The crown of victors", "descHe": "הכתר של המנצחים" },
+    { "id": "fr_meander", "kind": "frame", "price": 400, "art": "meander", "nameEn": "Greek Key", "nameHe": "מסגרת מאנדר", "descEn": "The endless pattern", "descHe": "הדוגמה שאינה נגמרת" },
+    { "id": "fr_thunder", "kind": "frame", "price": 500, "art": "thunder", "nameEn": "Thunder Frame", "nameHe": "מסגרת ברק", "descEn": "Lightning around the edge", "descHe": "ברק לאורך הקצה" },
+    { "id": "fr_helm", "kind": "frame", "price": 700, "art": "helm", "nameEn": "Warrior's Helm", "nameHe": "קסדת לוחם", "descEn": "A crest above the emblem", "descHe": "ציץ מעל הסמל" },
+    { "id": "fr_wings", "kind": "frame", "price": 800, "art": "wings", "nameEn": "Wings of Hermes", "nameHe": "כנפי הרמס", "descEn": "Wings spread wide", "descHe": "כנפיים פרושות" },
+    { "id": "fx_glow", "kind": "effect", "price": 600, "art": "glow", "nameEn": "Card Glow", "nameHe": "זוהר לכרטיס", "descEn": "A halo in your rank colour", "descHe": "הילה בצבע הדרגה" },
+    { "id": "fx_ember", "kind": "effect", "price": 700, "art": "ember", "nameEn": "Rising Embers", "nameHe": "גחלים עולות", "descEn": "Sparks drifting upward", "descHe": "ניצוצות שעולים למעלה" },
+    { "id": "fx_sparks", "kind": "effect", "price": 800, "art": "sparks", "nameEn": "Lightning Sparks", "nameHe": "ניצוצות ברק", "descEn": "Crackling bolts around the emblem", "descHe": "ברקים סביב הסמל" },
+    { "id": "fx_dust", "kind": "effect", "price": 1000, "art": "dust", "nameEn": "Golden Dust", "nameHe": "אבק זהב", "descEn": "Gold falls on the card and on every rank-up", "descHe": "זהב נופל על הכרטיס ובכל עליית דרגה" }
+  ]
+}

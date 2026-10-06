@@ -73,7 +73,10 @@ test('card model: pending vs ranked, placeholders, file name', () => {
   const pend = cardModel({ profile, overall: { pending: true, remaining: 2 } });
   assert.deepEqual([pend.pending, pend.remaining, pend.tier, pend.rating], [true, 2, null, 0]);
   const ranked = cardModel({ profile, overall: { pending: false, rating: 563 }, workoutsCount: 3 });
-  assert.deepEqual([ranked.tier, ranked.division, ranked.lp, ranked.level, ranked.streak, ranked.achievements], ['platinum', 'II', 15, null, null, null]);
+  assert.deepEqual([ranked.tier, ranked.division, ranked.lp, ranked.level, ranked.streak, ranked.achievements], ['platinum', 'II', 15, null, null, null], 'no game state: dashes');
+  const g = { xp: 230, streak: { current: 4, best: 4, lastWorkoutDate: '2026-06-03', milestonesPaid: [], broken: null }, achievements: { unlocked: { a: 1, b: 2 } }, inventory: { equipped: { background: 'bg_storm', frame: null, effect: null } } };
+  const withGame = cardModel({ profile, overall: { pending: false, rating: 563 }, game: g, todayKey: '2026-06-04', shop: { cosmetics: [{ id: 'bg_storm', kind: 'background' }] } });
+  assert.deepEqual([withGame.level, withGame.streak, withGame.achievements, withGame.slots[0].id, withGame.slots[1]], [3, 4, 2, 'bg_storm', null]);
   assert.equal(ranked.slots.length, 3);
   assert.equal(cardModel({ profile, overall: { pending: false, rating: 1100 } }).division, null);
   assert.equal(cardFileName('Elia B.'), 'demigod-elia-b.png'); assert.equal(cardFileName(''), 'demigod-card.png'); assert.equal(cardFileName('אליה'), 'demigod-אליה.png');

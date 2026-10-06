@@ -4,7 +4,7 @@ import { buildScreens } from './ui/screens.js';
 import { tabBar, showToast } from './ui/components.js';
 import { loadSettings, saveSettings, requestPersistence } from './ui/storage.js';
 import { loadData } from './ui/data.js';
-import { initStore, store, saveProfile, subscribe } from './ui/store.js';
+import { initStore, store, saveProfile, subscribe, onAchievements } from './ui/store.js';
 import { onboarding } from './ui/onboarding.js';
 import { initRestTimer, refreshRestTimer } from './ui/rest-timer.js';
 import { keepAwake } from './ui/wakelock.js';
@@ -19,6 +19,7 @@ let settings;
 let screens;
 let dispose = null;
 
+const lang2 = () => document.documentElement.lang;
 function hexToRgb(hex) { const n = parseInt(hex.slice(1), 16); return `${(n >> 16) & 255} ${(n >> 8) & 255} ${n & 255}`; }
 
 /** The accent follows the overall rank (OUR DESIGN); gold while unranked or when set to fixed. */
@@ -55,7 +56,7 @@ function render() {
   const el = screens[id](param);
   dispose = el._dispose ?? null;
   app.replaceChildren(el);
-  const tab = { exercise: 'exercises', custom: 'exercises', history: 'profile', result: 'workout', routines: 'workout', routine: 'workout', plans: 'workout', plan: 'workout', progress: 'ranks', card: 'ranks' }[id] ?? id;
+  const tab = { exercise: 'exercises', custom: 'exercises', history: 'profile', achievements: 'profile', result: 'workout', routines: 'workout', routine: 'workout', plans: 'workout', plan: 'workout', progress: 'ranks', card: 'ranks' }[id] ?? id;
   nav.replaceChildren(TABS.some((x) => x.id === tab) ? tabBar({ tabs: TABS, current: tab }) : '');
   keepAwake(!!store.draft);
   window.scrollTo(0, 0);
@@ -92,6 +93,7 @@ async function boot() {
   applyAccent();
   render();
   initRestTimer(document.getElementById('rest-root'));
+  onAchievements((list, reward) => showToast({ message: t('ach.toast', { name: list.map((a) => (lang2() === 'he' ? a.nameHe : a.nameEn)).join(', '), n: reward }) }));
   let hadDraft = !!store.draft;
   subscribe(() => {
     applyAccent();

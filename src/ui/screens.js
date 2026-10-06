@@ -14,6 +14,8 @@ import { cardScreen } from './card-export.js';
 import { routinesScreen, routineEditScreen } from './routines.js';
 import { plansScreen, planScreen } from './plans.js';
 import { customFormScreen } from './custom.js';
+import { shopScreen } from './shop.js';
+import { achievementsScreen } from './game-ui.js';
 import { store } from './store.js';
 import { ranksPreviewScreen } from './ranks-preview.js';
 
@@ -74,7 +76,8 @@ export function buildScreens(ctx) {
     plan: (id) => planScreen(id),
     custom: (id) => customFormScreen(id),
     card: cardScreen,
-    shop: emptyScreen('shop', 'shop'),
+    shop: shopScreen,
+    achievements: achievementsScreen,
     profile: () => profileScreen(ctx),
     kit,
   };

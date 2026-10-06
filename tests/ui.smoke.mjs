@@ -10,7 +10,7 @@ mkdirSync(shots, { recursive: true });
 const server = await serve(0);
 const base = `http://localhost:${server.address().port}/`;
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-const ROUTES = ['workout', 'exercises', 'exercise/barbell-bench-press-medium-grip', 'exercise/plank', 'ranks', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'shop', 'profile', 'history', 'kit', 'ranks-preview'];
+const ROUTES = ['workout', 'exercises', 'exercise/barbell-bench-press-medium-grip', 'exercise/plank', 'ranks', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'profile', 'history', 'kit', 'ranks-preview'];
 const errors = [];
 let failed = 0;
 const ONLY = process.env.ONLY;
@@ -84,9 +84,9 @@ async function postThree(page) {
   await page.click('.live-head .btn');
   await page.waitForSelector('.sheet .btn-primary');
   await page.click('.sheet .btn-primary');
-  await page.waitForSelector('.rankup', { timeout: 5000 });
-  await page.click('.rankup button');
   await page.waitForSelector('main .stats-grid');
+  await page.waitForTimeout(800);
+  if (await page.locator('.rankup').count()) await page.click('.rankup button');
 }
 
 for (const lang of ['he', 'en']) {
@@ -478,6 +478,94 @@ for (const lang of ['he', 'en']) {
     await page.waitForTimeout(350);
     assert.equal(await page.locator('.ex-row', { hasText: 'My Cable Press 2' }).count(), 0);
     await page.fill('.search-input', '');
+  });
+
+  await check(`${lang}: game: rewards, level, quests, streak restore, shop (buy, equip, XP Shake), achievements, card cosmetics`, async () => {
+    // earlier checks already posted workouts today: free the daily reward limit so this check is self-contained
+    await page.evaluate(async () => {
+      const db = await new Promise((res, rej) => { const r = indexedDB.open('demigod'); r.onsuccess = () => res(r.result); r.onerror = rej; });
+      const all = await new Promise((res) => { const q = db.transaction('workouts').objectStore('workouts').getAll(); q.onsuccess = () => res(q.result); });
+      await new Promise((res) => { const tx = db.transaction('workouts', 'readwrite'); for (const w of all) { if (w.rewards) w.rewards.rewarded = false; tx.objectStore('workouts').put(w); } tx.oncomplete = res; });
+    });
+    await page.reload();
+    await page.waitForSelector('html[data-ready="1"]');
+    await postThree(page); // leaves us on the result screen
+    assert.ok(await page.locator('main .rewards').count() === 1, 'rewards card on the result screen');
+    assert.ok((await page.textContent('main .rewards')).includes('XP'));
+    await page.screenshot({ path: `${shots}${lang}-rewards.png`, fullPage: true });
+    // quests and streak on the Workout tab
+    await page.goto(`${base}#/workout`);
+    await page.waitForSelector('.quests');
+    assert.equal(await page.locator('.quest').count(), 4, '3 daily quests and 1 weekly');
+    assert.ok(await page.locator('.game-strip .game-chip').count() === 3);
+    assert.ok(await page.locator('.streak-card').count() === 1);
+    const claim = page.locator('.quest .btn-primary');
+    if (await claim.count()) { await claim.first().click(); await page.waitForSelector('.toast'); assert.ok(await page.locator('.quest.claimed').count() >= 1); }
+    await page.screenshot({ path: `${shots}${lang}-workout-game.png`, fullPage: true });
+    // floating +XP on V
+    await startEmpty(page);
+    await addExercise(page, 'barbell curl');
+    const card = page.locator('.ent-card').first();
+    await card.locator('.set-row').first().locator('.set-input').nth(0).fill('30');
+    await card.locator('.set-row').first().locator('.set-input').nth(1).fill('8');
+    await card.locator('.set-row').first().locator('.set-v').click();
+    await page.waitForSelector('.xp-float', { timeout: 2000 });
+    await page.click('.live-head .btn'); await page.waitForSelector('.sheet .btn-danger'); await page.click('.sheet .btn-danger'); await page.waitForSelector('.sheet .btn-danger'); await page.click('.sheet .btn-danger');
+    await page.waitForSelector('.live-head', { state: 'detached' });
+    // profile: level bar, achievements
+    await page.goto(`${base}#/profile`);
+    await page.waitForSelector('.level-bar');
+    await page.screenshot({ path: `${shots}${lang}-profile-game.png`, fullPage: true });
+    await page.goto(`${base}#/achievements`);
+    await page.waitForSelector('.ach-row');
+    assert.ok(await page.locator('.ach-row').count() >= 25);
+    assert.ok(await page.locator('.ach-row.unlocked').count() >= 1);
+    await page.screenshot({ path: `${shots}${lang}-achievements.png`, fullPage: true });
+    // shop: buy a background, equip it, buy an XP Shake and activate it
+    await page.goto(`${base}#/shop`);
+    await page.waitForSelector('.cosmetic');
+    assert.equal(await page.locator('.cosmetic').count(), 15);
+    const bal0 = Number((await page.textContent('.wallet-n')).replace(/[^0-9]/g, ''));
+    assert.ok(bal0 >= 100, `balance ${bal0}`);
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: `${shots}${lang}-shop.png`, fullPage: true });
+    await page.locator('.cosmetic').first().locator('.btn').click(); // Storm Clouds, 100
+    await page.waitForFunction((b) => Number(document.querySelector('.wallet-n').textContent.replace(/[^0-9]/g, '')) === b - 100, bal0);
+    await page.locator('.cosmetic').first().locator('.btn').click(); // equip
+    await page.waitForSelector('.cosmetic.equipped');
+    await page.locator('.shop-row', { hasText: /XP/ }).locator('.btn').last().click(); // buy XP Shake
+    await page.waitForFunction(() => [...document.querySelectorAll('.shop-row')].some((r) => /XP/.test(r.textContent) && r.querySelectorAll('.btn').length === 2));
+    await page.locator('.shop-row', { hasText: /XP/ }).locator('.btn').first().click(); // activate
+    await page.waitForSelector('.toast');
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: `${shots}${lang}-shop-after.png`, fullPage: true });
+    // the next posted workout is doubled by the shake
+    await postThree(page);
+    assert.ok((await page.textContent('main .rewards')).length > 20);
+    assert.ok(await page.locator('main .shake-note').count() === 1, 'XP Shake applied');
+    // player card shows level, streak, achievements and the equipped background
+    await page.goto(`${base}#/card`);
+    await page.waitForSelector('.card-preview canvas');
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: `${shots}${lang}-card-game.png`, fullPage: true });
+    // streak broken -> restore with an owned Super restore
+    await page.evaluate(async () => {
+      const db = await new Promise((res, rej) => { const r = indexedDB.open('demigod'); r.onsuccess = () => res(r.result); r.onerror = rej; });
+      const g = await new Promise((res) => { const q = db.transaction('game').objectStore('game').get('me'); q.onsuccess = () => res(q.result); });
+      const d = new Date(); d.setDate(d.getDate() - 9);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      g.streak = { current: 12, best: 12, lastWorkoutDate: key, milestonesPaid: [7], broken: null };
+      g.inventory.super = 1;
+      await new Promise((res) => { const tx = db.transaction('game', 'readwrite'); tx.objectStore('game').put(g, 'me'); tx.oncomplete = res; });
+    });
+    await page.goto(`${base}#/workout`);
+    await page.reload();
+    await page.waitForSelector('.streak-broken');
+    await page.screenshot({ path: `${shots}${lang}-streak-broken.png`, fullPage: true });
+    await page.locator('.streak-broken .btn-primary').click();
+    await page.waitForSelector('.streak-card');
+    assert.match(await page.textContent('.streak-card'), /12/);
+    assert.equal(await page.locator('.streak-broken').count(), 0);
   });
 
   await check(`${lang}: sheet + toast + language toggle + tab bar`, async () => {

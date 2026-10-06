@@ -1,0 +1,18 @@
+{
+  "reward": { "daily": 15, "weekly": 60 },
+  "daily": [
+    { "id": "d_finish", "metric": "workouts", "target": 1, "textEn": "Finish a workout", "textHe": "מסיימים אימון" },
+    { "id": "d_group", "metric": "sets_group", "target": 5, "param": "group", "textEn": "Do {target} sets for {group}", "textHe": "עושים {target} סטים ל{group}" },
+    { "id": "d_pr", "metric": "prs", "target": 1, "textEn": "Break a personal record", "textHe": "שוברים שיא אישי" },
+    { "id": "d_groups", "metric": "groups", "target": 3, "textEn": "Train {target} different muscle groups", "textHe": "מאמנים {target} קבוצות שרירים שונות" },
+    { "id": "d_sets", "metric": "sets", "target": 15, "textEn": "Log {target} sets in a day", "textHe": "מתעדים {target} סטים ביום אחד" },
+    { "id": "d_new", "metric": "new_exercises", "target": 1, "textEn": "Try an exercise you have never done", "textHe": "מנסים תרגיל שמעולם לא עשיתם" }
+  ],
+  "weekly": [
+    { "id": "w_volume", "metric": "volume", "target": 5000, "textEn": "Lift {target} kg of total volume this week", "textHe": "מרימים {target} ק״ג נפח כולל השבוע" },
+    { "id": "w_workouts", "metric": "workouts", "target": 3, "textEn": "Finish {target} workouts this week", "textHe": "מסיימים {target} אימונים השבוע" },
+    { "id": "w_prs", "metric": "prs", "target": 3, "textEn": "Break {target} personal records this week", "textHe": "שוברים {target} שיאים אישיים השבוע" },
+    { "id": "w_groups", "metric": "groups", "target": 6, "textEn": "Train {target} different muscle groups this week", "textHe": "מאמנים {target} קבוצות שרירים שונות השבוע" },
+    { "id": "w_sets", "metric": "sets", "target": 50, "textEn": "Log {target} sets this week", "textHe": "מתעדים {target} סטים השבוע" }
+  ]
+}

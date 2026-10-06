@@ -1,7 +1,7 @@
 // IndexedDB wrapper. One database, versioned stores. Every call is promise based and may reject (private mode etc.).
 const NAME = 'demigod';
-const VERSION = 3;
-const STORES = { kv: undefined, profile: undefined, bodyweight: 'dateKeyTime', workouts: 'id', bests: undefined, draft: undefined, routines: 'id', folders: 'id', plans: 'id', custom: 'id', blobs: undefined };
+const VERSION = 4;
+const STORES = { kv: undefined, profile: undefined, bodyweight: 'dateKeyTime', workouts: 'id', bests: undefined, draft: undefined, routines: 'id', folders: 'id', plans: 'id', custom: 'id', blobs: undefined, game: undefined };
 
 let dbp = null;
 export function openDb() {
