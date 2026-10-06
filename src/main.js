@@ -128,4 +128,8 @@ function registerServiceWorker() {
   });
 }
 
+// No pinch or double-tap zoom: a zoomed-in screen is hard to get out of on a phone (a trade-off against accessibility zoom, chosen by Elia).
+for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, (e) => e.preventDefault(), { passive: false });
+document.addEventListener('touchmove', (e) => { if (e.touches.length > 1 || (e.scale && e.scale !== 1)) e.preventDefault(); }, { passive: false });
+
 boot();

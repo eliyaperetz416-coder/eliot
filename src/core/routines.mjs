@@ -11,13 +11,20 @@ export function newRoutine({ name = '', folderId = null, now = Date.now() } = {}
 export function newFolder(name, now = Date.now()) { return { id: uid(), name: String(name).trim(), createdMs: now }; }
 
 export function routineEntry(ex, patch = {}) {
-  return { id: uid(), exerciseId: ex.id, sets: DEFAULT_ENTRY.sets, repsMin: DEFAULT_ENTRY.repsMin, repsMax: DEFAULT_ENTRY.repsMax, restSec: defaultRestSec(ex), notes: '', ...patch };
+  return { id: uid(), exerciseId: ex.id, sets: DEFAULT_ENTRY.sets, repsMin: DEFAULT_ENTRY.repsMin, repsMax: DEFAULT_ENTRY.repsMax, restSec: defaultRestSec(ex), weight: null, notes: '', ...patch };
 }
 
 export function addToRoutine(r, exercises, now = Date.now()) {
   for (const ex of exercises) r.entries.push(routineEntry(ex));
   r.updatedMs = now;
   return r;
+}
+/** Optional planned weight in kg: a number from 0 to 1000 (two decimals), or null for "use what I lifted last time". */
+export function cleanWeight(v) {
+  if (v == null || v === '') return null;
+  const n = Number(String(v).replace(',', '.'));
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.min(1000, Math.round(n * 100) / 100);
 }
 export function updateEntry(r, entryId, patch, now = Date.now()) {
   const e = r.entries.find((x) => x.id === entryId);
@@ -27,6 +34,7 @@ export function updateEntry(r, entryId, patch, now = Date.now()) {
   next.repsMin = Math.min(60, Math.max(1, Math.round(next.repsMin)));
   next.repsMax = Math.min(60, Math.max(next.repsMin, Math.round(next.repsMax)));
   next.restSec = clampRest(next.restSec);
+  next.weight = cleanWeight(next.weight);
   Object.assign(e, next);
   r.updatedMs = now;
   return e;
@@ -72,7 +80,8 @@ export function draftFromEntries(entries, { name = '', routineId = null, planDay
     const sg = suggest?.(e) ?? null;
     const sets = Array.from({ length: e.sets }, (_, i) => {
       const p = prev[i] ?? prev[prev.length - 1];
-      const weight = sg ? sg.weight : p?.weight ?? null;
+      const planned = cleanWeight(e.weight);
+      const weight = sg ? sg.weight : planned ?? p?.weight ?? null;
       const reps = sg ? null : p?.reps ?? null;
       return newSet(i, { weight: weight ?? null, reps: reps ?? null });
     });

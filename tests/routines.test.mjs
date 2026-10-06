@@ -92,3 +92,22 @@ test('photo is scaled so the longer side is at most 800 px, never enlarged', () 
   assert.deepEqual(fitSize(500, 400), { width: 500, height: 400 });
   assert.deepEqual(fitSize(1, 5000), { width: 1, height: 800 });
 });
+
+test('planned weight: cleaned, optional, and wins over last time when starting', async () => {
+  const R = await import('../src/core/routines.mjs');
+  assert.equal(R.cleanWeight(''), null); assert.equal(R.cleanWeight(null), null); assert.equal(R.cleanWeight('abc'), null);
+  assert.equal(R.cleanWeight('-5'), null); assert.equal(R.cleanWeight('62,5'), 62.5); assert.equal(R.cleanWeight(99999), 1000);
+  const r = R.newRoutine({});
+  R.addToRoutine(r, [{ id: 'bp', type: 'weight', equipment: 'barbell', ranked: true }]);
+  const e = r.entries[0];
+  assert.equal(e.weight, null);
+  R.updateEntry(r, e.id, { weight: '70' });
+  assert.equal(e.weight, 70);
+  const prev = () => [{ weight: 50, reps: 8 }];
+  const w1 = R.draftFromEntries(r.entries, { previous: prev });
+  assert.deepEqual(w1.entries[0].sets.map((s) => s.weight), [70, 70, 70]);
+  assert.equal(w1.entries[0].sets[0].reps, 8);
+  R.updateEntry(r, e.id, { weight: '' });
+  const w2 = R.draftFromEntries(r.entries, { previous: prev });
+  assert.equal(w2.entries[0].sets[0].weight, 50);
+});

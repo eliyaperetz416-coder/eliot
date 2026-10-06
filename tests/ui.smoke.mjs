@@ -622,6 +622,30 @@ for (const lang of ['he', 'en']) {
     await page.waitForSelector('.req-card');
   });
 
+  await check(`${lang}: saved workout with a planned weight starts with that weight`, async () => {
+    await page.goto(`${base}#/workout`);
+    const entryId = 'e-weight-test', rid = 'r-weight-test';
+    await page.evaluate(async ({ entryId, rid }) => {
+      const { dbPut } = await import('./src/ui/db.js');
+      await dbPut('routines', { id: rid, schemaVersion: 1, name: 'Weight test', folderId: null, notes: '', createdMs: Date.now(), updatedMs: Date.now(), entries: [{ id: entryId, exerciseId: 'barbell-bench-press-medium-grip', sets: 3, repsMin: 6, repsMax: 8, restSec: 90, weight: null, notes: '' }] });
+    }, { entryId, rid });
+    await page.reload();
+    await page.goto(`${base}#/routine/${rid}`);
+    await page.waitForSelector(`#rw-${entryId}`);
+    await page.fill(`#rw-${entryId}`, '62.5');
+    await page.waitForTimeout(300);
+    await page.reload();
+    await page.waitForSelector(`#rw-${entryId}`);
+    assert.equal(await page.inputValue(`#rw-${entryId}`), '62.5');
+    await page.screenshot({ path: `${shots}${lang}-routine-weight.png`, fullPage: true });
+    await page.locator('main .btn-primary').first().click();
+    await page.waitForSelector('.set-row');
+    assert.equal(await page.locator('.set-row .set-input').first().inputValue(), '62.5');
+    await page.evaluate(async () => { const { dbDelete, dbAll } = await import('./src/ui/db.js'); await dbDelete('draft', 'current'); for (const r of await dbAll('routines')) if (r.id === 'r-weight-test') await dbDelete('routines', r.id); localStorage.removeItem('dg.draft'); });
+    await page.goto(`${base}#/workout`); await page.reload();
+    await page.waitForSelector('main .btn-primary');
+  });
+
   await check(`${lang}: settings, backup export + restore, reminder, numbers page, reset`, async () => {
     const T = (he, en) => L(lang, he, en);
     if (ONLY) await postThree(page);

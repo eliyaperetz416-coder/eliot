@@ -6,7 +6,7 @@ import * as R from '../core/routines.mjs';
 import { previousPerformance } from '../core/workout.mjs';
 import { nextPlanDay, planDayId, templateRoutines, ROUTINE_TEMPLATES } from '../core/generator.mjs';
 import { suggestLoad, bestE1RM, stepFor } from '../core/progression.mjs';
-import { button, emptyState, miniStepper, openSheet, showToast } from './components.js';
+import { button, emptyState, miniStepper, numberField, openSheet, showToast } from './components.js';
 import { data } from './data.js';
 import { store, saveRoutine, deleteRoutine, saveFolder, removeFolder, setDraft } from './store.js';
 import { openExercisePicker } from './picker.js';
@@ -16,6 +16,14 @@ import { formatClock } from '../core/timer.mjs';
 import { planDayLabel } from './plan-names.js';
 
 const nameOf = (ex) => (getLanguage() === 'he' ? ex.nameHe : ex.nameEn);
+/** Optional planned weight for an exercise in a saved workout; empty = use the weight from the last time. */
+function weightField(e, onChange) {
+  const f = numberField({ id: `rw-${e.id}`, label: t('routines.weight'), unit: t('unit.kg'), value: e.weight == null ? '' : String(e.weight) });
+  const input = f.querySelector('input');
+  input.placeholder = t('routines.weight.ph');
+  input.addEventListener('input', () => onChange(input.value));
+  return h('div', { style: 'padding-block-start:10px' }, f);
+}
 const go = (hash) => { if (location.hash === hash) window.dispatchEvent(new HashChangeEvent('hashchange')); else location.hash = hash; };
 
 /* ---------- starting workouts ---------- */
@@ -201,7 +209,8 @@ export function routineEditScreen(id) {
           miniStepper({ label: t('routines.sets'), value: e.sets, min: 1, max: 10, onChange: (v) => { R.updateEntry(r, e.id, { sets: v }); save(); } }),
           miniStepper({ label: t('routines.repsMin'), value: e.repsMin, min: 1, max: 60, onChange: (v) => { R.updateEntry(r, e.id, { repsMin: v }); save(); } }),
           miniStepper({ label: t('routines.repsMax'), value: e.repsMax, min: 1, max: 60, onChange: (v) => { R.updateEntry(r, e.id, { repsMax: v }); save(); } }),
-          miniStepper({ label: t('entry.rest'), value: e.restSec, min: 15, max: 600, step: 15, format: formatClock, onChange: (v) => { R.updateEntry(r, e.id, { restSec: v }); save(); } })));
+          miniStepper({ label: t('entry.rest'), value: e.restSec, min: 15, max: 600, step: 15, format: formatClock, onChange: (v) => { R.updateEntry(r, e.id, { restSec: v }); save(); } })),
+        weightField(e, (v) => { R.updateEntry(r, e.id, { weight: v }); save(); }));
     });
     const notes = h('textarea', { class: 'notes-input', rows: 3, placeholder: t('routines.notes'), 'aria-label': t('routines.notes') }, r.notes ?? '');
     notes.addEventListener('input', () => { r.notes = notes.value; save(); });

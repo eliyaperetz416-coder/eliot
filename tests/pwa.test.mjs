@@ -26,3 +26,14 @@ test('sw.js precache is stamped and every file exists', () => {
   assert.ok(list.includes('index.html') && list.includes('offline.html'));
   for (const f of list) assert.ok(existsSync(r(f)), f);
 });
+
+test('pinch and double-tap zoom are switched off (a zoomed-in screen is hard to leave on a phone)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.match(html, /name="viewport"[^>]*user-scalable=no/);
+  assert.match(html, /maximum-scale=1/);
+  const css = readFileSync(new URL('../src/styles/base.css', import.meta.url), 'utf8');
+  assert.match(css, /touch-action: manipulation/);
+  const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
+  assert.match(main, /gesturestart/);
+});

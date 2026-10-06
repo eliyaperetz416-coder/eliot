@@ -654,5 +654,7 @@
   "req.copy": "Copy the message",
   "req.copied": "Copied. Paste it in the chat with Claude.",
   "req.copyManual": "Select the text and copy it.",
-  "req.next": "Paste this message in the chat with Claude. When the exercise is added you will see it in the library after the app updates."
+  "req.next": "Paste this message in the chat with Claude. When the exercise is added you will see it in the library after the app updates.",
+  "routines.weight": "Planned weight (optional)",
+  "routines.weight.ph": "Same as last time"
 }
