@@ -5,3 +5,7 @@
 - Re-building data: `node scripts/build-exercises.mjs <free-exercise-db clone>` then `node scripts/process-images.mjs <clone>`. Retune ratings by editing `src/data/calibration.json` (R per family, ratio per exercise), then rerun the build; `exercises.json` is generated.
 - Outside Stage 2 scope, noticed: exercise list renders all 300 rows at once (content-visibility keeps it smooth; revisit in the Stage 7 performance pass).
 - Muscle-map polygons have no separate side delt, so lateral raises highlight both front and rear delts.
+- Stage 3: user data lives in IndexedDB stores `profile`, `bodyweight`, `workouts`, `bests` (derived), `draft`, plus `kv` for settings. The draft is also mirrored to localStorage on every change so a killed app restores exactly.
+- Stage 3: switching the strength curve in the profile affects only ratings calculated afterwards; a saved workout keeps the curve it was posted with until it is edited and saved (then it keeps that same curve).
+- Stage 3 limitation: rest timer audio needs one tap on a V first (iOS rule). Vibration is not available on iPhone.
+- Not in Stage 3 on purpose: XP/drachmas/quests/streaks (Stage 6), Ranks tab and charts (Stage 4), routines (Stage 5).

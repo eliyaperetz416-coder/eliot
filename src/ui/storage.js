@@ -2,24 +2,10 @@
 import { migrateSettings, DEFAULT_SETTINGS } from '../core/settings.mjs';
 
 const LS_KEY = 'dg.settings';
-const DB = 'demigod', STORE = 'kv';
+import { dbGet, dbPut } from './db.js';
 
-function idb() {
-  return new Promise((res, rej) => {
-    const r = indexedDB.open(DB, 1);
-    r.onupgradeneeded = () => r.result.createObjectStore(STORE);
-    r.onsuccess = () => res(r.result);
-    r.onerror = () => rej(r.error);
-  });
-}
-async function idbSet(key, val) {
-  const db = await idb();
-  return new Promise((res, rej) => { const tx = db.transaction(STORE, 'readwrite'); tx.objectStore(STORE).put(val, key); tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
-}
-async function idbGet(key) {
-  const db = await idb();
-  return new Promise((res, rej) => { const q = db.transaction(STORE).objectStore(STORE).get(key); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
-}
+const idbSet = (key, val) => dbPut('kv', val, key);
+const idbGet = (key) => dbGet('kv', key);
 
 export async function loadSettings() {
   let raw = null;

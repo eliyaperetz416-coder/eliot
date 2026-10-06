@@ -50,3 +50,15 @@ test('detectLanguage', () => {
   assert.equal(detectLanguage('en-US'), 'en');
   assert.equal(detectLanguage(), 'en');
 });
+
+test('every t("literal.key") used in the UI exists in both dictionaries', () => {
+  const files = [...readdirSync(new URL('../src/ui/', import.meta.url)).map((f) => `../src/ui/${f}`), '../src/main.js'];
+  const missing = [];
+  for (const f of files) {
+    const src = readFileSync(new URL(f, import.meta.url), 'utf8');
+    for (const m of src.matchAll(/\bt\(\s*'([a-zA-Z0-9_.-]+)'/g)) {
+      if (!(m[1] in en) || !(m[1] in he)) missing.push(`${f}: ${m[1]}`);
+    }
+  }
+  assert.deepEqual(missing, []);
+});

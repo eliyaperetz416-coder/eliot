@@ -2,8 +2,13 @@ import { h } from './dom.js';
 import { icon } from './icons.js';
 import { t, getLanguage } from '../core/i18n.mjs';
 import { button, card, emptyState, list, listRow, numberField, openSheet, segmented, showToast } from './components.js';
-import { APP_VERSION } from '../version.js';
 import { exercisesScreen, exerciseDetailScreen } from './exercises.js';
+import { profileScreen } from './profile.js';
+import { startScreen } from './workout.js';
+import { liveScreen } from './live.js';
+import { resultScreen } from './post-ui.js';
+import { historyScreen, historyDetailScreen } from './history.js';
+import { store } from './store.js';
 import { ranksPreviewScreen } from './ranks-preview.js';
 
 const head = (titleKey, withMark = true) =>
@@ -15,28 +20,6 @@ const emptyScreen = (id, ic) => () =>
 
 function isStandalone() {
   return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-}
-
-function profile({ onLanguage }) {
-  const kids = [
-    head('profile.title'),
-    h('div', { class: 'section-label', text: t('profile.language') }),
-    segmented({
-      label: t('profile.language'), value: getLanguage(), onChange: onLanguage,
-      options: [{ value: 'he', label: t('lang.he'), lang: 'he' }, { value: 'en', label: t('lang.en'), lang: 'en' }],
-    }),
-    h('p', { class: 'row-sub', style: 'padding-block-start:8px', text: t('profile.language.hint') }),
-  ];
-  if (!isStandalone()) {
-    kids.push(h('div', { class: 'section-label', text: t('profile.install.title') }),
-      h('section', { class: 'card card-accent tip' }, icon('share'), h('p', { text: t('profile.install.body') })));
-  }
-  kids.push(h('div', { class: 'section-label', text: t('profile.about') }),
-    list([
-      listRow({ title: t('app.name'), sub: t('app.tagline'), icon: 'shield', end: h('span', { class: 'num', dir: 'ltr', text: `${t('profile.version')} ${APP_VERSION}` }) }),
-      listRow({ title: t('profile.local'), icon: 'info' }),
-    ]));
-  return h('main', { class: 'screen' }, kids);
 }
 
 /** Component showcase at #/kit (tested, not linked from the UI). */
@@ -71,13 +54,15 @@ function kit() {
 
 export function buildScreens(ctx) {
   return {
-    workout: emptyScreen('workout', 'workout'),
+    workout: () => (store.draft ? liveScreen() : startScreen()),
+    result: resultScreen,
+    history: (id) => (id ? historyDetailScreen(id) : historyScreen()),
     exercises: () => exercisesScreen(),
     exercise: (id) => exerciseDetailScreen(id),
     'ranks-preview': ranksPreviewScreen,
     ranks: emptyScreen('ranks', 'ranks'),
     shop: emptyScreen('shop', 'shop'),
-    profile: () => profile(ctx),
+    profile: () => profileScreen(ctx),
     kit,
   };
 }

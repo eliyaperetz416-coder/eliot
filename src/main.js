@@ -1,8 +1,13 @@
 import { DIR, LANGS, detectLanguage, setDictionaries, setLanguage, t } from './core/i18n.mjs';
+import { TIER_COLORS } from './core/ranks.mjs';
 import { buildScreens } from './ui/screens.js';
 import { tabBar, showToast } from './ui/components.js';
-import { loadData } from './ui/data.js';
 import { loadSettings, saveSettings, requestPersistence } from './ui/storage.js';
+import { loadData } from './ui/data.js';
+import { initStore, store, saveProfile, subscribe } from './ui/store.js';
+import { onboarding } from './ui/onboarding.js';
+import { initRestTimer, refreshRestTimer } from './ui/rest-timer.js';
+import { keepAwake } from './ui/wakelock.js';
 
 const TABS = [
   { id: 'workout', icon: 'workout' }, { id: 'exercises', icon: 'exercises' }, { id: 'ranks', icon: 'ranks' },
@@ -12,6 +17,20 @@ const app = document.getElementById('app');
 const nav = document.getElementById('nav-root');
 let settings;
 let screens;
+let dispose = null;
+
+function hexToRgb(hex) { const n = parseInt(hex.slice(1), 16); return `${(n >> 16) & 255} ${(n >> 8) & 255} ${n & 255}`; }
+
+/** The accent follows the overall rank (OUR DESIGN); gold while unranked or when set to fixed. */
+function applyAccent() {
+  const root = document.documentElement.style;
+  let hex = '#ffc43d';
+  if (settings.accentMode === 'rank' && !store.overall.pending) {
+    const tier = ['wood', 'bronze', 'silver', 'gold', 'platinum', 'diamond', 'champion', 'titan', 'olympian', 'greekgod'];
+    for (const id of tier) if (store.overall.rating >= ({ wood: 1, bronze: 200, silver: 300, gold: 400, platinum: 500, diamond: 600, champion: 700, titan: 800, olympian: 900, greekgod: 1000 })[id]) hex = TIER_COLORS[id];
+  }
+  root.setProperty('--accent-rgb', hexToRgb(hex));
+}
 
 function applyDocument() {
   const lang = document.documentElement.lang;
@@ -26,10 +45,19 @@ function route() {
 }
 
 function render() {
+  dispose?.(); dispose = null;
+  if (!store.profile) {
+    app.replaceChildren(onboarding({ onLanguage: changeLanguage, onDone: finishOnboarding }));
+    nav.replaceChildren();
+    return;
+  }
   const { id, param } = route();
-  app.replaceChildren(screens[id](param));
-  const tab = id === 'exercise' ? 'exercises' : id;
+  const el = screens[id](param);
+  dispose = el._dispose ?? null;
+  app.replaceChildren(el);
+  const tab = ['exercise'].includes(id) ? 'exercises' : ['history', 'result'].includes(id) ? (id === 'result' ? 'workout' : 'profile') : id;
   nav.replaceChildren(TABS.some((x) => x.id === tab) ? tabBar({ tabs: TABS, current: tab }) : '');
+  keepAwake(!!store.draft);
   window.scrollTo(0, 0);
 }
 
@@ -39,7 +67,15 @@ async function changeLanguage(lang) {
   settings = { ...settings, lang };
   applyDocument();
   render();
+  refreshRestTimer();
   saveSettings(settings);
+}
+
+async function finishOnboarding({ profile, weight }) {
+  await saveProfile(profile, weight);
+  applyAccent();
+  location.hash = '#/workout';
+  render();
 }
 
 async function boot() {
@@ -47,12 +83,20 @@ async function boot() {
   setDictionaries({ he, en });
   settings = await loadSettings();
   await loadData();
-  const lang = settings.lang ?? detectLanguage(navigator.language);
+  await initStore();
+  const lang = settings.lang ?? store.profile?.lang ?? detectLanguage(navigator.language);
   setLanguage(lang);
   document.documentElement.lang = lang;
   screens = buildScreens({ onLanguage: changeLanguage });
   applyDocument();
+  applyAccent();
   render();
+  initRestTimer(document.getElementById('rest-root'));
+  let hadDraft = !!store.draft;
+  subscribe(() => {
+    applyAccent();
+    if (!!store.draft !== hadDraft) { hadDraft = !!store.draft; if (store.profile && route().id === 'workout') render(); }
+  });
   window.addEventListener('hashchange', render);
   document.documentElement.dataset.ready = '1';
   requestPersistence();

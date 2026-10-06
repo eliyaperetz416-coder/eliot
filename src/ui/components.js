@@ -63,7 +63,7 @@ export function tabBar({ tabs, current }) {
 }
 
 /* ---------- sheet ---------- */
-export function openSheet({ title, content }) {
+export function openSheet({ title, content, tall = false }) {
   const root = document.getElementById('overlay-root');
   const app = document.getElementById('app');
   const prevFocus = document.activeElement;
@@ -75,14 +75,14 @@ export function openSheet({ title, content }) {
   const closeBtn = h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('common.close'), onclick: close }, icon('close'));
   const ov = h('div', { class: 'overlay' },
     h('div', { class: 'overlay-bg', onclick: close }),
-    h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
+    h('div', { class: `sheet${tall ? ' sheet-tall' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
       h('div', { class: 'sheet-grab' }),
       h('div', { class: 'sheet-head' }, h('h2', { text: title }), closeBtn),
       content));
   root.append(ov);
   app.inert = true;
   document.addEventListener('keydown', onKey);
-  closeBtn.focus();
+  if (!tall) closeBtn.focus();
   return { close };
 }
 
