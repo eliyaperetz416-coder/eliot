@@ -9,3 +9,6 @@
 - Stage 3: switching the strength curve in the profile affects only ratings calculated afterwards; a saved workout keeps the curve it was posted with until it is edited and saved (then it keeps that same curve).
 - Stage 3 limitation: rest timer audio needs one tap on a V first (iOS rule). Vibration is not available on iPhone.
 - Not in Stage 3 on purpose: XP/drachmas/quests/streaks (Stage 6), Ranks tab and charts (Stage 4), routines (Stage 5).
+- Stage 5: new IndexedDB stores `routines`, `folders`, `plans`, `custom`, `blobs` (database version 3). Custom exercises are merged into the in-memory library at start-up, with their photo turned into an object URL.
+- Stage 5: "Start workout" now opens the "Which workout today?" sheet instead of an empty workout (an empty workout is one tap away in the same sheet).
+- Not done on purpose: Hebrew names for custom exercises are the same text as the English field (one name field); templates are generated with the current library, so exercise choices vary a little between creations.

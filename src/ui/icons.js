@@ -10,6 +10,7 @@ const P = {
   more: '<circle cx="5" cy="12" r="1.600"/><circle cx="12" cy="12" r="1.600"/><circle cx="19" cy="12" r="1.600"/>',
   trash: '<path d="M5 7h14M10 7V4.500h4V7M7 7l1 13h8l1-13"/>',
   history: '<path d="M4 12a8 8 0 1 0 2.600-5.900M4 4v4h4M12 8v4.500l3 2"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
   bolt: '<path d="M13 2.500L5 13.500h6l-1 8 8-11h-6z"/>',
   globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.500 2.600 3.800 5.600 3.800 9S14.500 18.400 12 21c-2.500-2.600-3.800-5.600-3.800-9S9.500 5.600 12 3z"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5.500M12 7.700v.1"/>',

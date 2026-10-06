@@ -14,7 +14,7 @@ import { formatKg, formatNum } from './format.js';
 
 const GROUPS = ['chest', 'back', 'shoulders', 'biceps', 'triceps', 'quads', 'hamstrings', 'glutes', 'calves', 'abs', 'other'];
 const EQUIPMENT = ['barbell', 'dumbbell', 'machine', 'cable', 'ez-bar', 'bodyweight', 'other'];
-const state = { q: '', group: null, equipment: null, ranked: 'all' };
+const state = { q: '', group: null, equipment: null, ranked: 'all', mine: false };
 
 const nameOf = (ex) => (getLanguage() === 'he' ? ex.nameHe : ex.nameEn);
 const otherName = (ex) => (getLanguage() === 'he' ? ex.nameEn : ex.nameHe);
@@ -29,19 +29,20 @@ function filtered() {
   if (state.equipment) list = list.filter((e) => e.equipment === state.equipment);
   if (state.ranked === 'ranked') list = list.filter((e) => e.ranked);
   if (state.ranked === 'unranked') list = list.filter((e) => !e.ranked);
+  if (state.mine) list = list.filter((e) => e.custom);
   return searchExercises(list, state.q, haystack);
 }
 
-const activeFilters = () => (state.group ? 1 : 0) + (state.equipment ? 1 : 0) + (state.ranked !== 'all' ? 1 : 0);
+const activeFilters = () => (state.group ? 1 : 0) + (state.equipment ? 1 : 0) + (state.ranked !== 'all' ? 1 : 0) + (state.mine ? 1 : 0);
 
 function row(ex) {
-  const img = h('img', { src: ex.image, alt: '', loading: 'lazy', decoding: 'async', width: 56, height: 56 });
-  img.addEventListener('error', () => { img.replaceWith(h('span', { class: 'thumb-fallback' }, icon('workout'))); });
+  const img = ex.image ? h('img', { src: ex.image, alt: '', loading: 'lazy', decoding: 'async', width: 56, height: 56 }) : h('span', { class: 'thumb-fallback' }, icon('workout'));
+  img.addEventListener?.('error', () => { img.replaceWith(h('span', { class: 'thumb-fallback' }, icon('workout'))); });
   return h('a', { class: 'ex-row', href: `#/exercise/${ex.id}` },
     h('span', { class: 'thumb' }, img),
     h('span', { class: 'row-main' },
       h('span', { class: 'row-title', text: nameOf(ex) }),
-      h('span', { class: 'row-sub', text: `${t(`group.${ex.muscleGroup}`)} · ${t(`equipment.${ex.equipment}`)}` })),
+      h('span', { class: 'row-sub', text: `${t(`group.${ex.muscleGroup}`)} · ${t(`equipment.${ex.equipment}`)}${ex.custom ? ` · ${t('custom.mine')}` : ''}` })),
     ex.ranked ? h('span', { class: 'ranked-dot', title: t('exercises.filter.ranked'), 'aria-label': t('exercises.filter.ranked') }, icon('ranks')) : null,
     icon('chevron', 'chev'));
 }
@@ -64,6 +65,7 @@ export function exercisesScreen() {
     const chips = [];
     if (state.group) chips.push(chip(t(`group.${state.group}`), () => { state.group = null; update(); }));
     if (state.equipment) chips.push(chip(t(`equipment.${state.equipment}`), () => { state.equipment = null; update(); }));
+    if (state.mine) chips.push(chip(t('custom.mine'), () => { state.mine = false; update(); }));
     if (state.ranked !== 'all') chips.push(chip(t(`exercises.filter.${state.ranked}`), () => { state.ranked = 'all'; update(); }));
     active.replaceChildren(...chips);
   }
@@ -82,6 +84,7 @@ export function exercisesScreen() {
         update();
       } }, labelOf(v))));
     body.append(
+      h('div', { class: 'chips-wrap' }, h('button', { class: 'chip chip-select', type: 'button', 'aria-pressed': String(state.mine), onclick: (e) => { state.mine = !state.mine; e.currentTarget.setAttribute('aria-pressed', String(state.mine)); update(); } }, t('custom.mine'))),
       h('div', { class: 'section-label', text: t('exercises.filter.group') }), optChips(GROUPS, 'group', (g) => t(`group.${g}`)),
       h('div', { class: 'section-label', text: t('exercises.filter.equipment') }), optChips(EQUIPMENT, 'equipment', (e) => t(`equipment.${e}`)),
       h('div', { class: 'section-label', text: t('exercises.filter.type') }),
@@ -93,7 +96,7 @@ export function exercisesScreen() {
   });
 
   root.append(
-    h('div', { class: 'search-row' }, h('div', { class: 'search-box' }, icon('search'), search), filterBtn),
+    h('div', { class: 'search-row' }, h('div', { class: 'search-box' }, icon('search'), search), filterBtn, h('a', { class: 'icon-btn add-custom', href: '#/custom/new', 'aria-label': t('custom.new') }, icon('plus'))),
     active, count, listBox);
   update();
   return root;
@@ -107,6 +110,7 @@ export function exerciseDetailScreen(id) {
   }
   const fam = data().families[ex.family];
   let showSecond = false;
+  const hasPhoto = !!ex.image;
   const img = h('img', { src: ex.image, alt: nameOf(ex), width: 480, height: 320, decoding: 'async' });
   const imgBtn = h('button', { class: 'ex-photo', type: 'button', 'aria-label': t('exercise.tapImage'), onclick: () => {
     if (!ex.image2) return;
@@ -126,20 +130,22 @@ export function exerciseDetailScreen(id) {
   return h('main', { class: 'screen' },
     h('a', { class: 'back-link', href: '#/exercises' }, icon('chevron', 'chev back-chev'), t('exercises.back')),
     h('h1', { class: 'ex-title', text: nameOf(ex) }),
-    h('p', { class: 'ex-title-alt', lang: getLanguage() === 'he' ? 'en' : 'he', dir: 'auto', text: otherName(ex) }),
+    ex.custom ? null : h('p', { class: 'ex-title-alt', lang: getLanguage() === 'he' ? 'en' : 'he', dir: 'auto', text: otherName(ex) }),
     h('div', { class: 'ex-meta' },
       h('span', { class: 'chip', text: t(`group.${ex.muscleGroup}`) }),
       h('span', { class: 'chip', text: t(`equipment.${ex.equipment}`) }),
-      h('span', { class: 'chip', text: t(`exercise.type.${ex.type}`) })),
+      h('span', { class: 'chip', text: t(`exercise.type.${ex.type}`) }),
+      ex.custom ? h('span', { class: 'chip chip-primary', text: t('custom.mine') }) : null),
     muscleMap({ muscles: data().muscles, exercise: ex }),
-    imgBtn,
-    h('p', { class: 'row-sub center', text: t('exercise.tapImage') }),
+    hasPhoto ? imgBtn : null,
+    hasPhoto && ex.image2 ? h('p', { class: 'row-sub center', text: t('exercise.tapImage') }) : null,
     h('div', { class: 'section-label', text: t('exercise.howto') }),
-    h('ol', { class: 'steps', lang: getLanguage() }, steps.map((s) => h('li', { text: s }))),
+    steps.length ? h('ol', { class: 'steps', lang: getLanguage() }, steps.map((s) => h('li', { text: s }))) : h('p', { class: 'row-sub', text: t('custom.nosteps') }),
     h('div', { class: 'section-label', text: t('exercise.curve') }),
     h('section', { class: 'card' }, curve),
     h('div', { class: 'section-label', text: t('exercise.best') }),
-    bestCard(ex));
+    bestCard(ex),
+    ex.custom ? h('div', { class: 'stack', style: 'padding-block-start:12px' }, h('a', { class: 'btn btn-secondary btn-block', href: `#/custom/${ex.id}` }, t('custom.edit'))) : null);
 }
 
 function bestCard(ex) {

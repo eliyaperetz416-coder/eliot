@@ -11,6 +11,9 @@ import { historyScreen, historyDetailScreen } from './history.js';
 import { ranksScreen } from './ranks.js';
 import { progressScreen } from './progress.js';
 import { cardScreen } from './card-export.js';
+import { routinesScreen, routineEditScreen } from './routines.js';
+import { plansScreen, planScreen } from './plans.js';
+import { customFormScreen } from './custom.js';
 import { store } from './store.js';
 import { ranksPreviewScreen } from './ranks-preview.js';
 
@@ -65,6 +68,11 @@ export function buildScreens(ctx) {
     'ranks-preview': ranksPreviewScreen,
     ranks: ranksScreen,
     progress: (id) => progressScreen(id),
+    routines: routinesScreen,
+    routine: (id) => routineEditScreen(id),
+    plans: plansScreen,
+    plan: (id) => planScreen(id),
+    custom: (id) => customFormScreen(id),
     card: cardScreen,
     shop: emptyScreen('shop', 'shop'),
     profile: () => profileScreen(ctx),

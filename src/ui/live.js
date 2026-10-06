@@ -110,6 +110,7 @@ export function liveScreen() {
     unlockAudio();
     const bw = bodyweightKg();
     completeSet({ workout: w, entryId: entry.id, idx: s.idx, now: Date.now(), bodyweightKg: bw, sex: store.profile.sex, workouts: store.workouts, byId });
+    if (entry.target?.find && s.type !== 'warmup' && s.weight > 0) for (const x of entry.sets) if (!x.done && x.weight == null) x.weight = s.weight; // first working set sets the weight for the rest
     const idx = w.entries.indexOf(entry);
     const next = w.entries[idx + 1];
     const midSuperset = entry.supersetGroup && next?.supersetGroup === entry.supersetGroup;
@@ -127,6 +128,12 @@ export function liveScreen() {
     return h('div', { class: 'set-fb' }, bits);
   }
 
+  function targetLine(tg) {
+    const bits = [h('span', { class: 'chip', text: t('target.reps', { min: tg.repsMin, max: tg.repsMax }) })];
+    if (tg.action) bits.push(h('span', { class: `chip target-${tg.action}`, text: t(`target.${tg.action}`) }));
+    return h('div', { class: 'target-line' }, bits);
+  }
+
   function entryCard(entry, i) {
     const ex = byId[entry.exerciseId];
     const L = layoutOf(ex);
@@ -142,6 +149,7 @@ export function liveScreen() {
       h('header', { class: 'ent-head' },
         h('a', { class: 'ent-name', href: `#/exercise/${ex.id}` }, nameOf(ex)),
         h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('entry.menu'), onclick: () => entryMenu(entry, i) }, icon('more'))),
+      entry.target ? targetLine(entry.target) : null,
       entry.notes ? h('p', { class: 'ent-notes', text: entry.notes }) : null,
       h('div', { class: 'ent-rest' }, h('span', { class: 'row-sub', text: t('entry.rest') }), restLabel,
         h('button', { class: 'mini-btn', type: 'button', dir: 'ltr', onclick: () => bump(-15), 'aria-label': t('rest.minus') }, '−15'),

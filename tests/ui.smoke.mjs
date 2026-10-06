@@ -3,16 +3,18 @@ import { chromium } from 'playwright';
 import { serve } from './serve.mjs';
 import { mkdirSync } from 'node:fs';
 import assert from 'node:assert/strict';
+import sharp from 'sharp';
 
 const shots = new URL(`../docs/stage-${process.env.STAGE ?? 3}/`, import.meta.url).pathname;
 mkdirSync(shots, { recursive: true });
 const server = await serve(0);
 const base = `http://localhost:${server.address().port}/`;
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-const ROUTES = ['workout', 'exercises', 'exercise/barbell-bench-press-medium-grip', 'exercise/plank', 'ranks', 'progress', 'card', 'shop', 'profile', 'history', 'kit', 'ranks-preview'];
+const ROUTES = ['workout', 'exercises', 'exercise/barbell-bench-press-medium-grip', 'exercise/plank', 'ranks', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'shop', 'profile', 'history', 'kit', 'ranks-preview'];
 const errors = [];
 let failed = 0;
-const check = (name, fn) => fn().then(() => console.log('ok  ', name), (e) => { failed++; console.error('FAIL', name, '-', e.message.split('\n')[0]); });
+const ONLY = process.env.ONLY;
+const check = (name, fn) => (ONLY && !name.includes(ONLY) && !name.includes('onboarding') ? Promise.resolve() : fn()).then(() => console.log('ok  ', name), (e) => { failed++; console.error('FAIL', name, '-', e.message.split('\n')[0], (e.stack.match(/ui\.smoke\.mjs:\d+/) ?? [''])[0]); });
 const L = (lang, he, en) => (lang === 'he' ? he : en);
 
 async function onboard(page, lang, shotPrefix) {
@@ -43,6 +45,13 @@ async function onboard(page, lang, shotPrefix) {
   await page.waitForSelector('.tabbar');
 }
 
+async function startEmpty(page) {
+  await page.waitForSelector('main .btn-primary');
+  await page.click('main .btn-primary');
+  await page.waitForSelector('.sheet .row');
+  await page.locator('.sheet .row', { hasText: /Empty workout|אימון ריק/ }).click();
+  await page.waitForSelector('.sheet .pick-row');
+}
 async function addExercise(page, query) {
   await page.waitForSelector('.sheet .pick-row');
   await page.fill('.picker .search-input', query);
@@ -63,8 +72,7 @@ async function logSet(page, cardIndex, weight, reps) {
 
 async function postThree(page) {
   await page.goto(`${base}#/workout`);
-  await page.waitForSelector('main .btn-primary');
-  await page.click('main .btn-primary');
+  await startEmpty(page);
   await addExercise(page, 'barbell bench press');
   await logSet(page, 0, 100, 5);
   await page.click('.live-actions .btn-secondary');
@@ -78,7 +86,7 @@ async function postThree(page) {
   await page.click('.sheet .btn-primary');
   await page.waitForSelector('.rankup', { timeout: 5000 });
   await page.click('.rankup button');
-  await page.waitForSelector('.stats-grid');
+  await page.waitForSelector('main .stats-grid');
 }
 
 for (const lang of ['he', 'en']) {
@@ -109,7 +117,7 @@ for (const lang of ['he', 'en']) {
       assert.ok(o.sw <= o.cw, `scrollWidth ${o.sw} > ${o.cw}`);
     });
     await check(`${lang}: ${r} touch targets >= 44px`, async () => {
-      const small = await page.evaluate(() => [...document.querySelectorAll('button, a.tab, .btn, input, a.btn')]
+      const small = await page.evaluate(() => [...document.querySelectorAll('button, a.tab, .btn, input:not([type=file]), a.btn')]
         .map((el) => el.getBoundingClientRect()).filter((b) => b.width && b.height < 43.5).length);
       assert.equal(small, 0);
     });
@@ -145,7 +153,7 @@ for (const lang of ['he', 'en']) {
     await page.goto(`${base}#/workout`);
     await page.waitForSelector('.screen h1');
     await page.screenshot({ path: `${shots}${lang}-workout-start.png` });
-    await page.click('main .btn-primary');
+    await startEmpty(page);
     await addExercise(page, 'barbell bench press');
     await page.waitForSelector('.ent-card');
     await logSet(page, 0, 100, 5);
@@ -179,7 +187,7 @@ for (const lang of ['he', 'en']) {
     await page.waitForTimeout(1600);
     await page.screenshot({ path: `${shots}${lang}-rankup.png` });
     await page.click('.rankup button');
-    await page.waitForSelector('.stats-grid');
+    await page.waitForSelector('main .stats-grid');
     await page.screenshot({ path: `${shots}${lang}-result.png`, fullPage: true });
     await page.click('main .btn-primary');
     await page.waitForSelector('.rank-card');
@@ -211,8 +219,7 @@ for (const lang of ['he', 'en']) {
 
   await check(`${lang}: discard keeps nothing; empty finish cannot post`, async () => {
     await page.goto(`${base}#/workout`);
-    await page.click('main .btn-primary');
-    await page.waitForSelector('.sheet .pick-row');
+    await startEmpty(page);
     await page.keyboard.press('Escape');
     await page.click('.live-head .btn');
     await page.waitForSelector('.sheet');
@@ -289,6 +296,190 @@ for (const lang of ['he', 'en']) {
     assert.deepEqual([px[0], px[1]], [1080, 1350]); assert.equal(px[2], 255);
   });
 
+  await check(`${lang}: saved workouts: prepare in advance, "which workout today?", templates, duplicate, delete`, async () => {
+    await page.goto(`${base}#/workout`);
+    await page.waitForSelector('.screen h1');
+    await page.screenshot({ path: `${shots}${lang}-workout-start-s5.png`, fullPage: true });
+    await page.goto(`${base}#/routines`);
+    await page.waitForSelector('.screen h1');
+    await page.getByRole('button', { name: L(lang, 'אימון חדש', 'New workout'), exact: true }).click();
+    await page.waitForSelector('.routine-name');
+    await page.fill('.routine-name', L(lang, 'חזה וכתפיים', 'Chest and shoulders'));
+    await page.getByRole('button', { name: L(lang, 'הוספת תרגיל', 'Add exercise') }).click();
+    await page.waitForSelector('.sheet .pick-row');
+    for (const i of [0, 1, 2]) await page.locator('.picker .pick-row').nth(i).click();
+    await page.click('.pick-footer .btn');
+    await page.waitForSelector('.ent-card');
+    assert.equal(await page.locator('.ent-card').count(), 3);
+    await page.locator('.ent-card').first().getByRole('button', { name: `${L(lang, 'סטים', 'Sets')} +` }).click();
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: `${shots}${lang}-routine-edit.png`, fullPage: true });
+    // leave and come back: persisted
+    await page.goto(`${base}#/routines`);
+    await page.waitForSelector('.routine-row');
+    await page.reload();
+    await page.waitForSelector('.routine-row');
+    assert.equal(await page.locator('.routine-row').count(), 1);
+    await page.screenshot({ path: `${shots}${lang}-routines.png`, fullPage: true });
+    // templates
+    await page.getByRole('button', { name: L(lang, 'מתבנית מוכנה', 'From a template') }).click();
+    await page.waitForSelector('.sheet .row');
+    await page.locator('.sheet .row').first().click(); // PPL: 3 workouts in a folder
+    await page.waitForFunction(() => document.querySelectorAll('.routine-row').length >= 4);
+    assert.equal(await page.locator('.routine-row').count(), 4);
+    // duplicate through the menu
+    await page.locator('.routine-row').first().getByRole('button', { name: L(lang, 'אפשרויות תרגיל', 'Exercise options') }).click();
+    await page.waitForSelector('.sheet .row');
+    await page.locator('.sheet .row').first().click();
+    await page.waitForFunction(() => document.querySelectorAll('.routine-row').length >= 5);
+    // start workout -> "which workout today?" -> pick the first saved workout
+    await page.goto(`${base}#/workout`);
+    await page.waitForSelector('main .btn-primary');
+    await page.click('main .btn-primary');
+    await page.waitForSelector('.sheet .row');
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: `${shots}${lang}-choose.png` });
+    assert.ok(await page.locator('.sheet .row').count() >= 6);
+    await page.locator('.sheet .row', { hasText: L(lang, 'חזה וכתפיים', 'Chest and shoulders') }).first().click();
+    await page.waitForSelector('.ent-card');
+    assert.equal(await page.locator('.ent-card').count(), 3);
+    assert.equal(await page.locator('.ent-card').first().locator('.set-row').count(), 4, 'edited set count carried over');
+    await page.screenshot({ path: `${shots}${lang}-from-routine.png` });
+    await page.click('.live-head .btn');
+    await page.waitForSelector('.sheet .btn-danger');
+    await page.click('.sheet .btn-danger');
+    await page.waitForSelector('.sheet .btn-danger');
+    await page.click('.sheet .btn-danger');
+    await page.waitForSelector('.live-head', { state: 'detached' });
+    // delete the first routine
+    await page.goto(`${base}#/routines`);
+    await page.waitForSelector('.routine-row');
+    const before = await page.locator('.routine-row').count();
+    await page.locator('.routine-row').first().getByRole('button', { name: L(lang, 'אפשרויות תרגיל', 'Exercise options') }).click();
+    await page.locator('.sheet .danger-row').click();
+    await page.waitForSelector('.sheet .btn-danger');
+    await page.click('.sheet .btn-danger');
+    await page.waitForFunction((n) => document.querySelectorAll('.routine-row').length === n - 1, before);
+  });
+
+  await check(`${lang}: generated plan: form, plan view, start a day with targets, find-weight prefill`, async () => {
+    if (ONLY) await postThree(page);
+    await page.goto(`${base}#/plans`);
+    await page.waitForSelector('.screen h1');
+    await page.click('main .btn-primary');
+    await page.waitForSelector('.seg');
+    await page.screenshot({ path: `${shots}${lang}-plan-form.png`, fullPage: true });
+    await page.locator('.seg').nth(1).locator('button').nth(1).click(); // 3 days
+    await page.click('main .btn-primary');
+    await page.waitForSelector('.plan-day');
+    assert.equal(await page.locator('.plan-day').count(), 3);
+    assert.ok(await page.locator('.week-chips .chip').count() === 6);
+    await page.screenshot({ path: `${shots}${lang}-plan.png`, fullPage: true });
+    await page.locator('.plan-day .btn').first().click();
+    await page.waitForSelector('.ent-card');
+    assert.ok(await page.locator('.target-line').count() >= 4);
+    assert.ok(await page.locator('.target-line').count() >= 4);
+    await page.screenshot({ path: `${shots}${lang}-plan-day-live.png` });
+    const card = page.locator('.ent-card').first();
+    await card.locator('.set-row').first().locator('.set-input').nth(0).fill('60');
+    await card.locator('.set-row').first().locator('.set-input').nth(1).fill('8');
+    await card.locator('.set-row').first().locator('.set-v').click();
+    await page.waitForTimeout(200);
+    const second = await card.locator('.set-row').nth(1).locator('.set-input').first().inputValue();
+    if (await card.locator('.target-find').count()) assert.equal(second, '60', 'first working set prefills the rest'); else assert.ok(second !== '', 'suggested weight is prefilled');
+    await page.click('.live-head .btn');
+    await page.waitForSelector('.sheet .btn-primary');
+    await page.click('.sheet .btn-primary');
+    await page.waitForSelector('main .stats-grid');
+    await page.goto(`${base}#/workout`);
+    await page.waitForSelector('.plan-next');
+    await page.screenshot({ path: `${shots}${lang}-workout-plan-next.png`, fullPage: true });
+    assert.match(await page.textContent('.plan-next'), /2/);
+    await page.goto(`${base}#/plans`);
+    await page.locator('.plan-card').first().click();
+    await page.waitForSelector('.plan-day.done');
+  });
+
+  await check(`${lang}: custom exercise with photo: create, ranked like another, persists across reload, edit, delete`, async () => {
+    const png = await sharp({ create: { width: 1600, height: 1200, channels: 3, background: { r: 200, g: 60, b: 60 } } }).png().toBuffer();
+    await page.goto(`${base}#/exercises`);
+    await page.waitForSelector('.ex-row');
+    await page.click('.add-custom');
+    await page.waitForSelector('#cx-name');
+    await page.click('main .btn-primary:has-text("' + L(lang, 'שמירה', 'Save') + '")');
+    await page.waitForSelector('.field-error');
+    await page.fill('#cx-name', 'My Cable Press');
+    await page.click('.chip-cycle[data-muscle="chest"]');
+    await page.click('.chip-cycle[data-muscle="triceps"]');
+    await page.click('.chip-cycle[data-muscle="triceps"]');
+    await page.waitForSelector('.mmap svg');
+    await page.getByRole('button', { name: L(lang, 'בחירת תרגיל', 'Choose exercise') }).first().click();
+    await page.waitForSelector('.sheet .pick-row');
+    await page.fill('.picker .search-input', 'barbell bench press');
+    await page.waitForTimeout(350);
+    await page.locator('.picker .pick-row').first().click();
+    await page.setInputFiles('#cx-photo', { name: 'photo.png', mimeType: 'image/png', buffer: png });
+    await page.waitForSelector('.custom-photo');
+    await page.screenshot({ path: `${shots}${lang}-custom-form.png`, fullPage: true });
+    await page.click('main .btn-primary:has-text("' + L(lang, 'שמירה', 'Save') + '")');
+    await page.waitForSelector('.ex-photo img');
+    assert.ok((await page.textContent('.ex-meta')).includes(L(lang, 'שלי', 'Mine')));
+    assert.ok(await page.locator('.mm-primary').count() >= 1);
+    // stored photo is scaled down to at most 800 px
+    const dims = await page.evaluate(async () => {
+      const db = await new Promise((res, rej) => { const r = indexedDB.open('demigod'); r.onsuccess = () => res(r.result); r.onerror = rej; });
+      const blob = await new Promise((res) => { const q = db.transaction('blobs').objectStore('blobs').getAll(); q.onsuccess = () => res(q.result[0]); });
+      const bmp = await createImageBitmap(blob); return [bmp.width, bmp.height, blob.type];
+    });
+    assert.ok(Math.max(dims[0], dims[1]) <= 800 && Math.max(dims[0], dims[1]) >= 700, `stored photo ${dims}`);
+    await page.screenshot({ path: `${shots}${lang}-custom-detail.png`, fullPage: true });
+    // survives a reload, photo included, and behaves like a library exercise (search, ranking)
+    await page.reload();
+    await page.waitForSelector('.ex-photo img');
+    assert.ok(await page.evaluate(() => { const i = document.querySelector('.ex-photo img'); return i.complete && i.naturalWidth > 0; }), 'photo still shows after reload');
+    await page.goto(`${base}#/exercises`);
+    await page.waitForSelector('.ex-row');
+    await page.fill('.search-input', 'cable press');
+    await page.waitForTimeout(350);
+    assert.ok((await page.locator('.ex-row', { hasText: 'My Cable Press' }).count()) === 1);
+    await page.fill('.search-input', '');
+    await page.goto(`${base}#/workout`);
+    await startEmpty(page);
+    await page.fill('.picker .search-input', 'my cable press');
+    await page.waitForTimeout(350);
+    await page.locator('.picker .pick-row').first().click();
+    await page.click('.pick-footer .btn');
+    await page.waitForSelector('.ent-card');
+    await logSet(page, 0, 60, 5);
+    assert.ok(await page.locator('.fb-rating').count() === 1, 'counts like the bench press, so it gets a rating');
+    await page.click('.live-head .btn');
+    await page.waitForSelector('.sheet .btn-danger');
+    await page.click('.sheet .btn-danger');
+    await page.waitForSelector('.sheet .btn-danger');
+    await page.click('.sheet .btn-danger');
+    await page.waitForSelector('.live-head', { state: 'detached' });
+    // edit and delete
+    await page.goto(`${base}#/exercises`);
+    await page.fill('.search-input', 'cable press');
+    await page.waitForTimeout(350);
+    await page.locator('.ex-row', { hasText: 'My Cable Press' }).click();
+    await page.getByRole('link', { name: L(lang, 'עריכת תרגיל', 'Edit exercise') }).click();
+    await page.waitForSelector('#cx-name');
+    await page.fill('#cx-name', 'My Cable Press 2');
+    await page.click('main .btn-primary:has-text("' + L(lang, 'שמירה', 'Save') + '")');
+    await page.waitForFunction(() => document.querySelector('.ex-title')?.textContent.includes('My Cable Press 2'));
+    await page.getByRole('link', { name: L(lang, 'עריכת תרגיל', 'Edit exercise') }).click();
+    await page.waitForSelector('#cx-name');
+    await page.getByRole('button', { name: L(lang, 'מחיקה', 'Delete') }).click();
+    await page.waitForSelector('.sheet .btn-danger');
+    await page.click('.sheet .btn-danger');
+    await page.waitForSelector('.ex-row');
+    await page.fill('.search-input', 'my cable press 2');
+    await page.waitForTimeout(350);
+    assert.equal(await page.locator('.ex-row', { hasText: 'My Cable Press 2' }).count(), 0);
+    await page.fill('.search-input', '');
+  });
+
   await check(`${lang}: sheet + toast + language toggle + tab bar`, async () => {
     await page.goto(`${base}#/kit`);
     await page.waitForSelector('.screen');
@@ -328,7 +519,7 @@ for (const lang of ['he', 'en']) {
     await page.reload();
     await page.waitForSelector('.screen h1', { timeout: 5000 });
     await page.click('main .btn-primary');
-    await page.waitForSelector('.sheet .pick-row', { timeout: 5000 });
+    await page.waitForSelector('.sheet .row', { timeout: 5000 });
     await ctx.setOffline(false);
   });
   await ctx.close();

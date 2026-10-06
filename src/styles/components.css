@@ -343,3 +343,43 @@ button.chip { cursor: pointer; min-height: var(--tap); padding-inline: 14px; fon
 .chart-empty { padding-block: var(--s-4); text-align: center; }
 .card-preview { background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-lg); padding: var(--s-2); min-height: 200px; }
 .card-preview canvas { width: 100%; height: auto; display: block; border-radius: 14px; }
+
+/* ---------- stage 5: workouts, plans, custom ---------- */
+.btn-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-2); }
+.btn-pair .btn { padding-inline: var(--s-3); font-size: 14px; }
+.folder-head { display: flex; align-items: center; justify-content: space-between; }
+.folder-label { padding-block: var(--s-2) 0; font-weight: 700; }
+.routine-row { gap: var(--s-2); }
+.routine-link { text-decoration: none; color: inherit; min-height: 44px; align-content: center; }
+.routine-name-box { min-height: 56px; }
+.routine-name { font-size: 20px; }
+.add-custom { flex: none; text-decoration: none; color: var(--accent); background: var(--accent-soft); }
+.ent-actions { display: flex; gap: 4px; }
+.ent-actions .icon-btn { width: 40px; height: 40px; min-width: 44px; min-height: 44px; }
+.up-chev { transform: rotate(-90deg); }
+.down-chev { transform: rotate(90deg); }
+.icon-btn[disabled] { opacity: .3; }
+.ms-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-2); padding-block-start: var(--s-2); }
+.mini-stepper { display: grid; gap: 4px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-md); padding: var(--s-2); }
+.ms-label { font-size: 12px; color: var(--text-mute); }
+.ms-ctrl { display: flex; align-items: center; justify-content: space-between; }
+.ms-btn { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-3); font-size: 22px; font-weight: 700; }
+.ms-v { font-size: 20px; font-weight: 700; }
+.target-line { display: flex; flex-wrap: wrap; gap: 6px; padding-block: 2px var(--s-2); }
+.target-increase { background: rgb(79 227 160 / .16); border-color: rgb(79 227 160 / .5); color: var(--ok); }
+.target-decrease { background: rgb(255 85 119 / .14); border-color: rgb(255 85 119 / .5); color: #ff8fa6; }
+.target-find, .target-start { background: var(--accent-soft); border-color: rgb(var(--accent-rgb) / .4); color: var(--accent); }
+.plan-card { display: grid; gap: 4px; text-decoration: none; color: inherit; margin-block-end: var(--s-2); }
+.plan-day.done { opacity: .6; }
+.plan-day.next { border-color: rgb(var(--accent-rgb) / .6); box-shadow: 0 0 24px -10px var(--accent-glow); }
+.plan-list { list-style: none; margin: var(--s-2) 0 0; padding: 0; display: grid; gap: 6px; color: var(--text-dim); font-size: 14px; }
+.plan-list li { display: flex; justify-content: space-between; gap: var(--s-3); }
+.week-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-block-end: 2px; }
+.week-chips .chip { flex: none; }
+.warn { color: var(--accent); }
+.chip-cycle[aria-pressed="false"] { opacity: .8; }
+.chip-cycle.chip-primary, .chip-cycle.chip-secondary { font-weight: 700; }
+.custom-photo { width: 100%; max-height: 260px; object-fit: contain; border-radius: var(--r-md); background: var(--surface-2); }
+.plan-next { margin-block-end: var(--s-2); }
+a.btn { text-decoration: none; }
+.ms-ctrl { direction: ltr; }

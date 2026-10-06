@@ -16,3 +16,9 @@ export function h(tag, props = {}, ...kids) {
   }
   return el;
 }
+
+// Null, undefined and false children are skipped, instead of showing up as the text "null".
+for (const m of ['replaceChildren', 'append', 'prepend']) {
+  const orig = Element.prototype[m];
+  Element.prototype[m] = function (...nodes) { return orig.apply(this, nodes.flat(Infinity).filter((n) => n != null && n !== false)); };
+}

@@ -96,3 +96,16 @@ export function showToast({ message, actionLabel, onAction, duration = 4000 }) {
   if (duration) setTimeout(remove, duration);
   return { remove };
 }
+
+/** Compact − value + control. onChange(newValue). */
+export function miniStepper({ label, value, min = 1, max = 99, step = 1, format = (v) => String(v), onChange }) {
+  const val = h('span', { class: 'ms-v num', text: format(value) });
+  let cur = value;
+  const set = (v) => { cur = Math.min(max, Math.max(min, v)); val.textContent = format(cur); onChange(cur); };
+  return h('div', { class: 'mini-stepper', role: 'group', 'aria-label': label },
+    h('span', { class: 'ms-label', text: label }),
+    h('div', { class: 'ms-ctrl' },
+      h('button', { class: 'ms-btn', type: 'button', dir: 'ltr', 'aria-label': `${label} −`, onclick: () => set(cur - step) }, '−'),
+      val,
+      h('button', { class: 'ms-btn', type: 'button', dir: 'ltr', 'aria-label': `${label} +`, onclick: () => set(cur + step) }, '+')));
+}
