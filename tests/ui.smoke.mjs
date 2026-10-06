@@ -124,14 +124,24 @@ for (const lang of ['he', 'en']) {
     await page.screenshot({ path: `${shots}${lang}-${r.replace(/\//g, '_')}.png`, fullPage: r.includes('preview') });
   }
 
-  await check(`${lang}: exercise library lists 300 and searches`, async () => {
+  await check(`${lang}: exercise library lists 301 and searches (incl. gym slang)`, async () => {
     await page.goto(`${base}#/exercises`);
     await page.waitForSelector('.ex-row');
-    assert.equal(await page.locator('.ex-row').count(), 300);
+    assert.equal(await page.locator('.ex-row').count(), 301);
     await page.fill('.search-input', L(lang, 'דדליפט רומני', 'romanian'));
     await page.waitForTimeout(400);
     const n = await page.locator('.ex-row').count();
     assert.ok(n >= 1 && n < 20, `rows after search: ${n}`);
+    for (const [q, want] of [['מקרבים', /קירוב|Adductor/], ['הולובאדי', /הולו|Hollow/]]) {
+      await page.fill('.search-input', q);
+      await page.waitForTimeout(400);
+      assert.match(await page.locator('.ex-row').first().textContent(), want, q);
+    }
+    await page.locator('.ex-row').first().click();
+    await page.waitForSelector('.ex-title');
+    assert.match(await page.textContent('.steps'), /./);
+    await page.goBack();
+    await page.waitForSelector('.search-input');
     await page.fill('.search-input', 'zzzzqq');
     await page.waitForTimeout(400);
     assert.equal(await page.locator('.ex-row').count(), 0);

@@ -3,9 +3,17 @@ let cache = null;
 export async function loadData() {
   if (cache) return cache;
   const get = (p) => fetch(p).then((r) => r.json());
-  const [ex, cal, muscles, quests, shop, achievements, numbers] = await Promise.all([get('src/data/exercises.json'), get('src/data/calibration.json'), get('src/data/muscles.json'), get('src/data/quests.json'), get('src/data/shop.json'), get('src/data/achievements.json'), get('src/data/numbers.json')]);
-  cache = { exercises: ex.exercises, byId: Object.fromEntries(ex.exercises.map((e) => [e.id, e])), families: cal.families, ratios: cal.ratios, muscles, quests, shop, achievements, numbers };
+  const [ex, extra, cal, muscles, quests, shop, achievements, numbers] = await Promise.all([get('src/data/exercises.json'), get('src/data/extra-exercises.json'), get('src/data/calibration.json'), get('src/data/muscles.json'), get('src/data/quests.json'), get('src/data/shop.json'), get('src/data/achievements.json'), get('src/data/numbers.json')]);
+  const all = mergeExtras(ex.exercises, extra);
+  cache = { exercises: all, byId: Object.fromEntries(all.map((e) => [e.id, e])), families: cal.families, ratios: cal.ratios, muscles, quests, shop, achievements, numbers };
   return cache;
+}
+/** Library additions (src/data/extra-exercises.json) and search aliases (gym slang for the same machine). */
+export function mergeExtras(base, extra) {
+  const have = new Set(base.map((e) => e.id));
+  const all = [...base, ...(extra?.exercises ?? []).filter((e) => !have.has(e.id))];
+  for (const e of all) { const a = extra?.aliases?.[e.id]; if (a) e.aliases = a; }
+  return all;
 }
 export const data = () => cache;
 

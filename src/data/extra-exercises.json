@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "note": "Exercises added after the first library build (requested through the app). No photo yet, so the list shows the dumbbell placeholder. Written by hand; steps are condensed.",
+  "exercises": [
+    {
+      "id": "hollow-body-crunch",
+      "nameEn": "Hollow Body Crunch",
+      "nameHe": "כפיפות הולו בודי",
+      "equipment": "bodyweight",
+      "primaryMuscles": ["abs"],
+      "secondaryMuscles": [],
+      "muscleGroup": "abs",
+      "ranked": false,
+      "type": "bodyweight",
+      "instructionsEn": [
+        "Lie on your back with your legs straight and together and your arms extended overhead.",
+        "Press your lower back into the floor and brace your abs. Lift your shoulders, arms and legs a few inches off the floor into a shallow banana shape. This is the hollow position.",
+        "Curl your torso up and pull your knees toward your chest at the same time, reaching your arms toward your shins.",
+        "Lower back to the hollow position with control. Your lower back stays on the floor the whole time.",
+        "Tip: if your lower back lifts off the floor, bend your knees slightly or keep your arms along your sides."
+      ],
+      "instructionsHe": [
+        "שוכבים על הגב, רגליים ישרות וצמודות, ידיים ישרות מעל הראש.",
+        "לוחצים את הגב התחתון לרצפה ומכווצים את הבטן. מרימים כתפיים, ידיים ורגליים כמה סנטימטרים מהרצפה, בצורת בננה. זו עמדת ההולו.",
+        "מקפלים את פלג הגוף העליון למעלה ומושכים את הברכיים לחזה בו זמנית, וידיים נמתחות לכיוון השוקיים.",
+        "יורדים חזרה לעמדת ההולו בשליטה. הגב התחתון נשאר על הרצפה כל הזמן.",
+        "טיפ: אם הגב התחתון נתלש מהרצפה, מכופפים מעט את הברכיים או משאירים את הידיים לצד הגוף."
+      ],
+      "image": "",
+      "image2": ""
+    }
+  ],
+  "aliases": {
+    "thigh-adductor": ["מקרבים", "מכונת מקרבים", "אדוקטור", "adductor", "adductors", "hip adduction", "inner thigh"],
+    "thigh-abductor": ["מרחיקים", "מכונת מרחיקים", "אבדוקטור", "abductor", "abductors", "hip abduction", "outer thigh"],
+    "hollow-body-crunch": ["הולובאדי", "הולו בודי", "hollow body", "hollow hold", "כפיפות הולובאדי"]
+  }
+}

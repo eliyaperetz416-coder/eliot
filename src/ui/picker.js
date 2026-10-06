@@ -29,7 +29,7 @@ export function openExercisePicker({ title, multi = true, ids = null, onPick }) 
   function update() {
     let items = ids ? ids.map((id) => data().byId[id]).filter(Boolean) : data().exercises;
     if (group) items = items.filter((e) => e.muscleGroup === group);
-    items = searchExercises(items, q, (ex) => { const f = data().families[ex.family]; return [ex.nameEn, ex.nameHe, t(`equipment.${ex.equipment}`), f?.nameEn, f?.nameHe]; }).slice(0, 80);
+    items = searchExercises(items, q, (ex) => { const f = data().families[ex.family]; return [ex.nameEn, ex.nameHe, t(`equipment.${ex.equipment}`), f?.nameEn, f?.nameHe, ...(ex.aliases ?? [])]; }).slice(0, 80);
     list.replaceChildren(...items.map((ex) => {
       const on = chosen.has(ex.id);
       return h('button', { type: 'button', class: 'pick-row', 'aria-pressed': String(on), onclick: () => {
@@ -37,7 +37,7 @@ export function openExercisePicker({ title, multi = true, ids = null, onPick }) 
         chosen.has(ex.id) ? chosen.delete(ex.id) : chosen.set(ex.id, ex);
         update();
       } },
-        h('span', { class: 'thumb' }, h('img', { src: ex.image, alt: '', loading: 'lazy', width: 48, height: 48 })),
+        h('span', { class: 'thumb' }, ex.image ? h('img', { src: ex.image, alt: '', loading: 'lazy', width: 48, height: 48 }) : h('span', { class: 'thumb-fallback' }, icon('workout'))),
         h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: nameOf(ex) }), h('span', { class: 'row-sub', text: `${t(`group.${ex.muscleGroup}`)} · ${t(`equipment.${ex.equipment}`)}` })),
         multi ? h('span', { class: `check${on ? ' on' : ''}` }, on ? icon('check') : null) : null);
     }));

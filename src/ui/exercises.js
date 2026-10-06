@@ -22,7 +22,7 @@ const nameOf = (ex) => (getLanguage() === 'he' ? ex.nameHe : ex.nameEn);
 const otherName = (ex) => (getLanguage() === 'he' ? ex.nameEn : ex.nameHe);
 const haystack = (ex) => {
   const f = data().families[ex.family];
-  return [ex.nameEn, ex.nameHe, t(`equipment.${ex.equipment}`), t(`group.${ex.muscleGroup}`), f?.nameEn, f?.nameHe];
+  return [ex.nameEn, ex.nameHe, t(`equipment.${ex.equipment}`), t(`group.${ex.muscleGroup}`), f?.nameEn, f?.nameHe, ...(ex.aliases ?? [])];
 };
 
 function filtered() {
