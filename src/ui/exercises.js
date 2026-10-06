@@ -12,6 +12,7 @@ import { openNeedSheet } from './need.js';
 import { button } from './components.js';
 import { openMissingSheet } from './missing.js';
 import { openRenameSheet } from './rename.js';
+import { weightHint, openWeightSheet } from './weight-info.js';
 import { formatKg, formatNum } from './format.js';
 
 const GROUPS = ['chest', 'back', 'shoulders', 'biceps', 'triceps', 'quads', 'hamstrings', 'glutes', 'calves', 'abs', 'other'];
@@ -140,6 +141,7 @@ export function exerciseDetailScreen(id) {
       h('span', { class: 'chip', text: t(`equipment.${ex.equipment}`) }),
       h('span', { class: 'chip', text: t(`exercise.type.${ex.type}`) }),
       ex.custom ? h('span', { class: 'chip chip-primary', text: t('custom.mine') }) : null),
+    weightHint(ex) ? h('button', { class: 'card tip weight-tip', type: 'button', onclick: () => openWeightSheet(ex, () => window.dispatchEvent(new HashChangeEvent('hashchange'))) }, icon('info'), h('p', { text: weightHint(ex) })) : null,
     muscleMap({ muscles: data().muscles, exercise: ex }),
     hasPhoto ? imgBtn : null,
     hasPhoto && ex.image2 ? h('p', { class: 'row-sub center', text: t('exercise.tapImage') }) : null,

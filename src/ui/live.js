@@ -6,11 +6,13 @@ import * as W from '../core/workout.mjs';
 import { completeSet, reopenSet, refreshWorkout, feedbackOf } from '../core/live.mjs';
 import { button, emptyState, openSheet } from './components.js';
 import { data } from './data.js';
-import { store, touchDraft, bodyweightKg } from './store.js';
+import { store, touchDraft, bodyweightKg, baseOf } from './store.js';
 import { openExercisePicker } from './picker.js';
 import { startRestTimer, unlockAudio } from './rest-timer.js';
 import { openFinishSheet } from './post-ui.js';
 import { openRenameSheet } from './rename.js';
+import { weightChip, openWeightSheet } from './weight-info.js';
+import { supportsBase, totalFromTyped, typedFromTotal } from '../core/load.mjs';
 import { formatDuration, formatKg } from './format.js';
 import { formatClock } from '../core/timer.mjs';
 
@@ -25,12 +27,12 @@ function layoutOf(ex) {
 }
 const repsShown = (ex, reps) => (reps == null ? '' : layoutOf(ex).minutes ? String(Math.round((reps / 60) * 10) / 10) : String(reps));
 
-function prevText(ex, p) {
+function prevText(ex, p, base = 0) {
   if (!p) return '–';
   const L = layoutOf(ex);
   const reps = repsShown(ex, p.reps);
   if (!L.weight) return `${reps}${L.minutes ? t('col.min.short') : t('col.sec.short')}`;
-  const w = Number(p.weight) > 0 ? formatKg(p.weight) : null;
+  const w = Number(p.weight) > 0 ? formatKg(typedFromTotal(p.weight, base)) : null;
   return w ? `${w}×${reps}` : `${ex.type === 'bodyweight' ? '' : '0×'}${reps}`;
 }
 
@@ -75,6 +77,7 @@ export function liveScreen() {
     const linked = !!entry.supersetGroup;
     body.append(
       h('div', { class: 'list' },
+        act(t('weight.sheet.title'), 'info', () => openWeightSheet(ex, rerender)),
         act(t('rename.title'), 'edit', () => openRenameSheet(ex, rerender)),
         act(t('entry.replace'), 'refresh', () => openExercisePicker({ title: t('pick.replace.title'), multi: false, onPick: ([ex2]) => { W.replaceExercise(w, entry.id, ex2); refreshDone(); } })),
         i > 0 ? act(t('entry.up'), 'chevron', () => { W.moveEntry(w, entry.id, -1); save(); rerender(); }) : null,
@@ -88,11 +91,13 @@ export function liveScreen() {
   function setRow(entry, ex, s, workingNo) {
     const L = layoutOf(ex);
     const p = prevOf(ex.id)[s.idx];
+    const base = supportsBase(ex) ? baseOf(ex.id) : 0; // you type what you add; the set stores the total
     const done = s.done;
     const typeBtn = h('button', { class: `set-num type-${s.type}`, type: 'button', 'aria-label': `${t('col.set')} ${s.idx + 1}: ${t(`settype.${s.type}`)}`, onclick: () => typeSheet(entry, s) }, s.type === 'normal' ? String(workingNo) : LETTER[s.type]);
     const setNum = (field, v) => { W.setField(w, entry.id, s.idx, field, v); if (field === 'reps' && L.minutes && s.reps != null) s.reps = Math.round(s.reps * 60); save(); };
-    const cells = [typeBtn, h('span', { class: 'set-prev num', text: prevText(ex, p) })];
-    if (L.weight) cells.push(numInput({ value: s.weight ?? '', placeholder: p && Number(p.weight) > 0 ? formatKg(p.weight) : '', label: t(L.weightLabel), onInput: (v) => setNum('weight', v), onChange: () => s.done && refreshDone() }));
+    const cells = [typeBtn, h('span', { class: 'set-prev num', text: prevText(ex, p, base) })];
+    const typedNow = typedFromTotal(s.weight, base);
+    if (L.weight) cells.push(numInput({ value: typedNow == null ? '' : String(typedNow), placeholder: p && Number(p.weight) > 0 ? formatKg(typedFromTotal(p.weight, base)) : '', label: t(L.weightLabel), onInput: (v) => { const n = v === '' ? null : Number(String(v).replace(',', '.')); setNum('weight', n == null || !Number.isFinite(n) ? '' : String(totalFromTyped(n, base))); }, onChange: () => s.done && refreshDone() }));
     cells.push(numInput({ value: repsShown(ex, s.reps), placeholder: p?.reps != null ? repsShown(ex, p.reps) : '', integer: !L.minutes, label: t(L.repsLabel), onInput: (v) => setNum('reps', v), onChange: () => s.done && refreshDone() }));
     if (!L.weight) cells.splice(2, 0, h('span'));
     const vBtn = h('button', { class: `set-v${done ? ' on' : ''}`, type: 'button', 'aria-pressed': String(done), 'aria-label': t('set.done'), onclick: () => toggle(entry, ex, s, p) }, icon('check'));
@@ -163,6 +168,7 @@ export function liveScreen() {
       h('header', { class: 'ent-head' },
         h('a', { class: 'ent-name', href: `#/exercise/${ex.id}` }, nameOf(ex)),
         h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('entry.menu'), onclick: () => entryMenu(entry, i) }, icon('more'))),
+      weightChip(ex, rerender) ? h('div', { class: 'weight-line' }, weightChip(ex, rerender)) : null,
       entry.target ? targetLine(entry.target) : null,
       entry.notes ? h('p', { class: 'ent-notes', text: entry.notes }) : null,
       h('div', { class: 'ent-rest' }, h('span', { class: 'row-sub', text: t('entry.rest') }), restLabel,

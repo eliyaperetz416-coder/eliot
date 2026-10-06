@@ -656,6 +656,53 @@ for (const lang of ['he', 'en']) {
     await page.waitForSelector('main .btn-primary');
   });
 
+  await check(`${lang}: weight convention hint + bar/machine base weight (type 10 on a 20 kg base = 30 total)`, async () => {
+    const T = (he, en) => L(lang, he, en);
+    await page.goto(`${base}#/exercise/barbell-bench-press-medium-grip`);
+    await page.waitForSelector('.weight-tip');
+    assert.match(await page.textContent('.weight-tip'), /20/);
+    await page.goto(`${base}#/workout`);
+    await startEmpty(page);
+    await addExercise(page, 'barbell bench press');
+    const chip = page.locator('.weight-chip');
+    assert.ok((await chip.textContent()).includes(T('כולל', 'total')));
+    await chip.click();
+    await page.waitForSelector('#wb-input');
+    await page.screenshot({ path: `${shots}${lang}-weight-sheet.png` });
+    await page.fill('#wb-input', '20');
+    await page.locator('.sheet .btn-primary').click();
+    await page.waitForFunction(() => /20/.test(document.querySelector('.weight-chip')?.textContent ?? ''));
+    const row = page.locator('.ent-card .set-row').first();
+    await row.locator('.set-input').nth(0).fill('10');
+    await row.locator('.set-input').nth(1).fill('8');
+    await row.locator('.set-v').click();
+    await page.waitForTimeout(250);
+    const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('dg.draft')).entries[0].sets[0].weight);
+    assert.equal(stored, 30, 'the set stores the total');
+    assert.equal(await page.locator('.ent-card .set-row .set-input').first().inputValue(), '10', 'the input shows what you typed');
+    // no base again: the same set shows the total
+    await page.locator('.weight-chip').click();
+    await page.waitForSelector('#wb-input');
+    await page.fill('#wb-input', '');
+    await page.locator('.sheet .btn-primary').click();
+    await page.waitForFunction(() => document.querySelector('.ent-card .set-row .set-input')?.value === '30');
+    // dumbbells: per hand, no base field
+    await page.evaluate(async () => { const { dbDelete } = await import('./src/ui/db.js'); await dbDelete('draft', 'current'); localStorage.removeItem('dg.draft'); });
+    await page.goto(`${base}#/workout`); await page.reload();
+    await page.waitForSelector('main .btn-primary');
+    await startEmpty(page);
+    await addExercise(page, 'dumbbell curl');
+    const dchip = page.locator('.weight-chip').first();
+    assert.ok((await dchip.textContent()).includes(T('לכל יד', 'Per hand')));
+    await dchip.click();
+    await page.waitForSelector('.sheet');
+    assert.equal(await page.locator('#wb-input').count(), 0);
+    await page.keyboard.press('Escape');
+    await page.evaluate(async () => { const { dbDelete } = await import('./src/ui/db.js'); await dbDelete('draft', 'current'); localStorage.removeItem('dg.draft'); });
+    await page.goto(`${base}#/workout`); await page.reload();
+    await page.waitForSelector('main .btn-primary');
+  });
+
   await check(`${lang}: settings, backup export + restore, reminder, numbers page, reset`, async () => {
     const T = (he, en) => L(lang, he, en);
     if (ONLY) await postThree(page);

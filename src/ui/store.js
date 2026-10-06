@@ -9,7 +9,7 @@ import { markPlanDone } from '../core/generator.mjs';
 import { newGame, migrateGame, evaluateAchievements } from '../core/gamestate.mjs';
 import { dateKey } from '../core/workout.mjs';
 
-export const store = { profile: null, bwLog: [], workouts: [], draft: null, bests: {}, overall: { pending: true, remaining: 3, rating: 0 }, routines: [], folders: [], plans: [], custom: [], game: newGame(), requests: [] };
+export const store = { profile: null, bwLog: [], workouts: [], draft: null, bests: {}, overall: { pending: true, remaining: 3, rating: 0 }, routines: [], folders: [], plans: [], custom: [], game: newGame(), requests: [], bases: {} };
 export const todayKey = () => dateKey(Date.now());
 let achievementListener = null;
 export const onAchievements = (fn) => { achievementListener = fn; };
@@ -46,6 +46,7 @@ export async function initStore() {
   await loadCustom();
   setRenames(await dbGet('kv', 'renames').catch(() => null));
   store.requests = (await dbGet('kv', 'requests').catch(() => null)) ?? [];
+  store.bases = (await dbGet('kv', 'bases').catch(() => null)) ?? {};
   store.profile = profile ?? null;
   store.bwLog = bw.sort((a, b) => a.ms - b.ms);
   store.workouts = workouts.map(migrateWorkout).filter(Boolean).sort((a, b) => a.startedMs - b.startedMs);
@@ -208,3 +209,13 @@ export async function saveRequests(list) {
   await dbPut('kv', list, 'requests');
   emit();
 }
+
+/** Remember the bar / machine weight of an exercise (kg). 0 removes it: you type the total again. */
+export async function saveBase(exerciseId, kg) {
+  const next = { ...store.bases };
+  if (kg > 0) next[exerciseId] = kg; else delete next[exerciseId];
+  store.bases = next;
+  await dbPut('kv', next, 'bases');
+  emit();
+}
+export const baseOf = (exerciseId) => store.bases[exerciseId] ?? 0;

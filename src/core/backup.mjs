@@ -17,7 +17,7 @@ export function checksum(str) {
   return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16).padStart(14, '0');
 }
 
-export const EMPTY_DATA = Object.freeze({ profile: null, bodyweight: [], workouts: [], routines: [], folders: [], plans: [], custom: [], blobs: {}, game: null, settings: {}, renames: {}, requests: [] });
+export const EMPTY_DATA = Object.freeze({ profile: null, bodyweight: [], workouts: [], routines: [], folders: [], plans: [], custom: [], blobs: {}, game: null, settings: {}, renames: {}, requests: [], bases: {} });
 const ARRAYS = ['bodyweight', 'workouts', 'routines', 'folders', 'plans', 'custom', 'requests'];
 
 export function buildBackup({ data, appVersion, now }) {
@@ -36,12 +36,12 @@ export function validateBackup(text) {
   const d = b.data;
   for (const k of ARRAYS) if (d[k] != null && !Array.isArray(d[k])) return { ok: false, error: 'shape' };
   if (d.blobs != null && (typeof d.blobs !== 'object' || Array.isArray(d.blobs))) return { ok: false, error: 'shape' };
-  if (d.renames != null && (typeof d.renames !== 'object' || Array.isArray(d.renames))) return { ok: false, error: 'shape' };
+  for (const k of ['renames', 'bases']) if (d[k] != null && (typeof d[k] !== 'object' || Array.isArray(d[k]))) return { ok: false, error: 'shape' };
   if (d.profile != null && typeof d.profile !== 'object') return { ok: false, error: 'shape' };
   for (const w of d.workouts ?? []) if (!w || typeof w.id !== 'string' || !Number.isFinite(w.startedMs)) return { ok: false, error: 'shape' };
   for (const k of ['routines', 'folders', 'plans', 'custom', 'requests']) for (const x of d[k] ?? []) if (!x || typeof x.id !== 'string') return { ok: false, error: 'shape' };
   for (const e of d.bodyweight ?? []) if (!e || typeof e.dateKeyTime !== 'string') return { ok: false, error: 'shape' };
-  return { ok: true, backup: { ...b, data: { ...EMPTY_DATA, ...d, blobs: d.blobs ?? {}, settings: d.settings ?? {}, renames: d.renames ?? {}, requests: d.requests ?? [] } } };
+  return { ok: true, backup: { ...b, data: { ...EMPTY_DATA, ...d, blobs: d.blobs ?? {}, settings: d.settings ?? {}, renames: d.renames ?? {}, requests: d.requests ?? [], bases: d.bases ?? {} } } };
 }
 
 export function summarize(data) {
@@ -70,6 +70,7 @@ export function mergeData(cur, inc) {
     custom: union(c.custom, i.custom, (x) => x.id),
     blobs: { ...i.blobs, ...c.blobs },
     renames: { ...i.renames, ...c.renames },
+    bases: { ...i.bases, ...c.bases },
     requests: union(c.requests, i.requests, (x) => x.id),
   };
   if (fresh || !c.profile) out.profile = i.profile ?? c.profile;

@@ -452,3 +452,9 @@ a.btn { text-decoration: none; }
 .ex-title-row .ex-title { margin: 0; flex: 1; min-width: 0; }
 .missing-btn { margin-block-start: 8px; }
 .req-card { margin-block-start: 8px; }
+
+/* Which number do I type */
+.weight-line { padding-block-end: var(--s-2); }
+.weight-chip { min-height: 32px; }
+.weight-tip { width: 100%; text-align: start; margin-block: var(--s-3); cursor: pointer; }
+.weight-tip p { color: var(--text-dim); font-size: 14px; }
