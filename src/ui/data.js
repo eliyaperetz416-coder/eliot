@@ -13,6 +13,7 @@ export const data = () => cache;
 export function registerCustom(ex, imageUrl = '') {
   const d = cache;
   const rec = { ...ex, image: imageUrl, image2: '' };
+  applyName(rec);
   const i = d.exercises.findIndex((e) => e.id === ex.id);
   if (i >= 0) d.exercises[i] = rec; else d.exercises.push(rec);
   d.byId[ex.id] = rec;
@@ -22,4 +23,27 @@ export function unregisterCustom(id) {
   const d = cache;
   d.exercises = d.exercises.filter((e) => e.id !== id);
   delete d.byId[id];
+}
+
+/** Own names for exercises (OUR DESIGN): per language, kept next to the original so it can be reset. { id: { he?, en? } } */
+export const renames = {};
+function applyName(ex) {
+  ex.origNameHe ??= ex.nameHe; ex.origNameEn ??= ex.nameEn;
+  const r = renames[ex.id];
+  ex.nameHe = r?.he || ex.origNameHe;
+  ex.nameEn = r?.en || ex.origNameEn;
+}
+export function setRenames(obj) {
+  for (const k of Object.keys(renames)) delete renames[k];
+  Object.assign(renames, obj ?? {});
+  cache?.exercises.forEach(applyName);
+}
+/** name '' resets that language to the original name. Returns the new renames object. */
+export function renameExercise(id, lang, name) {
+  const r = { ...renames[id] };
+  const v = String(name ?? '').trim().slice(0, 60);
+  if (v) r[lang] = v; else delete r[lang];
+  if (!r.he && !r.en) delete renames[id]; else renames[id] = r;
+  if (cache?.byId[id]) applyName(cache.byId[id]);
+  return { ...renames };
 }

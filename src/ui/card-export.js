@@ -36,17 +36,20 @@ export async function renderCard(model) {
   const glow = g.createRadialGradient(W / 2, 470, 40, W / 2, 470, 720);
   glow.addColorStop(0, `${accent}55`); glow.addColorStop(1, '#0a0b1200');
   g.fillStyle = glow; g.fillRect(0, 0, W, H);
-  const ecx = W / 2, ecy = 290 + (400 * (168 / 160)) / 2, erad = 230;
+  const framed = !!frItem && frItem.art !== 'meander'; // a frame needs room around the emblem, so the emblem is drawn smaller
+  const esize = framed ? 320 : 400;
+  const ecx = W / 2, ecy = 290 + (400 * (168 / 160)) / 2, erad = framed ? 185 : 230;
   if (fxItem) paintEffect(g, fxItem.art, ecx, ecy, erad, W, H, accent);
   g.strokeStyle = `${accent}88`; g.lineWidth = 6; g.beginPath(); g.roundRect(30, 30, W - 60, H - 60, 56); g.stroke();
   // title and name
   g.fillStyle = accent; g.font = '700 54px Cinzel, serif'; g.fillText('DEMIGOD', W / 2, 130);
   g.fillStyle = '#f4f5fa'; g.font = '700 84px Heebo, system-ui, sans-serif'; g.fillText(model.name, W / 2, 250, W - 160);
   // emblem
-  const em = emblem({ tier: model.tier ?? 'unranked', divisionIndex: model.divisionIndex, size: 400 });
+  const em = emblem({ tier: model.tier ?? 'unranked', divisionIndex: model.divisionIndex, size: esize });
   const img = await svgToImage(em.querySelector('svg'));
   const eh = 400 * (168 / 160);
-  g.drawImage(img, (W - 400) / 2, 290, 400, eh);
+  const eh2 = esize * (168 / 160);
+  g.drawImage(img, (W - esize) / 2, ecy - eh2 / 2, esize, eh2);
   if (frItem) paintFrame(g, frItem.art, ecx, ecy, erad, W, H, accent);
   // rank text
   const ty = 290 + eh + 85;

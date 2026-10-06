@@ -4,12 +4,12 @@ import { migrateWorkout, newestDraft } from '../core/draft.mjs';
 import { bestsFrom, ratingsOf, afterEdit } from '../core/post.mjs';
 import { overallRating } from '../core/ranks.mjs';
 import { latestBodyweight, bodyweightEntry } from '../core/profile.mjs';
-import { data, registerCustom, unregisterCustom } from './data.js';
+import { data, registerCustom, unregisterCustom, setRenames, renameExercise } from './data.js';
 import { markPlanDone } from '../core/generator.mjs';
 import { newGame, migrateGame, evaluateAchievements } from '../core/gamestate.mjs';
 import { dateKey } from '../core/workout.mjs';
 
-export const store = { profile: null, bwLog: [], workouts: [], draft: null, bests: {}, overall: { pending: true, remaining: 3, rating: 0 }, routines: [], folders: [], plans: [], custom: [], game: newGame() };
+export const store = { profile: null, bwLog: [], workouts: [], draft: null, bests: {}, overall: { pending: true, remaining: 3, rating: 0 }, routines: [], folders: [], plans: [], custom: [], game: newGame(), requests: [] };
 export const todayKey = () => dateKey(Date.now());
 let achievementListener = null;
 export const onAchievements = (fn) => { achievementListener = fn; };
@@ -44,6 +44,8 @@ export async function initStore() {
   store.game = migrateGame(gameRaw);
   store.routines = routines.sort((a, b) => a.createdMs - b.createdMs); store.folders = folders; store.plans = plans.sort((a, b) => a.createdMs - b.createdMs);
   await loadCustom();
+  setRenames(await dbGet('kv', 'renames').catch(() => null));
+  store.requests = (await dbGet('kv', 'requests').catch(() => null)) ?? [];
   store.profile = profile ?? null;
   store.bwLog = bw.sort((a, b) => a.ms - b.ms);
   store.workouts = workouts.map(migrateWorkout).filter(Boolean).sort((a, b) => a.startedMs - b.startedMs);
@@ -190,5 +192,19 @@ export async function deleteCustom(id) {
   store.custom = store.custom.filter((x) => x.id !== id);
   if (urls.has(id)) { URL.revokeObjectURL(urls.get(id)); urls.delete(id); }
   unregisterCustom(id);
+  emit();
+}
+
+/** Rename an exercise in the current language (empty name = back to the original). */
+export async function saveExerciseName(id, lang, name) {
+  const all = renameExercise(id, lang, name);
+  await dbPut('kv', all, 'renames');
+  emit();
+}
+
+/** Requests for exercises that are missing from the library; Elia sends them to Claude, who adds them in an update. */
+export async function saveRequests(list) {
+  store.requests = list;
+  await dbPut('kv', list, 'requests');
   emit();
 }

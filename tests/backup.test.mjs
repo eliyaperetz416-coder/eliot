@@ -83,3 +83,18 @@ test('numbers.json is in sync with the ASSUMPTIONS docs and both languages have 
   assert.equal(built.en.length, built.he.length);
   built.en.forEach((s, i) => assert.equal(s.blocks.length > 0, built.he[i].blocks.length > 0));
 });
+
+test('renames and requests travel in the backup and merge without losing yours', () => {
+  const d = data({ renames: { x: { he: 'א' } }, requests: [{ id: 'q1', name: 'n', links: [] }] });
+  const r = validateBackup(file(d));
+  assert.ok(r.ok);
+  assert.deepEqual(r.backup.data.renames, { x: { he: 'א' } });
+  const m = mergeData(data({ renames: { x: { he: 'mine' }, y: { en: 'Y' } }, requests: [{ id: 'q2', name: 'm', links: [] }] }), d);
+  assert.equal(m.renames.x.he, 'mine');
+  assert.equal(m.renames.y.en, 'Y');
+  assert.deepEqual(m.requests.map((x) => x.id).sort(), ['q1', 'q2']);
+  assert.equal(validateBackup(file(data({ requests: [{ name: 'no id' }] }))).error, 'shape');
+  assert.equal(validateBackup(file(data({ renames: [] }))).error, 'shape');
+  // an old backup without these fields still loads
+  assert.deepEqual(validateBackup(file()).backup.data.requests, []);
+});

@@ -10,6 +10,7 @@ import { store, touchDraft, bodyweightKg } from './store.js';
 import { openExercisePicker } from './picker.js';
 import { startRestTimer, unlockAudio } from './rest-timer.js';
 import { openFinishSheet } from './post-ui.js';
+import { openRenameSheet } from './rename.js';
 import { formatDuration, formatKg } from './format.js';
 import { formatClock } from '../core/timer.mjs';
 
@@ -74,6 +75,7 @@ export function liveScreen() {
     const linked = !!entry.supersetGroup;
     body.append(
       h('div', { class: 'list' },
+        act(t('rename.title'), 'edit', () => openRenameSheet(ex, rerender)),
         act(t('entry.replace'), 'refresh', () => openExercisePicker({ title: t('pick.replace.title'), multi: false, onPick: ([ex2]) => { W.replaceExercise(w, entry.id, ex2); refreshDone(); } })),
         i > 0 ? act(t('entry.up'), 'chevron', () => { W.moveEntry(w, entry.id, -1); save(); rerender(); }) : null,
         i < w.entries.length - 1 ? act(t('entry.down'), 'chevron', () => { W.moveEntry(w, entry.id, 1); save(); rerender(); }) : null,

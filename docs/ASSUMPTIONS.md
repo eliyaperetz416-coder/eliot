@@ -77,3 +77,10 @@ seasons and leaderboards exist (server features, not built here), about 600 exer
 - **Backup reminder:** after 28 days without a backup (or 28 days after the first workout if you never backed up) a card appears on the workout screen. "Later" hides it for 3 days.
 - **Reset:** deletes all data on the device and needs a typed confirmation word.
 - **Storage:** the app asks the browser for persistent storage. iOS may clear sites that were not opened for seven days when the app is not on the home screen, so a backup is the safety net.
+
+## After Stage 7 (feedback round)
+**OUR DESIGN:**
+- **Finishing a workout:** if sets have weight and reps but were never ticked with the V, the finish sheet offers "Mark N filled sets as done and finish" (a set is usable when it has reps, and a weight too unless it is a bodyweight, hold or cardio exercise). The other option finishes with only the ticked sets. Nothing typed is lost.
+- **Renaming exercises:** the name is changed per language, everywhere (lists, workouts, history, search). The original name is kept so it can be restored, and history and ranks do not change.
+- **Missing exercises:** "Create it myself" makes a custom exercise right away. "Ask Claude to add it" saves a request (name, video links, notes) on the phone and builds a message to paste into the chat. There is no AI inside the app (no server, no AI APIs): Claude researches the exercise in the chat and adds it to the library in an update. Renames and requests are part of the backup.
+- **Shop art:** frames, the lightning effect and the helm were redrawn (gold metal gradients, symmetric laurel, Greek key border, lightning ring, feathered wings).

@@ -5,6 +5,7 @@ import { t, getLanguage } from '../core/i18n.mjs';
 import { searchExercises } from '../core/search.mjs';
 import { button, openSheet } from './components.js';
 import { data } from './data.js';
+import { openMissingSheet } from './missing.js';
 
 const GROUPS = ['chest', 'back', 'shoulders', 'biceps', 'triceps', 'quads', 'hamstrings', 'glutes', 'calves', 'abs', 'other'];
 const nameOf = (ex) => (getLanguage() === 'he' ? ex.nameHe : ex.nameEn);
@@ -48,7 +49,8 @@ export function openExercisePicker({ title, multi = true, ids = null, onPick }) 
   search.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => { q = search.value; update(); }, 120); });
 
   const content = h('div', { class: 'picker' },
-    h('div', { class: 'search-box' }, icon('search'), search), groupChips, list, footer);
+    h('div', { class: 'search-box' }, icon('search'), search), groupChips, list,
+    h('button', { class: 'btn btn-ghost btn-block missing-btn', type: 'button', onclick: () => openMissingSheet(() => sheet.close()) }, icon('plus'), t('missing.cta')), footer);
   const sheet = openSheet({ title, content, tall: true });
   update();
   return sheet;

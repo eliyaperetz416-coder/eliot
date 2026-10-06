@@ -10,7 +10,7 @@ mkdirSync(shots, { recursive: true });
 const server = await serve(0);
 const base = `http://localhost:${server.address().port}/`;
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-const ROUTES = ['workout', 'exercises', 'exercise/barbell-bench-press-medium-grip', 'exercise/plank', 'ranks', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'profile', 'history', 'kit', 'ranks-preview'];
+const ROUTES = ['workout', 'exercises', 'exercise/barbell-bench-press-medium-grip', 'exercise/plank', 'ranks', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'requests', 'profile', 'history', 'kit', 'ranks-preview'];
 const errors = [];
 let failed = 0;
 const ONLY = process.env.ONLY;
@@ -566,6 +566,60 @@ for (const lang of ['he', 'en']) {
     await page.waitForSelector('.streak-card');
     assert.match(await page.textContent('.streak-card'), /12/);
     assert.equal(await page.locator('.streak-broken').count(), 0);
+  });
+
+  await check(`${lang}: finish with unticked sets, rename exercise, missing-exercise request`, async () => {
+    const T = (he, en) => L(lang, he, en);
+    // numbers typed but the V never tapped: finishing must still work and keep the data
+    await page.goto(`${base}#/workout`);
+    await startEmpty(page);
+    assert.ok(await page.locator('.sheet .missing-btn').isVisible(), 'picker offers "can\'t find it"');
+    await addExercise(page, 'barbell bench press');
+    const row = page.locator('.ent-card .set-row').first();
+    await row.locator('.set-input').nth(0).fill('60');
+    await row.locator('.set-input').nth(1).fill('8');
+    await page.locator('.live-head .btn').click();
+    await page.waitForSelector('.sheet');
+    assert.match(await page.textContent('.sheet'), /1/);
+    await page.screenshot({ path: `${shots}${lang}-finish-unticked.png` });
+    await page.locator('.sheet .btn-primary').click();
+    await page.waitForSelector('main .stats-grid', { timeout: 8000 });
+    assert.equal(await page.evaluate(() => location.hash), '#/result');
+    // rename (current language only), persists, can be reset
+    const id = 'barbell-bench-press-medium-grip';
+    await page.goto(`${base}#/exercise/${id}`);
+    const before = await page.textContent('.ex-title');
+    await page.getByRole('button', { name: T('שינוי שם תרגיל', 'Rename exercise') }).click();
+    await page.fill('#rename-input', 'My Bench');
+    await page.locator('.sheet .btn-primary').click();
+    await page.waitForFunction(() => document.querySelector('.ex-title')?.textContent === 'My Bench');
+    await page.reload();
+    await page.waitForFunction(() => document.querySelector('.ex-title')?.textContent === 'My Bench');
+    await page.goto(`${base}#/exercises`);
+    await page.fill('.search-input', 'My Bench');
+    await page.waitForTimeout(350);
+    assert.ok((await page.locator('.ex-row, .row').filter({ hasText: 'My Bench' }).count()) > 0, 'search finds the new name');
+    await page.goto(`${base}#/exercise/${id}`);
+    await page.getByRole('button', { name: T('שינוי שם תרגיל', 'Rename exercise') }).click();
+    await page.locator('.sheet .btn-ghost').click();
+    await page.waitForFunction((b) => document.querySelector('.ex-title')?.textContent === b, before);
+    // missing exercise request
+    await page.goto(`${base}#/exercises`);
+    await page.locator('.missing-btn').click();
+    await page.waitForSelector('.sheet .row');
+    await page.locator('.sheet .row', { hasText: T('לבקש מ-Claude', 'Ask Claude') }).click();
+    await page.waitForSelector('#req-name');
+    await page.click('main .btn-primary');
+    await page.waitForSelector('.field-error');
+    await page.fill('#req-name', 'Hammer Strength Chest Press');
+    await page.fill('#req-links', 'https://youtu.be/abc123\nnot a link\nhttps://example.com/v2');
+    await page.click('main .btn-primary');
+    await page.waitForSelector('.req-card');
+    const msg = await page.inputValue('#req-message');
+    assert.ok(msg.includes('Hammer Strength Chest Press') && msg.includes('https://youtu.be/abc123') && msg.includes('https://example.com/v2') && !msg.includes('not a link'));
+    await page.screenshot({ path: `${shots}${lang}-requests.png`, fullPage: true });
+    await page.reload();
+    await page.waitForSelector('.req-card');
   });
 
   await check(`${lang}: settings, backup export + restore, reminder, numbers page, reset`, async () => {

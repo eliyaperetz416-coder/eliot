@@ -4,12 +4,13 @@ import { icon } from './icons.js';
 import { t, getLanguage } from '../core/i18n.mjs';
 import * as W from '../core/workout.mjs';
 import { postWorkout, rankIndex } from '../core/post.mjs';
+import { filledOpenSets, completeFilled } from '../core/live.mjs';
 import { applyPost } from '../core/gamestate.mjs';
 import { rewardsCard } from './game-ui.js';
 import { tierFor } from '../core/ranks.mjs';
 import { button, emptyState, openSheet } from './components.js';
 import { data } from './data.js';
-import { store, commitPost, clearDraft } from './store.js';
+import { store, commitPost, clearDraft, bodyweightKg } from './store.js';
 import { skipRest } from './rest-timer.js';
 import { keepAwake } from './wakelock.js';
 import { emblem } from './emblem.js';
@@ -33,22 +34,28 @@ export function openFinishSheet() {
   body.append(h('div', { class: 'stats-grid' },
     statTile(t('fin.duration'), formatDuration(s.durationSec)), statTile(t('fin.sets'), String(s.workingSets)),
     statTile(t('fin.volume'), `${formatNum(s.volume, 0)} ${t('unit.kg')}`), statTile(t('fin.prs'), String(s.prs))));
-  if (total - done > 0 && done > 0) body.append(h('p', { class: 'row-sub', text: t('fin.unfinished', { n: total - done }) }));
-  if (done === 0) {
-    body.append(h('p', { text: t('fin.empty') }));
-  } else {
-    body.append(button({ label: t('fin.post'), block: true, onClick: async (e) => {
-      e.currentTarget.disabled = true;
-      const now = Date.now();
-      const result = postWorkout({ draft: w, workouts: store.workouts, now, byId, sex: store.profile.sex });
-      const after = result.summary.overallAfter;
-      const g = applyPost({ game: store.game, workout: result.workout, workouts: result.workouts, byId, now, overallRankIndex: after.pending ? -1 : rankIndex(after.rating), customCount: store.custom.length, plansCount: store.plans.length, achievements: data().achievements, pool: data().quests });
-      await commitPost(result, g.game);
-      lastResult = { ...result, game: g.game, rewards: g.rewards };
-      skipRest(); keepAwake(false);
-      sh.close();
-      location.hash = '#/result';
-    } }));
+  const open = filledOpenSets(w, byId).length;
+  const post = async (btn, markFilled) => {
+    btn.disabled = true;
+    if (markFilled) completeFilled({ workout: w, now: Date.now(), bodyweightKg: bodyweightKg(), sex: store.profile.sex, workouts: store.workouts, byId });
+    const now = Date.now();
+    const result = postWorkout({ draft: w, workouts: store.workouts, now, byId, sex: store.profile.sex });
+    const after = result.summary.overallAfter;
+    const g = applyPost({ game: store.game, workout: result.workout, workouts: result.workouts, byId, now, overallRankIndex: after.pending ? -1 : rankIndex(after.rating), customCount: store.custom.length, plansCount: store.plans.length, achievements: data().achievements, pool: data().quests });
+    await commitPost(result, g.game);
+    lastResult = { ...result, game: g.game, rewards: g.rewards };
+    skipRest(); keepAwake(false);
+    sh.close();
+    location.hash = '#/result';
+  };
+  if (open) {
+    body.append(h('p', { class: 'row-sub', text: t('fin.filled', { n: open }) }),
+      button({ label: t('fin.markFilled', { n: open }), block: true, onClick: (e) => post(e.currentTarget, true) }));
+  } else if (done === 0) body.append(h('p', { text: t('fin.empty') }));
+  if (done > 0) {
+    if (total - done - open > 0) body.append(h('p', { class: 'row-sub', text: t('fin.unfinished', { n: total - done - open }) }));
+    if (!open) body.append(button({ label: t('fin.post'), block: true, onClick: (e) => post(e.currentTarget, false) }));
+    else body.append(button({ label: t('fin.postDoneOnly'), variant: 'secondary', block: true, onClick: (e) => post(e.currentTarget, false) }));
   }
   body.append(
     button({ label: t('fin.keep'), variant: 'secondary', block: true, onClick: () => sh.close() }),

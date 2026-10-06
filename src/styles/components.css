@@ -447,3 +447,9 @@ a.btn { text-decoration: none; }
 .numbers-list { margin: 0; padding-inline-start: 1.2em; display: grid; gap: 8px; }
 .backup-reminder { margin-block-end: 12px; }
 .backup-reminder h2 { margin: 0 0 4px; font-size: 1rem; }
+
+/* Stage 7b */
+.ex-title-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
+.ex-title-row .ex-title { margin: 0; flex: 1; min-width: 0; }
+.missing-btn { margin-block-start: 8px; }
+.req-card { margin-block-start: 8px; }

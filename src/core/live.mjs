@@ -40,3 +40,29 @@ export function feedbackOf(s) {
 export function refreshWorkout(workout, workouts, byId) {
   computeWorkout(workout, buildEvents(workouts), byId);
 }
+
+/** Sets that have usable numbers but were never ticked with the V (people often fill the numbers and forget the tick). */
+export function filledOpenSets(workout, byId) {
+  const out = [];
+  for (const e of workout.entries) {
+    const ex = byId[e.exerciseId];
+    for (const s of e.sets) {
+      if (s.done || !(s.reps > 0)) continue;
+      const needsWeight = ex && (ex.type === 'weight' || (ex.type !== 'bodyweight' && ex.type !== 'time' && ex.type !== 'cardio'));
+      if (needsWeight && !(s.weight > 0)) continue;
+      out.push({ entryId: e.id, idx: s.idx });
+    }
+  }
+  return out;
+}
+
+/** Ticks every filled-but-open set. Returns how many were ticked. */
+export function completeFilled({ workout, now, bodyweightKg, sex, workouts, byId }) {
+  const list = filledOpenSets(workout, byId);
+  for (const { entryId, idx } of list) {
+    const { s } = find(workout, entryId, idx);
+    if (s.type !== 'warmup' && s.weight == null) s.weight = 0;
+    completeSet({ workout, entryId, idx, now, bodyweightKg, sex, workouts, byId });
+  }
+  return list.length;
+}

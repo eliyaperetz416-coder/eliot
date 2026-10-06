@@ -10,6 +10,8 @@ import { e1rmSeries } from '../core/charts.mjs';
 import { tierFor } from '../core/ranks.mjs';
 import { openNeedSheet } from './need.js';
 import { button } from './components.js';
+import { openMissingSheet } from './missing.js';
+import { openRenameSheet } from './rename.js';
 import { formatKg, formatNum } from './format.js';
 
 const GROUPS = ['chest', 'back', 'shoulders', 'biceps', 'triceps', 'quads', 'hamstrings', 'glutes', 'calves', 'abs', 'other'];
@@ -97,7 +99,8 @@ export function exercisesScreen() {
 
   root.append(
     h('div', { class: 'search-row' }, h('div', { class: 'search-box' }, icon('search'), search), filterBtn, h('a', { class: 'icon-btn add-custom', href: '#/custom/new', 'aria-label': t('custom.new') }, icon('plus'))),
-    active, count, listBox);
+    active, count, listBox,
+    h('div', { class: 'stack', style: 'padding-block-start:12px' }, h('button', { class: 'btn btn-secondary btn-block missing-btn', type: 'button', onclick: () => openMissingSheet() }, icon('plus'), t('missing.cta'))));
   update();
   return root;
 }
@@ -129,7 +132,8 @@ export function exerciseDetailScreen(id) {
   const steps = getLanguage() === 'he' ? ex.instructionsHe : ex.instructionsEn;
   return h('main', { class: 'screen' },
     h('a', { class: 'back-link', href: '#/exercises' }, icon('chevron', 'chev back-chev'), t('exercises.back')),
-    h('h1', { class: 'ex-title', text: nameOf(ex) }),
+    h('div', { class: 'ex-title-row' }, h('h1', { class: 'ex-title', text: nameOf(ex) }),
+      h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('rename.title'), onclick: () => openRenameSheet(ex, () => window.dispatchEvent(new HashChangeEvent('hashchange'))) }, icon('edit'))),
     ex.custom ? null : h('p', { class: 'ex-title-alt', lang: getLanguage() === 'he' ? 'en' : 'he', dir: 'auto', text: otherName(ex) }),
     h('div', { class: 'ex-meta' },
       h('span', { class: 'chip', text: t(`group.${ex.muscleGroup}`) }),

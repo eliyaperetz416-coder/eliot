@@ -10,8 +10,8 @@ const dataUrlToBlob = (url) => fetch(url).then((r) => r.blob());
 
 /** Everything that belongs to the user, as plain JSON (photos become data URLs). The draft is not included. */
 export async function collectData() {
-  const [profile, bodyweight, workouts, routines, folders, plans, custom, game] = await Promise.all([
-    dbGet('profile', 'me'), dbAll('bodyweight'), dbAll('workouts'), dbAll('routines'), dbAll('folders'), dbAll('plans'), dbAll('custom'), dbGet('game', 'me'),
+  const [profile, bodyweight, workouts, routines, folders, plans, custom, game, renames, requests] = await Promise.all([
+    dbGet('profile', 'me'), dbAll('bodyweight'), dbAll('workouts'), dbAll('routines'), dbAll('folders'), dbAll('plans'), dbAll('custom'), dbGet('game', 'me'), dbGet('kv', 'renames'), dbGet('kv', 'requests'),
   ]);
   const blobs = {};
   for (const ex of custom) {
@@ -20,7 +20,7 @@ export async function collectData() {
     if (b) blobs[ex.imageBlobId] = await blobToDataUrl(b);
   }
   const { lang, accentMode, reducedMotion } = getSettings();
-  return { profile: profile ?? null, bodyweight, workouts, routines, folders, plans, custom, blobs, game: game ?? null, settings: { lang, accentMode, reducedMotion } };
+  return { profile: profile ?? null, bodyweight, workouts, routines, folders, plans, custom, blobs, game: game ?? null, renames: renames ?? {}, requests: requests ?? [], settings: { lang, accentMode, reducedMotion } };
 }
 
 export const backupFileName = (now = Date.now()) => `demigod-backup-${new Date(now).toISOString().slice(0, 10)}.json`;
@@ -63,6 +63,7 @@ export async function applyImport(backup, mode) {
   for (const k of ['routines', 'folders', 'plans', 'custom']) for (const x of data[k] ?? []) ops.push(['put', k, x]);
   for (const [id, b] of Object.entries(blobs)) ops.push(['put', 'blobs', b, id]);
   if (data.game) ops.push(['put', 'game', data.game, 'me']);
+  ops.push(['put', 'kv', data.renames ?? {}, 'renames'], ['put', 'kv', data.requests ?? [], 'requests']);
   await openDb();
   await dbBatch(ops);
   try { localStorage.removeItem('dg.draft'); } catch { /* ignore */ }
