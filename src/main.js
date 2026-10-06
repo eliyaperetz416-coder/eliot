@@ -55,7 +55,7 @@ function render() {
   const el = screens[id](param);
   dispose = el._dispose ?? null;
   app.replaceChildren(el);
-  const tab = { exercise: 'exercises', custom: 'exercises', history: 'profile', achievements: 'profile', settings: 'profile', requests: 'exercises', numbers: 'profile', result: 'workout', routines: 'workout', routine: 'workout', plans: 'workout', plan: 'workout', progress: 'ranks', card: 'ranks' }[id] ?? id;
+  const tab = { exercise: 'exercises', custom: 'exercises', history: 'profile', achievements: 'profile', settings: 'profile', requests: 'exercises', calendar: 'profile', numbers: 'profile', result: 'workout', routines: 'workout', routine: 'workout', plans: 'workout', plan: 'workout', progress: 'ranks', card: 'ranks' }[id] ?? id;
   nav.replaceChildren(TABS.some((x) => x.id === tab) ? tabBar({ tabs: TABS, current: tab }) : '');
   keepAwake(!!store.draft);
   window.scrollTo(0, 0);

@@ -10,18 +10,31 @@ import { rewardsCard } from './game-ui.js';
 import { tierFor } from '../core/ranks.mjs';
 import { button, emptyState, openSheet } from './components.js';
 import { data } from './data.js';
-import { store, commitPost, clearDraft, bodyweightKg } from './store.js';
+import { store, commitPost, clearDraft, bodyweightKg, saveRoutine } from './store.js';
+import { getSettings } from './storage.js';
+import { bumpPlannedWeights } from '../core/routines.mjs';
 import { skipRest } from './rest-timer.js';
 import { keepAwake } from './wakelock.js';
 import { emblem } from './emblem.js';
 import { rankCard } from './rank-card.js';
-import { formatDuration, formatNum } from './format.js';
+import { formatDuration, formatNum, formatKg } from './format.js';
 
 let lastResult = null;
 const nameOf = (ex) => (getLanguage() === 'he' ? ex.nameHe : ex.nameEn);
 const reducedMotion = () => document.documentElement.dataset.motion === 'reduce' || matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function statTile(label, value) { return h('div', { class: 'stat' }, h('span', { class: 'stat-v display num', text: value }), h('span', { class: 'stat-l', text: label })); }
+
+/** A workout started from a saved workout: raise its planned weights where you lifted more (setting can switch it off). */
+async function updateSavedWorkout(workout) {
+  if (getSettings().autoRoutineWeight === false || !workout.routineId) return null;
+  const r = store.routines.find((x) => x.id === workout.routineId);
+  if (!r) return null;
+  const changes = bumpPlannedWeights(r, workout);
+  if (!changes.length) return null;
+  await saveRoutine(r);
+  return { name: r.name, changes };
+}
 
 export function openFinishSheet() {
   const w = store.draft;
@@ -43,7 +56,7 @@ export function openFinishSheet() {
     const after = result.summary.overallAfter;
     const g = applyPost({ game: store.game, workout: result.workout, workouts: result.workouts, byId, now, overallRankIndex: after.pending ? -1 : rankIndex(after.rating), customCount: store.custom.length, plansCount: store.plans.length, achievements: data().achievements, pool: data().quests });
     await commitPost(result, g.game);
-    lastResult = { ...result, game: g.game, rewards: g.rewards };
+    lastResult = { ...result, game: g.game, rewards: g.rewards, routineUpdate: await updateSavedWorkout(result.workout) };
     skipRest(); keepAwake(false);
     sh.close();
     location.hash = '#/result';
@@ -115,6 +128,12 @@ export function resultScreen() {
     rankCard(s.overallAfter, { title: false }),
   ];
   if (s.overallAfter.pending) kids.push(h('p', { class: 'row-sub', text: t('rank.pending', { n: s.overallAfter.remaining }) }));
+  if (r.routineUpdate) {
+    kids.push(h('div', { class: 'section-label', text: t('res.routine.title') }),
+      h('section', { class: 'card card-accent routine-update' }, h('p', { text: t('res.routine.sub', { name: r.routineUpdate.name || t('routines.untitled') }) }),
+        h('div', { class: 'list', style: 'margin-block-start:8px' }, r.routineUpdate.changes.map((c) => h('div', { class: 'row' }, h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: nameOf(byId[c.exerciseId]) })),
+          h('bdi', { class: 'num', text: `${formatKg(c.from)} → ${formatKg(c.to)} ${t('unit.kg')}` }))))));
+  }
   if (s.ratingChanges.length) {
     kids.push(h('div', { class: 'section-label', text: t('res.ratings') }),
       h('div', { class: 'list' }, s.ratingChanges.map((c) => {

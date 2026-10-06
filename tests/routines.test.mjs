@@ -111,3 +111,28 @@ test('planned weight: cleaned, optional, and wins over last time when starting',
   const w2 = R.draftFromEntries(r.entries, { previous: prev });
   assert.equal(w2.entries[0].sets[0].weight, 50);
 });
+
+test('bumpPlannedWeights raises only planned weights, never lowers, ignores warm-ups', async () => {
+  const mk = (weight, id = 'bp') => ({ id: `e-${id}`, exerciseId: id, sets: 3, repsMin: 6, repsMax: 8, restSec: 90, weight, notes: '' });
+  const set = (weight, type = 'normal', done = true) => ({ idx: 0, type, weight, reps: 5, done });
+  const r = { entries: [mk(60, 'bp'), mk(null, 'sq'), mk(100, 'dl'), mk(40, 'ohp')], updatedMs: 0 };
+  const w = { entries: [
+    { exerciseId: 'bp', sets: [set(60), set(62.5), set(100, 'warmup')] },   // warm-up is ignored, top working set 62.5
+    { exerciseId: 'sq', sets: [set(120)] },                               // no planned weight: untouched
+    { exerciseId: 'dl', sets: [set(90)] },                                // lighter day: plan stays
+    { exerciseId: 'ohp', sets: [set(45, 'normal', false)] },              // not done: ignored
+  ] };
+  const ch = R.bumpPlannedWeights(r, w, 5);
+  assert.deepEqual(ch, [{ exerciseId: 'bp', from: 60, to: 62.5 }]);
+  assert.deepEqual(r.entries.map((e) => e.weight), [62.5, null, 100, 40]);
+  assert.equal(r.updatedMs, 5);
+  assert.deepEqual(R.bumpPlannedWeights(r, w), [], 'second time nothing changes');
+});
+
+test('bumpPlannedWeights matches a repeated exercise entry by entry', async () => {
+  const mk = (weight) => ({ id: Math.random().toString(36), exerciseId: 'bp', sets: 3, repsMin: 6, repsMax: 8, restSec: 90, weight, notes: '' });
+  const r = { entries: [mk(60), mk(40)], updatedMs: 0 };
+  const w = { entries: [{ exerciseId: 'bp', sets: [{ idx: 0, type: 'normal', weight: 65, done: true }] }, { exerciseId: 'bp', sets: [{ idx: 0, type: 'normal', weight: 45, done: true }] }] };
+  R.bumpPlannedWeights(r, w);
+  assert.deepEqual(r.entries.map((e) => e.weight), [65, 45]);
+});

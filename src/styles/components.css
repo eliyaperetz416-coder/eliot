@@ -458,3 +458,27 @@ a.btn { text-decoration: none; }
 .weight-chip { min-height: 32px; }
 .weight-tip { width: 100%; text-align: start; margin-block: var(--s-3); cursor: pointer; }
 .weight-tip p { color: var(--text-dim); font-size: 14px; }
+
+/* Training calendar */
+.cal-nav { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding-block-end: var(--s-3); }
+.cal-month { font-weight: 800; font-size: 20px; text-align: center; flex: 1; }
+.cal-prev svg { transform: scaleX(-1); }
+:root[dir="rtl"] .cal-prev svg { transform: none; }
+:root[dir="rtl"] .cal-next svg { transform: scaleX(-1); }
+.cal-nav .icon-btn[disabled] { opacity: .3; }
+.cal-card { padding: var(--s-3); }
+.cal-head, .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cal-head span { text-align: center; font-size: 12px; font-weight: 700; color: var(--text-mute); padding-block-end: var(--s-2); }
+.cal-cell { position: relative; display: grid; place-items: center; aspect-ratio: 1; min-height: 44px; border-radius: 10px; border: 1px solid transparent; background: none; color: var(--text-dim); font: inherit; padding: 0; }
+.cal-cell.out { visibility: hidden; }
+.cal-cell.today { border-color: var(--text-mute); color: var(--text); }
+.cal-cell.on { background: var(--accent); color: var(--accent-ink); font-weight: 800; border-color: var(--accent); }
+.cal-cell.on.today { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
+.cal-pr { position: absolute; inset-block-start: 5px; inset-inline-end: 5px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent-ink); }
+.cal-legend { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; font-size: 13px; color: var(--text-mute); padding-block-start: var(--s-3); }
+.cal-legend .cal-key { width: 14px; height: 14px; border-radius: 4px; margin-inline-start: var(--s-3); }
+.cal-legend .cal-key:first-child { margin-inline-start: 0; }
+.cal-key.on { background: var(--accent); }
+.cal-key.pr { background: var(--surface-3); border: 1px solid var(--line); position: relative; }
+.cal-key.pr::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--accent); }
+.routine-update { margin-block-end: var(--s-2); }

@@ -80,6 +80,9 @@ export function settingsScreen({ onLanguage }) {
       h('div', { class: 'section-label', text: t('set.motion') }),
       segmented({ label: t('set.motion'), value: s.reducedMotion ? 'on' : 'off', onChange: async (v) => { await updateSettings({ reducedMotion: v === 'on' }); draw(); }, options: [{ value: 'off', label: t('set.motion.off') }, { value: 'on', label: t('set.motion.on') }] }),
       h('p', { class: 'row-sub', style: 'padding-block-start:8px', text: t('set.motion.hint') }),
+      h('div', { class: 'section-label', text: t('set.autoweight') }),
+      segmented({ label: t('set.autoweight'), value: s.autoRoutineWeight === false ? 'off' : 'on', onChange: async (v) => { await updateSettings({ autoRoutineWeight: v === 'on' }); draw(); }, options: [{ value: 'on', label: t('set.autoweight.on') }, { value: 'off', label: t('set.autoweight.off') }] }),
+      h('p', { class: 'row-sub', style: 'padding-block-start:8px', text: t('set.autoweight.hint') }),
       h('div', { class: 'section-label', text: t('set.backup') }),
       h('p', { class: 'row-sub', style: 'padding-block-end:8px', text: t('set.backup.note') }),
       list([

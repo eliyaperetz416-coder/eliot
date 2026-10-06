@@ -19,6 +19,7 @@ import { achievementsScreen } from './game-ui.js';
 import { settingsScreen } from './settings.js';
 import { numbersScreen } from './numbers.js';
 import { requestsScreen } from './requests.js';
+import { calendarScreen } from './calendar.js';
 import { store } from './store.js';
 import { ranksPreviewScreen } from './ranks-preview.js';
 
@@ -85,6 +86,7 @@ export function buildScreens(ctx) {
     settings: () => settingsScreen(ctx),
     numbers: numbersScreen,
     requests: requestsScreen,
+    calendar: calendarScreen,
     kit,
   };
 }

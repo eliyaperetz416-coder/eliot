@@ -5,6 +5,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   lang: null,            // null = detect from the device on first run
   accentMode: 'rank',    // 'rank' | 'fixed'
   reducedMotion: false,
+  autoRoutineWeight: true, // raise the planned weight of a saved workout when you lift more
   lastExportAt: null,
   reminderSnoozedUntil: null, // export reminder hidden until this time
 });

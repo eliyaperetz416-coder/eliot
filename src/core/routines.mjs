@@ -91,3 +91,25 @@ export function draftFromEntries(entries, { name = '', routineId = null, planDay
   }
   return w;
 }
+
+/**
+ * After a workout that was started from a saved workout is posted: raise the PLANNED weight of an exercise when you lifted more.
+ * Only exercises that have a planned weight are touched (an empty one already follows your last session), and it never goes down
+ * (a lighter day does not lower the plan). The new weight is the heaviest working set of that exercise in the workout.
+ * Returns the changes: [{ exerciseId, from, to }]. Mutates the routine.
+ */
+export function bumpPlannedWeights(routine, workout, now = Date.now()) {
+  const changes = [];
+  const used = new Set();
+  for (const entry of routine.entries) {
+    const planned = cleanWeight(entry.weight);
+    if (planned == null) continue;
+    const idx = workout.entries.findIndex((e, i) => !used.has(i) && e.exerciseId === entry.exerciseId);
+    if (idx < 0) continue;
+    used.add(idx);
+    const top = Math.max(0, ...workout.entries[idx].sets.filter((s) => s.done && s.type !== 'warmup' && s.weight > 0).map((s) => s.weight));
+    if (top > planned) { entry.weight = top; changes.push({ exerciseId: entry.exerciseId, from: planned, to: top }); }
+  }
+  if (changes.length) routine.updatedMs = now;
+  return changes;
+}

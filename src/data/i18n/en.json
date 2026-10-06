@@ -669,5 +669,32 @@
   "weight.base.label": "Empty weight",
   "weight.base.hint": "Set it once and the app adds it to everything you type. Example: the machine is 20 kg and you add 5 kg per side. Set 20 and type 10: the set counts as 30 kg. Ranks, PRs and volume always use the total.",
   "weight.base.none": "None",
-  "weight.base.saved": "Saved"
+  "weight.base.saved": "Saved",
+  "cal.title": "Training calendar",
+  "cal.prev": "Previous month",
+  "cal.next": "Next month",
+  "cal.legend.trained": "Trained",
+  "cal.legend.pr": "Personal record",
+  "cal.days": "Days trained",
+  "cal.workouts": {
+    "one": "{n} workout",
+    "other": "{n} workouts"
+  },
+  "cal.streak.title": "Streak",
+  "cal.streak.now": {
+    "one": "{n} day now",
+    "other": "{n} days now"
+  },
+  "cal.streak.best": {
+    "one": "Best: {n} day",
+    "other": "Best: {n} days"
+  },
+  "cal.row": "Training calendar",
+  "cal.row.sub": "Every day you trained, month by month",
+  "set.autoweight": "Saved workouts",
+  "set.autoweight.on": "Raise automatically",
+  "set.autoweight.off": "Keep as is",
+  "set.autoweight.hint": "When you lift more than the planned weight of an exercise in a saved workout, the plan goes up to that weight after you finish. It never goes down, and exercises without a planned weight are not touched.",
+  "res.routine.title": "Saved workout updated",
+  "res.routine.sub": "The planned weight went up in \"{name}\""
 }

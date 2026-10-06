@@ -10,7 +10,7 @@ mkdirSync(shots, { recursive: true });
 const server = await serve(0);
 const base = `http://localhost:${server.address().port}/`;
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-const ROUTES = ['workout', 'exercises', 'exercise/barbell-bench-press-medium-grip', 'exercise/plank', 'ranks', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'requests', 'profile', 'history', 'kit', 'ranks-preview'];
+const ROUTES = ['workout', 'exercises', 'exercise/barbell-bench-press-medium-grip', 'exercise/plank', 'ranks', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'requests', 'calendar', 'profile', 'history', 'kit', 'ranks-preview'];
 const errors = [];
 let failed = 0;
 const ONLY = process.env.ONLY;
@@ -701,6 +701,69 @@ for (const lang of ['he', 'en']) {
     await page.evaluate(async () => { const { dbDelete } = await import('./src/ui/db.js'); await dbDelete('draft', 'current'); localStorage.removeItem('dg.draft'); });
     await page.goto(`${base}#/workout`); await page.reload();
     await page.waitForSelector('main .btn-primary');
+  });
+
+  await check(`${lang}: planned weight goes up by itself after a heavier workout (and can be switched off)`, async () => {
+    const T = (he, en) => L(lang, he, en);
+    const rid = 'r-auto-test', eid = 'e-auto-test';
+    const readW = () => page.evaluate(async (rid) => { const { dbGet } = await import('./src/ui/db.js'); return (await dbGet('routines', rid)).entries[0].weight; }, rid);
+    const lift = async (kg) => {
+      await page.goto(`${base}#/routine/${rid}`);
+      await page.waitForSelector('.set-row, main .btn-primary');
+      await page.locator('main .btn-primary').first().click();
+      await page.waitForSelector('.set-row');
+      assert.equal(await page.locator('.set-row .set-input').first().inputValue(), String(await readW()), 'starts with the planned weight');
+      const row = page.locator('.ent-card .set-row').first();
+      await row.locator('.set-input').nth(0).fill(String(kg));
+      await row.locator('.set-input').nth(1).fill('5');
+      await row.locator('.set-v').click();
+      await page.waitForTimeout(200);
+      await page.locator('.live-head .btn').click();
+      await page.waitForSelector('.sheet .btn-primary');
+      await page.locator('.sheet .btn-primary').first().click();
+      await page.waitForSelector('main .stats-grid', { timeout: 8000 });
+    };
+    await page.goto(`${base}#/workout`);
+    await page.evaluate(async ({ rid, eid }) => {
+      const { dbPut } = await import('./src/ui/db.js');
+      await dbPut('routines', { id: rid, schemaVersion: 1, name: 'Auto test', folderId: null, notes: '', createdMs: Date.now(), updatedMs: Date.now(), entries: [{ id: eid, exerciseId: 'barbell-bench-press-medium-grip', sets: 1, repsMin: 5, repsMax: 5, restSec: 90, weight: 40, notes: '' }] });
+    }, { rid, eid });
+    await page.reload();
+    await lift(45);
+    assert.ok(await page.locator('.routine-update').count() > 0, 'result shows the update');
+    await page.screenshot({ path: `${shots}${lang}-routine-updated.png`, fullPage: true });
+    assert.equal(await readW(), 45);
+    await lift(42);                                   // lighter day: nothing changes
+    assert.equal(await page.locator('.routine-update').count(), 0);
+    assert.equal(await readW(), 45);
+    await page.evaluate(async () => { const m = await import('./src/ui/storage.js'); await m.updateSettings({ autoRoutineWeight: false }); });
+    await lift(50);                                   // switched off: stays 45
+    assert.equal(await page.locator('.routine-update').count(), 0);
+    assert.equal(await readW(), 45);
+    await page.evaluate(async () => { const m = await import('./src/ui/storage.js'); await m.updateSettings({ autoRoutineWeight: true }); const { dbDelete } = await import('./src/ui/db.js'); await dbDelete('routines', 'r-auto-test'); });
+    await page.goto(`${base}#/settings`);
+    await page.getByRole('button', { name: T('העלאה אוטומטית', 'Raise automatically') }).waitFor();
+  });
+
+  await check(`${lang}: training calendar shows today, opens the day, month arrows are limited`, async () => {
+    const T = (he, en) => L(lang, he, en);
+    if (ONLY) await postThree(page);
+    await page.goto(`${base}#/calendar`);
+    await page.waitForSelector('.cal-grid');
+    await page.screenshot({ path: `${shots}${lang}-calendar.png`, fullPage: true });
+    assert.equal(await page.locator('.cal-head span').count(), 7);
+    const on = page.locator('.cal-cell.on');
+    assert.ok((await on.count()) >= 1, 'a trained day is filled');
+    assert.ok(await page.locator('.cal-cell.today').count() === 1);
+    assert.ok(await page.locator('.cal-next').isDisabled(), 'cannot go past the current month');
+    assert.ok(await page.locator('.cal-prev').isDisabled(), 'cannot go before the first workout month');
+    await on.first().click();
+    await page.waitForSelector('.sheet .row');
+    await page.locator('.sheet .row').first().click();
+    await page.waitForFunction(() => location.hash.startsWith('#/history/'));
+    await page.goto(`${base}#/profile`);
+    await page.getByText(T('לוח אימונים', 'Training calendar')).first().click();
+    await page.waitForSelector('.cal-grid');
   });
 
   await check(`${lang}: settings, backup export + restore, reminder, numbers page, reset`, async () => {
