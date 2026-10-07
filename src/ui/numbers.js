@@ -1,5 +1,6 @@
 import { h } from './dom.js';
 import { icon } from './icons.js';
+import { backLink } from './components.js';
 import { t, getLanguage } from '../core/i18n.mjs';
 import { data } from './data.js';
 
@@ -22,6 +23,7 @@ function inline(text) {
 export function numbersScreen() {
   const sections = data().numbers[getLanguage()] ?? data().numbers.en;
   return h('main', { class: 'screen numbers' },
+    backLink('#/profile', t('tab.profile')),
     h('header', { class: 'screen-head' }, icon('info', 'mark'), h('h1', { text: t('numbers.title') })),
     h('p', { class: 'row-sub', text: t('numbers.intro') }),
     ...sections.map((s, i) => h('details', { class: 'card', open: i === 0 }, h('summary', { text: s.title.replace(/`/g, '') }),

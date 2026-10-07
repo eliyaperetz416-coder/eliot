@@ -14,7 +14,7 @@ const errText = (e) => t(`crew.err.${errorKey(e)}`);
 
 export function crewScreen() {
   const root = h('main', { class: 'screen crew' });
-  let tab = 'board', sort = 'rating', kind = 'chat';
+  let tab = 'feed', sort = 'rating';
   let view = null, messages = [], timer = null, busy = false, formMode = 'join';
   const off = onCrew(() => { if (!crew.local) draw(); });
 
@@ -82,8 +82,8 @@ export function crewScreen() {
       : h('div', { class: `crew-msg ${m.kind}${m.member_id === mine ? ' mine' : ''}` },
         h('div', { class: 'crew-meta' }, h('b', { text: m.nickname }), m.kind === 'status' ? h('span', { class: 'chip chip-primary', text: t('crew.status') }) : null, h('span', { class: 'row-sub', text: formatDateTime(Date.parse(m.created_at)) })),
         h('div', { class: 'crew-body', dir: 'auto', text: m.body })))) : [h('p', { class: 'row-sub center', text: t('crew.feed.empty') })];
-    const input = h('input', { class: 'text-input', type: 'text', maxlength: MAX_MESSAGE, enterkeyhint: 'send', autocomplete: 'off', placeholder: t(kind === 'chat' ? 'crew.say.ph' : 'crew.status.ph'), 'aria-label': t('crew.say'), id: 'crew-say' });
-    const send = async (body, k = kind) => {
+    const input = h('input', { class: 'text-input', type: 'text', maxlength: MAX_MESSAGE, enterkeyhint: 'send', autocomplete: 'off', placeholder: t('crew.say.ph'), 'aria-label': t('crew.say'), id: 'crew-say' });
+    const send = async (body, k = 'chat') => {
       const text = String(body).trim();
       if (!text) return;
       try { await sendMessage(k, text); input.value = ''; await refreshFeed(true); } catch (e) { showToast({ message: errText(e) }); }
@@ -92,9 +92,8 @@ export function crewScreen() {
     const quick = ['going', 'done', 'rest'].map((q) => h('button', { class: 'chip chip-select', type: 'button', onclick: () => send(t(`crew.q.${q}`), 'status') }, t(`crew.q.${q}`)));
     return [
       h('div', { class: 'crew-feed', id: 'crew-feed', 'aria-live': 'polite' }, bubbles),
-      h('div', { class: 'chips-wrap', style: 'padding-block:8px' }, quick),
-      segmented({ label: t('crew.kind'), value: kind, onChange: (v) => { kind = v; draw(); }, options: [{ value: 'chat', label: t('crew.kind.chat') }, { value: 'status', label: t('crew.kind.status') }] }),
-      h('div', { class: 'crew-compose' }, h('div', { class: 'field-box' }, input), h('button', { class: 'icon-btn send-btn', type: 'button', 'aria-label': t('crew.send'), onclick: () => send(input.value) }, icon('share'))),
+      h('div', { class: 'crew-quick' }, quick),
+      h('div', { class: 'crew-compose' }, h('div', { class: 'field-box' }, input), h('button', { class: 'icon-btn send-btn', type: 'button', 'aria-label': t('crew.send'), onclick: () => send(input.value) }, icon('upload'))),
     ];
   }
 
@@ -125,13 +124,15 @@ export function crewScreen() {
 
   function joinedView() {
     return [
-      h('section', { class: 'card crew-head' },
-        h('div', {}, h('div', { class: 'row-sub', text: t('crew.code.label') }), h('div', { class: 'display crew-code num', dir: 'ltr', text: crew.local.code })),
-        button({ label: t('crew.invite'), icon: 'share', variant: 'secondary', onClick: invite })),
-      h('div', { style: 'padding-block:12px' }, segmented({ label: t('crew.title'), value: tab, onChange: (v) => { tab = v; draw(); if (v === 'feed') markRead(); }, options: [{ value: 'board', label: t('crew.tab.board') }, { value: 'feed', label: `${t('crew.tab.feed')}${crew.unread ? ` (${crew.unread})` : ''}` }] })),
+      h('div', { class: 'crew-tabs' }, segmented({ label: t('crew.title'), value: tab, onChange: (v) => { tab = v; draw(); if (v === 'feed') markRead(); }, options: [{ value: 'feed', label: `${t('crew.tab.feed')}${crew.unread ? ` (${crew.unread})` : ''}` }, { value: 'board', label: t('crew.tab.board') }] })),
       !view ? h('p', { class: 'row-sub center', text: t('common.loading') }) : tab === 'board' ? boardView() : feedView(),
-      notifyBox(),
-      h('div', { style: 'padding-block-start:20px' }, list([listRow({ title: t('crew.leave'), sub: t('crew.leave.sub'), icon: 'trash', onClick: leave })])),
+      h('details', { class: 'crew-more' },
+        h('summary', { text: t('crew.more') }),
+        h('section', { class: 'card crew-head' },
+          h('div', {}, h('div', { class: 'row-sub', text: t('crew.code.label') }), h('div', { class: 'display crew-code num', dir: 'ltr', text: crew.local.code })),
+          button({ label: t('crew.invite'), icon: 'share', variant: 'secondary', onClick: invite })),
+        notifyBox(),
+        h('div', { style: 'padding-block-start:12px' }, list([listRow({ title: t('crew.leave'), sub: t('crew.leave.sub'), icon: 'trash', onClick: leave })]))),
     ];
   }
 
@@ -139,7 +140,7 @@ export function crewScreen() {
     const keep = document.getElementById('crew-say')?.value ?? '';
     root.replaceChildren(
       h('a', { class: 'back-link', href: '#/profile' }, icon('chevron', 'chev back-chev'), t('tab.profile')),
-      h('header', { class: 'screen-head' }, h('h1', { text: crew.local ? crew.local.name : t('crew.title') })),
+      h('header', { class: 'screen-head' }, h('h1', { text: crew.local ? crew.local.name : t('crew.title') }), crew.local ? h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('crew.invite'), onclick: invite }, icon('plus')) : null),
       ...(crew.local ? joinedView() : startView()));
     const say = document.getElementById('crew-say'); if (say && keep) say.value = keep;
     const feed = document.getElementById('crew-feed'); if (feed) feed.scrollTop = feed.scrollHeight;

@@ -8,7 +8,7 @@ import { filledOpenSets, completeFilled } from '../core/live.mjs';
 import { applyPost } from '../core/gamestate.mjs';
 import { rewardsCard } from './game-ui.js';
 import { tierFor } from '../core/ranks.mjs';
-import { button, emptyState, openSheet } from './components.js';
+import { button, emptyState, openSheet, backLink } from './components.js';
 import { data } from './data.js';
 import { store, commitPost, clearDraft, bodyweightKg, saveRoutine } from './store.js';
 import { getSettings } from './storage.js';
@@ -121,6 +121,7 @@ export function resultScreen() {
   if (!r) return h('main', { class: 'screen' }, emptyState({ icon: 'workout', title: t('res.none'), body: '' }), button({ label: t('res.done'), block: true, onClick: () => { location.hash = '#/workout'; } }));
   const { summary: s } = r;
   const kids = [
+    backLink('#/workout', t('workout.title')),
     h('header', { class: 'screen-head' }, icon('check', 'mark'), h('h1', { text: t('res.title') })),
     h('div', { class: 'stats-grid' },
       statTile(t('fin.duration'), formatDuration(s.stats.durationSec)), statTile(t('fin.sets'), String(s.stats.workingSets)),

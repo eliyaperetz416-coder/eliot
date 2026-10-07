@@ -1,7 +1,7 @@
 import { h } from './dom.js';
 import { icon } from './icons.js';
 import { t, getLanguage } from '../core/i18n.mjs';
-import { button, list, listRow, openSheet, segmented, showToast } from './components.js';
+import { button, list, listRow, openSheet, segmented, showToast, backLink } from './components.js';
 import { getSettings, updateSettings, requestPersistence, storageInfo } from './storage.js';
 import { exportBackup, readBackupFile, applyImport, resetAll } from './backup.js';
 import { summarize } from '../core/backup.mjs';
@@ -72,6 +72,7 @@ export function settingsScreen({ onLanguage }) {
   function draw() {
     const s = getSettings();
     root.replaceChildren(
+      backLink('#/profile', t('tab.profile')),
       h('header', { class: 'screen-head' }, icon('settings', 'mark'), h('h1', { text: t('set.title') })),
       h('div', { class: 'section-label', text: t('set.language') }),
       segmented({ label: t('set.language'), value: getLanguage(), onChange: (l) => onLanguage(l), options: [{ value: 'he', label: t('lang.he'), lang: 'he' }, { value: 'en', label: t('lang.en'), lang: 'en' }] }),

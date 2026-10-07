@@ -787,7 +787,7 @@ for (const lang of ['he', 'en']) {
       await page.getByRole('button', { name: T('יצירת קבוצה', 'Create a crew') }).click();
       await page.fill('#crew-name', 'Gym bros'); await page.fill('#crew-nick', 'Elia');
       await page.getByRole('button', { name: T('צור את הקבוצה', 'Create the crew') }).click();
-      await page.waitForSelector('.crew-code');
+      await page.waitForSelector('.crew-code', { state: 'attached' });
       const code = await page.textContent('.crew-code');
       assert.equal(code.length, 6);
       // a bad code and a taken nickname on the friend's phone
@@ -801,11 +801,12 @@ for (const lang of ['he', 'en']) {
       await p2.waitForFunction(() => /כבר בשימוש|already used/.test(document.querySelector('.field-error')?.textContent ?? ''));
       await p2.fill('#crew-nick', 'Dan');
       await p2.getByRole('button', { name: T('הצטרף', 'Join'), exact: true }).click();
-      await p2.waitForSelector('.crew-board');
+      await p2.waitForSelector('#crew-say'); // chat is the first thing you see
       // the board shows both, I am marked
+      await p2.getByRole('button', { name: T('לידרבורד', 'Leaderboard') }).click();
       await p2.waitForFunction(() => document.querySelectorAll('.crew-row').length === 2);
       // friend posts a status and a chat message
-      await p2.getByRole('button', { name: T('פיד', 'Feed') }).click();
+      await p2.getByRole('button', { name: new RegExp(T("צ'אט", 'Chat')) }).click();
       await p2.waitForSelector('#crew-say');
       await p2.getByRole('button', { name: T('הולך להתאמן', 'Going to train') }).click();
       await p2.waitForFunction(() => document.querySelectorAll('.crew-msg').length === 1);
@@ -818,23 +819,27 @@ for (const lang of ['he', 'en']) {
       assert.ok((await page.textContent('.crew-unread')).includes('2'));
       assert.equal(await page.locator('.tab-dot').count(), 1);
       await page.goto(`${base}#/crew`);
+      await page.waitForSelector('#crew-say');
+      await page.getByRole('button', { name: T('לידרבורד', 'Leaderboard') }).click();
       await page.waitForSelector('.crew-board');
       assert.equal(await page.locator('.crew-row').count(), 2);
       assert.ok(await page.locator('.crew-row.me').count() === 1);
-      await page.getByRole('button', { name: new RegExp(T('פיד', 'Feed')) }).click();
+      await page.getByRole('button', { name: new RegExp(T("צ'אט", 'Chat')) }).click();
       await page.waitForFunction(() => document.querySelectorAll('.crew-msg').length === 2);
       await page.screenshot({ path: `${shots}${lang}-crew-feed.png`, fullPage: true });
-      await page.getByRole('button', { name: T('סטטוס', 'Status'), exact: true }).click();
-      await page.fill('#crew-say', 'Going to the gym at 18:00'); await page.keyboard.press('Enter');
+      await page.getByRole('button', { name: T('הולך להתאמן', 'Going to train') }).click();
       await page.waitForFunction(() => document.querySelectorAll('.crew-msg.mine.status').length >= 1);
       await page.goto(`${base}#/workout`);
       assert.equal(await page.locator('.tab-dot').count(), 0, 'read: no dot');
       // my numbers are on the board, and nothing private is sent
       await page.goto(`${base}#/crew`);
+      await page.waitForSelector('#crew-say');
+      await page.getByRole('button', { name: T('לידרבורד', 'Leaderboard') }).click();
       await page.waitForSelector('.crew-board');
       const sent = fake.calls.filter((c) => c.name === 'update_stats').map((c) => Object.keys(c.args.p_stats));
       assert.ok(sent.length >= 1);
       for (const keys of sent) for (const k of keys) assert.ok(['level', 'streak', 'workouts', 'weekVolume', 'monthWorkouts', 'rating', 'tier', 'division'].includes(k), `unexpected shared field ${k}`);
+      await page.locator('.crew-more summary').click();
       await page.waitForSelector('.crew-push h2');
       await page.screenshot({ path: `${shots}${lang}-crew-board.png`, fullPage: true });
       // sorting chips work
@@ -842,11 +847,13 @@ for (const lang of ['he', 'en']) {
       await page.waitForSelector('.crew-row');
       // leaving
       await p2.goto(`${base}#/crew`);
+      await p2.locator('.crew-more summary').click();
       await p2.getByRole('button', { name: T('עזוב את הקבוצה', 'Leave the crew') }).click();
       await p2.locator('.sheet .btn-danger').click();
       await p2.waitForSelector('#crew-code');
       await page.reload();
-      await page.waitForSelector('.crew-board');
+      await page.waitForSelector('#crew-say');
+      await page.getByRole('button', { name: T('לידרבורד', 'Leaderboard') }).click();
       await page.waitForFunction(() => document.querySelectorAll('.crew-row').length === 1);
     } finally {
       await ctx2.close();
@@ -936,6 +943,20 @@ for (const lang of ['he', 'en']) {
     assert.equal(after.w, before);
     assert.equal(after.p, parsed.data.profile.name);
     assert.equal(after.g, parsed.data.game.xp);
+  });
+
+  await check(`${lang}: every sub-screen has a back link`, async () => {
+    const subs = ['exercise/plank', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'requests', 'calendar', 'crew', 'history', 'history/nope', 'routine/nope', 'plan/nope', 'exercise/nope', 'ranks-preview'];
+    for (const r of subs) {
+      await page.goto(`${base}#/${r}`);
+      await page.waitForSelector('main');
+      assert.ok(await page.locator('main .back-link').count() >= 1, `no back link on #/${r}`);
+    }
+    for (const r of ['workout', 'exercises', 'ranks', 'profile']) {
+      await page.goto(`${base}#/${r}`);
+      await page.waitForSelector('main');
+      assert.equal(await page.locator('main > .back-link').count(), 0, `unexpected back link on tab root #/${r}`);
+    }
   });
 
   await check(`${lang}: accessibility basics (names, labels, language, landmarks)`, async () => {

@@ -55,6 +55,11 @@ export function emptyState({ icon: ic, title, body }) {
     h('p', { text: body }));
 }
 
+/** A consistent "back" link at the top of every sub-screen (OUR DESIGN). */
+export function backLink(href, label) {
+  return h('a', { class: 'back-link', href }, icon('chevron', 'chev back-chev'), label);
+}
+
 export function tabBar({ tabs, current, badges = {} }) {
   return h('nav', { class: 'tabbar', 'aria-label': t('nav.label') },
     tabs.map((tab) => h('a', {

@@ -493,7 +493,7 @@ a.btn { text-decoration: none; }
 .crew-row.me { background: var(--accent-soft); }
 .crew-pos { width: 28px; text-align: center; font-size: 18px; color: var(--text-mute); flex: none; }
 .crew-val { font-size: 18px; text-align: end; white-space: nowrap; }
-.crew-feed { display: grid; gap: var(--s-2); max-height: 52dvh; overflow-y: auto; padding: var(--s-2); background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-lg); align-content: start; min-height: 160px; }
+.crew-feed { display: grid; gap: var(--s-2); height: 52dvh; max-height: 52dvh; overflow-y: auto; padding: var(--s-2); background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-lg); align-content: start; min-height: 160px; }
 .crew-msg { max-width: 88%; background: var(--surface-3); border-radius: 12px; padding: var(--s-2) var(--s-3); justify-self: start; }
 .crew-msg.mine { justify-self: end; background: var(--accent-soft); }
 .crew-msg.status { border-inline-start: 3px solid var(--accent); }
@@ -527,3 +527,12 @@ a.btn { text-decoration: none; }
 .home-more > summary { display: flex; align-items: center; justify-content: space-between; min-height: 52px; padding-inline: var(--s-4); background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-lg); font-weight: 700; cursor: pointer; list-style: none; }
 .home-more > summary::-webkit-details-marker { display: none; }
 .home-more[open] > summary { margin-block-end: var(--s-3); }
+
+/* Crew: chat first (OUR DESIGN) */
+.crew-tabs { padding-block: var(--s-2) var(--s-3); }
+.crew-quick { display: flex; gap: var(--s-2); overflow-x: auto; padding-block: var(--s-2); scrollbar-width: none; }
+.crew-quick .chip { flex: none; }
+.screen-head:has(> .icon-btn) { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
+.crew-more { margin-block-start: var(--s-5); }
+.crew-more > summary { cursor: pointer; color: var(--text-dim); min-height: var(--tap); display: flex; align-items: center; }
+.crew-more[open] > summary { margin-block-end: var(--s-2); }

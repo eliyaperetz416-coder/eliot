@@ -4,7 +4,7 @@ import { icon } from './icons.js';
 import { t } from '../core/i18n.mjs';
 import { purchase, toggleEquip, activateShake } from '../core/shop.mjs';
 import { view } from '../core/streak.mjs';
-import { button, showToast } from './components.js';
+import { button, showToast, backLink } from './components.js';
 import { data } from './data.js';
 import { store, saveGame, todayKey } from './store.js';
 import { emblem } from './emblem.js';
@@ -49,6 +49,7 @@ export function shopScreen() {
           : button({ label: `${c.price}`, icon: 'coin', variant: g.drachmas >= c.price ? 'primary' : 'secondary', block: true, disabled: g.drachmas < c.price, onClick: () => act((gm) => purchase(gm, shop, c.id), () => t('shop.bought', { name: itemName(c) })) }));
     }));
     root.replaceChildren(
+      backLink('#/profile', t('tab.profile')),
       h('header', { class: 'screen-head' }, icon('bolt', 'mark'), h('h1', { text: t('shop.title') })),
       h('section', { class: 'card card-accent wallet' }, icon('coin', 'coin-icon'), h('div', {}, h('div', { class: 'display wallet-n num', text: formatNum(g.drachmas, 0) }), h('div', { class: 'row-sub', text: t('game.drachmas') }))),
       broken ? h('p', { class: 'row-sub warn', text: t('shop.brokenHint', { n: broken.lostLength }) }) : null,
