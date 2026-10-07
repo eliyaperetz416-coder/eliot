@@ -539,3 +539,21 @@ a.btn { text-decoration: none; }
 .crew-more { margin-block-start: var(--s-5); }
 .crew-more > summary { cursor: pointer; color: var(--text-dim); min-height: var(--tap); display: flex; align-items: center; }
 .crew-more[open] > summary { margin-block-end: var(--s-2); }
+
+/* Live workout: calmer cards, bigger touch targets (OUR DESIGN) */
+.ent-head { gap: var(--s-3); }
+.ent-head .ent-name { flex: 1; min-width: 0; }
+.ent-head .thumb { border-radius: 10px; }
+.ent-rest { display: flex; align-items: center; gap: var(--s-2); padding-block: var(--s-2) var(--s-3); }
+.rest-val { font-size: 18px; font-weight: 700; }
+.ent-card.all-done { opacity: .7; }
+.ent-card.all-done .ent-name { color: var(--text-dim); }
+.set-head, .set-row { grid-template-columns: 40px minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1.1fr) 52px; }
+.set-row.no-weight, .set-head.no-weight { grid-template-columns: 40px minmax(0, 1fr) 0 minmax(0, 1.6fr) 52px; }
+.set-row { min-height: 54px; }
+.set-input { min-height: 52px; font-size: 20px; }
+.set-v { width: 52px; height: 52px; border-radius: 14px; }
+.live-progress { white-space: nowrap; }
+.ent-card .chip, .ent-card .chip-select { min-height: 36px; padding: 4px 10px; font-size: 13px; }
+.ent-card .weight-line { padding-block-end: var(--s-1); }
+.ent-card .target-line { padding-block: var(--s-1) var(--s-3); }

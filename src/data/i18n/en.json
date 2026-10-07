@@ -189,6 +189,7 @@
   "wk.start": "Start workout",
   "wk.repeat": "Repeat last workout",
   "wk.last": "Last workout",
+  "live.progress": "{done} of {total} exercises",
   "live.finish": "Finish",
   "live.addExercise": "Add exercise",
   "live.addSet": "Add set",

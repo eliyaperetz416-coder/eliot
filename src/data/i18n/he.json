@@ -193,6 +193,7 @@
   "wk.start": "התחלת אימון",
   "wk.repeat": "חזרה על האימון האחרון",
   "wk.last": "האימון האחרון",
+  "live.progress": "{done} מתוך {total} תרגילים",
   "live.finish": "סיום",
   "live.addExercise": "הוספת תרגיל",
   "live.addSet": "הוספת סט",

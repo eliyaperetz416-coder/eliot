@@ -4,7 +4,7 @@ import { icon } from './icons.js';
 import { t, getLanguage } from '../core/i18n.mjs';
 import * as W from '../core/workout.mjs';
 import { completeSet, reopenSet, refreshWorkout, feedbackOf } from '../core/live.mjs';
-import { button, emptyState, openSheet } from './components.js';
+import { button, emptyState, exThumb, openSheet } from './components.js';
 import { data } from './data.js';
 import { store, touchDraft, bodyweightKg, baseOf } from './store.js';
 import { openExercisePicker } from './picker.js';
@@ -50,6 +50,7 @@ export function liveScreen() {
   const root = h('main', { class: 'screen live' });
   const entriesBox = h('div', { class: 'stack' });
   const elapsed = h('span', { class: 'live-clock display num' });
+  const progress = h('span', { class: 'live-progress row-sub' });
   const prevCache = new Map();
   const prevOf = (exId) => { if (!prevCache.has(exId)) prevCache.set(exId, W.previousPerformance(store.workouts, exId)); return prevCache.get(exId); };
 
@@ -75,7 +76,12 @@ export function liveScreen() {
     notes.addEventListener('input', () => { entry.notes = notes.value; save(); });
     notes.addEventListener('change', rerender);
     const linked = !!entry.supersetGroup;
+    const restVal = h('span', { class: 'num rest-val', text: formatClock(entry.restSec) });
+    const bump = (d) => { W.adjustRestSec(w, entry.id, d); restVal.textContent = formatClock(entry.restSec); save(); rerender(); };
     body.append(
+      h('div', { class: 'ent-rest' }, h('span', { class: 'row-sub', text: t('entry.rest') }), restVal,
+        h('button', { class: 'mini-btn', type: 'button', dir: 'ltr', onclick: () => bump(-15), 'aria-label': t('rest.minus') }, '−15'),
+        h('button', { class: 'mini-btn', type: 'button', dir: 'ltr', onclick: () => bump(15), 'aria-label': t('rest.plus') }, '+15')),
       h('div', { class: 'list' },
         act(t('weight.sheet.title'), 'info', () => openWeightSheet(ex, rerender)),
         act(t('rename.title'), 'edit', () => openRenameSheet(ex, rerender)),
@@ -147,12 +153,6 @@ export function liveScreen() {
     }, 30);
   }
 
-  function targetLine(tg) {
-    const bits = [h('span', { class: 'chip', text: t('target.reps', { min: tg.repsMin, max: tg.repsMax }) })];
-    if (tg.action) bits.push(h('span', { class: `chip target-${tg.action}`, text: t(`target.${tg.action}`) }));
-    return h('div', { class: 'target-line' }, bits);
-  }
-
   function entryCard(entry, i) {
     const ex = byId[entry.exerciseId];
     const L = layoutOf(ex);
@@ -161,19 +161,21 @@ export function liveScreen() {
     const ssFirst = inSS && prevE?.supersetGroup !== entry.supersetGroup, ssLast = inSS && nextE?.supersetGroup !== entry.supersetGroup;
     let workingNo = 0;
     const rows = entry.sets.map((s) => { if (s.type !== 'warmup') workingNo++; return setRow(entry, ex, s, workingNo); });
-    const restLabel = h('span', { class: 'num', text: formatClock(entry.restSec) });
-    const bump = (d) => { W.adjustRestSec(w, entry.id, d); restLabel.textContent = formatClock(entry.restSec); save(); };
-    return h('section', { class: `card ent-card${inSS ? ' ss' : ''}${ssFirst ? ' ss-first' : ''}${ssLast ? ' ss-last' : ''}` },
+    const working = entry.sets.filter((x) => x.type !== 'warmup');
+    const allDone = working.length > 0 && working.every((x) => x.done);
+    const info = h('div', { class: 'target-line' },
+      entry.target ? h('span', { class: 'chip', text: t('target.reps', { min: entry.target.repsMin, max: entry.target.repsMax }) }) : null,
+      entry.target?.action ? h('span', { class: `chip target-${entry.target.action}`, text: t(`target.${entry.target.action}`) }) : null,
+      h('button', { class: 'chip chip-select rest-chip', type: 'button', 'aria-label': t('entry.rest'), onclick: () => entryMenu(entry, i) }, `${t('entry.rest')} ${formatClock(entry.restSec)}`));
+    return h('section', { class: `card ent-card${inSS ? ' ss' : ''}${ssFirst ? ' ss-first' : ''}${ssLast ? ' ss-last' : ''}${allDone ? ' all-done' : ''}` },
       ssFirst ? h('div', { class: 'ss-label', text: t('superset.label') }) : null,
       h('header', { class: 'ent-head' },
+        exThumb(ex, 48),
         h('a', { class: 'ent-name', href: `#/exercise/${ex.id}` }, nameOf(ex)),
         h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('entry.menu'), onclick: () => entryMenu(entry, i) }, icon('more'))),
       weightChip(ex, rerender) ? h('div', { class: 'weight-line' }, weightChip(ex, rerender)) : null,
-      entry.target ? targetLine(entry.target) : null,
+      info,
       entry.notes ? h('p', { class: 'ent-notes', text: entry.notes }) : null,
-      h('div', { class: 'ent-rest' }, h('span', { class: 'row-sub', text: t('entry.rest') }), restLabel,
-        h('button', { class: 'mini-btn', type: 'button', dir: 'ltr', onclick: () => bump(-15), 'aria-label': t('rest.minus') }, '−15'),
-        h('button', { class: 'mini-btn', type: 'button', dir: 'ltr', onclick: () => bump(15), 'aria-label': t('rest.plus') }, '+15')),
       h('div', { class: `set-head${L.weight ? '' : ' no-weight'}` },
         h('span', { text: t('col.set') }), h('span', { text: t('col.prev') }), L.weight ? h('span', { text: t(L.weightLabel) }) : h('span'), h('span', { text: t(L.repsLabel) }), h('span')),
       rows,
@@ -182,6 +184,8 @@ export function liveScreen() {
 
   function renderEntries() {
     const y = window.scrollY;
+    const doneN = w.entries.filter((e) => e.sets.some((x) => x.type !== 'warmup') && e.sets.filter((x) => x.type !== 'warmup').every((x) => x.done)).length;
+    progress.textContent = w.entries.length ? t('live.progress', { done: doneN, total: w.entries.length }) : '';
     entriesBox.replaceChildren(...(w.entries.length ? w.entries.map(entryCard) : [emptyState({ icon: 'workout', title: t('live.empty.title'), body: t('live.empty.body') })]));
     window.scrollTo(0, y);
   }
@@ -196,7 +200,7 @@ export function liveScreen() {
 
   root.append(
     h('header', { class: 'live-head' },
-      h('div', { class: 'live-title' }, nameInput, h('span', { class: 'row-sub' }, t('live.elapsed'), ' ', elapsed)),
+      h('div', { class: 'live-title' }, nameInput, h('span', { class: 'row-sub' }, t('live.elapsed'), ' ', elapsed, ' · ', progress)),
       button({ label: t('live.finish'), onClick: () => openFinishSheet() })),
     entriesBox,
     h('div', { class: 'stack live-actions' },
