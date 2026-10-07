@@ -2,7 +2,7 @@ import { h } from './dom.js';
 import { icon } from './icons.js';
 import { t, getLanguage } from '../core/i18n.mjs';
 import { searchExercises } from '../core/search.mjs';
-import { emptyState, openSheet, segmented } from './components.js';
+import { emptyState, exThumb, openSheet, segmented } from './components.js';
 import { loadData, data } from './data.js';
 import { muscleMap } from './muscle-map.js';
 import { store } from './store.js';
@@ -39,10 +39,8 @@ function filtered() {
 const activeFilters = () => (state.group ? 1 : 0) + (state.equipment ? 1 : 0) + (state.ranked !== 'all' ? 1 : 0) + (state.mine ? 1 : 0);
 
 function row(ex) {
-  const img = ex.image ? h('img', { src: ex.image, alt: '', loading: 'lazy', decoding: 'async', width: 56, height: 56 }) : h('span', { class: 'thumb-fallback' }, icon('workout'));
-  img.addEventListener?.('error', () => { img.replaceWith(h('span', { class: 'thumb-fallback' }, icon('workout'))); });
   return h('a', { class: 'ex-row', href: `#/exercise/${ex.id}` },
-    h('span', { class: 'thumb' }, img),
+    exThumb(ex),
     h('span', { class: 'row-main' },
       h('span', { class: 'row-title', text: nameOf(ex) }),
       h('span', { class: 'row-sub', text: `${t(`group.${ex.muscleGroup}`)} · ${t(`equipment.${ex.equipment}`)}${ex.custom ? ` · ${t('custom.mine')}` : ''}` })),

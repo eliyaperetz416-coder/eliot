@@ -3,7 +3,7 @@ import { h } from './dom.js';
 import { icon } from './icons.js';
 import { t, getLanguage } from '../core/i18n.mjs';
 import { GOALS, EXPERIENCE, PLAN_WEEKS, SESSION_MINUTES, GYM_EQUIPMENT, generatePlan, nextPlanDay, planDayId, planProgress } from '../core/generator.mjs';
-import { button, emptyState, openSheet, segmented, showToast } from './components.js';
+import { button, emptyState, exThumb, openSheet, segmented, showToast } from './components.js';
 import { data } from './data.js';
 import { store, savePlan, deletePlan } from './store.js';
 import { startFromPlanDay } from './routines.js';
@@ -78,8 +78,9 @@ export function planScreen(id) {
       return h('section', { class: `card plan-day${done ? ' done' : ''}${isNext ? ' next' : ''}` },
         h('header', { class: 'ent-head' },
           h('div', {}, h('div', { class: 'row-title', text: `${t('plan.day', { n: d.day })} · ${planDayLabel(plan, d)}` }), h('div', { class: 'row-sub', text: d.deload ? t('plan.deload.hint') : t('plan.sets', { n: d.entries.reduce((n, e) => n + e.sets, 0) }) })),
-          done ? h('span', { class: 'pr-badge pr-week', text: t('plan.done') }) : button({ label: t('routines.start'), variant: isNext ? 'primary' : 'secondary', onClick: () => startFromPlanDay(plan, d) })),
-        h('ul', { class: 'plan-list' }, d.entries.map((e) => h('li', {}, h('span', { text: nameOf(byId[e.exerciseId]) }), h('span', { class: 'num', dir: 'ltr', text: `${e.sets}×${e.repsMin}-${e.repsMax}` })))));
+          done ? h('span', { class: 'pr-badge pr-week', text: t('plan.done') }) : null),
+        h('ul', { class: 'plan-list' }, d.entries.map((e) => h('li', {}, exThumb(byId[e.exerciseId], 44), h('span', { class: 'plan-name', text: nameOf(byId[e.exerciseId]) }), h('span', { class: 'num plan-sr', dir: 'ltr', text: `${e.sets}×${e.repsMin}-${e.repsMax}` })))),
+        done ? null : button({ label: t('routines.start'), variant: isNext ? 'primary' : 'secondary', block: true, icon: 'workout', onClick: () => startFromPlanDay(plan, d) }));
     });
     root.replaceChildren(
       h('a', { class: 'back-link', href: '#/plans' }, icon('chevron', 'chev back-chev'), t('plans.title')),

@@ -6,7 +6,7 @@ import * as R from '../core/routines.mjs';
 import { previousPerformance } from '../core/workout.mjs';
 import { nextPlanDay, planDayId, templateRoutines, ROUTINE_TEMPLATES } from '../core/generator.mjs';
 import { suggestLoad, bestE1RM, stepFor } from '../core/progression.mjs';
-import { button, emptyState, miniStepper, numberField, openSheet, showToast } from './components.js';
+import { button, emptyState, exThumb, miniStepper, numberField, openSheet, showToast } from './components.js';
 import { data } from './data.js';
 import { store, saveRoutine, deleteRoutine, saveFolder, removeFolder, setDraft } from './store.js';
 import { openExercisePicker } from './picker.js';
@@ -169,6 +169,7 @@ export function routinesScreen() {
       if (g.folder) kids.push(h('div', { class: 'folder-head' }, h('span', { class: 'section-label', text: g.folder.name }), h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('folder.rename'), onclick: () => folderSheet(g.folder, draw) }, icon('more'))));
       if (!g.routines.length) { kids.push(h('p', { class: 'row-sub', text: t('folder.empty') })); continue; }
       kids.push(h('div', { class: 'list' }, g.routines.map((r) => h('div', { class: 'row routine-row' },
+        exThumb(data().byId[r.entries[0]?.exerciseId], 48),
         h('a', { class: 'row-main routine-link', href: `#/routine/${r.id}` }, h('span', { class: 'row-title', text: r.name || t('routines.untitled') }),
           h('span', { class: 'row-sub', text: r.entries.slice(0, 3).map((e) => nameOf(data().byId[e.exerciseId])).join(' · ') || t('routines.count', { n: 0 }) })),
         h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('routines.start'), onclick: () => startFromRoutine(r), disabled: !r.entries.length }, icon('bolt')),

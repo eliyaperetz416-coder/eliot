@@ -371,8 +371,11 @@ button.chip { cursor: pointer; min-height: var(--tap); padding-inline: 14px; fon
 .plan-card { display: grid; gap: 4px; text-decoration: none; color: inherit; margin-block-end: var(--s-2); }
 .plan-day.done { opacity: .6; }
 .plan-day.next { border-color: rgb(var(--accent-rgb) / .6); }
-.plan-list { list-style: none; margin: var(--s-2) 0 0; padding: 0; display: grid; gap: 6px; color: var(--text-dim); font-size: 14px; }
-.plan-list li { display: flex; justify-content: space-between; gap: var(--s-3); }
+.plan-list { list-style: none; margin: var(--s-3) 0; padding: 0; display: grid; gap: var(--s-3); color: var(--text); font-size: 15px; }
+.plan-list li { display: flex; align-items: center; gap: var(--s-3); }
+.plan-list .thumb { border-radius: 10px; }
+.plan-name { flex: 1; min-width: 0; font-weight: 500; }
+.plan-sr { color: var(--text-dim); white-space: nowrap; }
 .week-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-block-end: 2px; }
 .week-chips .chip { flex: none; }
 .warn { color: var(--accent); }

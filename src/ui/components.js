@@ -55,6 +55,14 @@ export function emptyState({ icon: ic, title, body }) {
     h('p', { text: body }));
 }
 
+/** Exercise photo thumbnail with an icon fallback (OUR DESIGN). */
+export function exThumb(ex, size = 56) {
+  const fallback = () => h('span', { class: 'thumb-fallback' }, icon('workout'));
+  const img = ex?.image ? h('img', { src: ex.image, alt: '', loading: 'lazy', decoding: 'async', width: size, height: size }) : fallback();
+  img.addEventListener?.('error', () => { img.replaceWith(fallback()); });
+  return h('span', { class: 'thumb', style: size === 56 ? null : `width:${size}px;height:${size}px` }, img);
+}
+
 /** A consistent "back" link at the top of every sub-screen (OUR DESIGN). */
 export function backLink(href, label) {
   return h('a', { class: 'back-link', href }, icon('chevron', 'chev back-chev'), label);
