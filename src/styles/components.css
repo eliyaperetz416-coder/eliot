@@ -483,3 +483,24 @@ a.btn { text-decoration: none; }
 .cal-key.pr::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--accent); }
 .routine-update { margin-block-end: var(--s-2); }
 .cal-streak { margin-block-start: var(--s-3); }
+
+.tab-dot { position: absolute; inset-block-start: 6px; inset-inline-start: calc(50% + 8px); width: 9px; height: 9px; border-radius: 50%; background: var(--danger); border: 2px solid var(--bg); }
+
+/* Crew */
+.badge { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: var(--danger); color: #fff; font-size: 12px; font-weight: 800; display: inline-grid; place-items: center; }
+.crew-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
+.crew-code { font-size: 28px; letter-spacing: .12em; }
+.crew-row.me { background: var(--accent-soft); }
+.crew-pos { width: 28px; text-align: center; font-size: 18px; color: var(--text-mute); flex: none; }
+.crew-val { font-size: 18px; text-align: end; white-space: nowrap; }
+.crew-feed { display: grid; gap: var(--s-2); max-height: 52dvh; overflow-y: auto; padding: var(--s-2); background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-lg); align-content: start; min-height: 160px; }
+.crew-msg { max-width: 88%; background: var(--surface-3); border-radius: 12px; padding: var(--s-2) var(--s-3); justify-self: start; }
+.crew-msg.mine { justify-self: end; background: var(--accent-soft); }
+.crew-msg.status { border-inline-start: 3px solid var(--accent); }
+.crew-meta { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; font-size: 13px; }
+.crew-body { overflow-wrap: anywhere; padding-block-start: 2px; }
+.crew-sys { text-align: center; font-size: 12px; color: var(--text-mute); padding-block: 2px; }
+.crew-compose { display: flex; gap: var(--s-2); align-items: center; padding-block-start: var(--s-2); }
+.crew-compose .field-box { flex: 1; min-width: 0; }
+.crew-unread { display: grid; gap: 2px; margin-block-end: var(--s-3); text-decoration: none; color: inherit; }
+.center { text-align: center; }

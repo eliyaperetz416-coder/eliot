@@ -9,6 +9,7 @@ import { rankCard } from './rank-card.js';
 import { formatDate, formatKg, formatNum } from './format.js';
 import { APP_VERSION } from '../version.js';
 import { levelBar, gameStrip } from './game-ui.js';
+import { crew } from './crew-state.js';
 
 const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 
@@ -80,7 +81,7 @@ export function profileScreen({ onLanguage }) {
       log.length > 1 ? h('div', { class: 'section-label', text: t('profile.bw.history') }) : null,
       log.length > 1 ? list(log.slice(0, 10).map((e) => listRow({ title: formatDate(e.ms), end: h('span', { class: 'num', text: `${formatKg(e.kg)} ${t('unit.kg')}` }) }))) : null,
       h('div', { class: 'section-label', text: t('hist.title') }),
-      list([listRow({ title: t('cal.row'), sub: t('cal.row.sub'), icon: 'history', onClick: () => { location.hash = '#/calendar'; } }), listRow({ title: t('card.title'), sub: t('card.sub'), icon: 'shield', onClick: () => { location.hash = '#/card'; } }), listRow({ title: t('hist.title'), sub: t('common.sets', { n: store.workouts.reduce((n, w) => n + (w.stats?.workingSets ?? 0), 0) }), icon: 'history', end: h('span', { class: 'num', text: formatNum(store.workouts.length, 0) }), onClick: () => { location.hash = '#/history'; } }), listRow({ title: t('set.title'), sub: t('set.backup'), icon: 'settings', onClick: () => { location.hash = '#/settings'; } })]),
+      list([listRow({ title: t('crew.title'), sub: t('crew.row.sub'), icon: 'trophy', end: crew.unread ? h('span', { class: 'badge', text: String(crew.unread) }) : null, onClick: () => { location.hash = '#/crew'; } }), listRow({ title: t('cal.row'), sub: t('cal.row.sub'), icon: 'history', onClick: () => { location.hash = '#/calendar'; } }), listRow({ title: t('card.title'), sub: t('card.sub'), icon: 'shield', onClick: () => { location.hash = '#/card'; } }), listRow({ title: t('hist.title'), sub: t('common.sets', { n: store.workouts.reduce((n, w) => n + (w.stats?.workingSets ?? 0), 0) }), icon: 'history', end: h('span', { class: 'num', text: formatNum(store.workouts.length, 0) }), onClick: () => { location.hash = '#/history'; } }), listRow({ title: t('set.title'), sub: t('set.backup'), icon: 'settings', onClick: () => { location.hash = '#/settings'; } })]),
       h('div', { class: 'section-label', text: t('profile.language') }),
       segmented({ label: t('profile.language'), value: getLanguage(), onChange: (l) => { onLanguage(l); }, options: [{ value: 'he', label: t('lang.he'), lang: 'he' }, { value: 'en', label: t('lang.en'), lang: 'en' }] }),
       h('p', { class: 'row-sub', style: 'padding-block-start:8px', text: t('profile.language.hint') }),

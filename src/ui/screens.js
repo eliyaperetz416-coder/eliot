@@ -20,6 +20,7 @@ import { settingsScreen } from './settings.js';
 import { numbersScreen } from './numbers.js';
 import { requestsScreen } from './requests.js';
 import { calendarScreen } from './calendar.js';
+import { crewScreen } from './crew.js';
 import { store } from './store.js';
 import { ranksPreviewScreen } from './ranks-preview.js';
 
@@ -87,6 +88,7 @@ export function buildScreens(ctx) {
     numbers: numbersScreen,
     requests: requestsScreen,
     calendar: calendarScreen,
+    crew: crewScreen,
     kit,
   };
 }

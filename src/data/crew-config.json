@@ -1,0 +1,6 @@
+{
+  "url": "https://szhdasydkoqtbmbrmzpi.supabase.co",
+  "key": "sb_publishable_5qaTK9dDcjPd_mMp6jLePQ_DKScPYbS",
+  "note": "The publishable key is public by design. The database tables are closed (row level security, no policies); the app can only call the crew functions, and each needs your secret token that never leaves your phone.",
+  "vapid": "BGHF4v4jgvywkr9KHUC2otVMTOdoImKR8inSmv6ndYtP-1CZfFfjg1tOcCDzuzUkCD8x8dopqjmiapHRPQ_JNPg"
+}

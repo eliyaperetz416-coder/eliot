@@ -6,6 +6,7 @@ import { store, saveRequests } from './store.js';
 import { buildRequest, requestsMessage } from '../core/requests.mjs';
 import { uid } from '../core/workout.mjs';
 import { formatDate } from './format.js';
+import { shareViaWhatsApp } from './share.js';
 
 export function requestsScreen() {
   const root = h('main', { class: 'screen' });
@@ -45,7 +46,8 @@ export function requestsScreen() {
           h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('req.delete'), onclick: async () => { await saveRequests(store.requests.filter((x) => x.id !== r.id)); draw(); } }, icon('trash'))))),
       store.requests.length ? h('div', { class: 'stack', style: 'padding-block-start:12px' },
         h('div', { class: 'section-label', text: t('req.message') }), out,
-        button({ label: t('req.copy'), icon: 'share', block: true, onClick: async () => {
+        button({ label: t('req.whatsapp'), icon: 'share', block: true, onClick: async () => { const r = await shareViaWhatsApp(msg); if (r === 'copied') showToast({ message: t('req.copied') }); } }),
+        button({ label: t('req.copy'), icon: 'share', variant: 'secondary', block: true, onClick: async () => {
           try { await navigator.clipboard.writeText(msg); showToast({ message: t('req.copied') }); } catch { out.focus(); out.select(); showToast({ message: t('req.copyManual') }); }
         } }),
         h('p', { class: 'row-sub', text: t('req.next') })) : null);

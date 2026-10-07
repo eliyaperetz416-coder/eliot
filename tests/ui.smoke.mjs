@@ -4,13 +4,14 @@ import { serve } from './serve.mjs';
 import { mkdirSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import sharp from 'sharp';
+import { createFakeCrew } from './fake-crew.mjs';
 
 const shots = new URL(`../docs/stage-${process.env.STAGE ?? 3}/`, import.meta.url).pathname;
 mkdirSync(shots, { recursive: true });
 const server = await serve(0);
 const base = `http://localhost:${server.address().port}/`;
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-const ROUTES = ['workout', 'exercises', 'exercise/barbell-bench-press-medium-grip', 'exercise/plank', 'ranks', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'requests', 'calendar', 'profile', 'history', 'kit', 'ranks-preview'];
+const ROUTES = ['workout', 'exercises', 'exercise/barbell-bench-press-medium-grip', 'exercise/plank', 'ranks', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'requests', 'calendar', 'crew', 'profile', 'history', 'kit', 'ranks-preview'];
 const errors = [];
 let failed = 0;
 const ONLY = process.env.ONLY;
@@ -625,6 +626,7 @@ for (const lang of ['he', 'en']) {
     await page.fill('#req-links', 'https://youtu.be/abc123\nnot a link\nhttps://example.com/v2');
     await page.click('main .btn-primary');
     await page.waitForSelector('.req-card');
+    assert.equal(await page.getByRole('button', { name: T('שלח בוואטסאפ', 'Send on WhatsApp') }).count(), 1);
     const msg = await page.inputValue('#req-message');
     assert.ok(msg.includes('Hammer Strength Chest Press') && msg.includes('https://youtu.be/abc123') && msg.includes('https://example.com/v2') && !msg.includes('not a link'));
     await page.screenshot({ path: `${shots}${lang}-requests.png`, fullPage: true });
@@ -764,6 +766,92 @@ for (const lang of ['he', 'en']) {
     await page.goto(`${base}#/profile`);
     await page.getByText(T('לוח אימונים', 'Training calendar')).first().click();
     await page.waitForSelector('.cal-grid');
+  });
+
+  await check(`${lang}: crew (friends): create, join, leaderboard, status + chat, unread dot, errors, leave`, async () => {
+    const T = (he, en) => L(lang, he, en);
+    const fake = createFakeCrew();
+    await fake.install(ctx);
+    // a second friend on another phone
+    const ctx2 = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: lang === 'he' ? 'he-IL' : 'en-US', serviceWorkers: 'block' });
+    await fake.install(ctx2);
+    const p2 = await ctx2.newPage();
+    p2.on('pageerror', (e) => errors.push(`crew friend: ${e.message}`));
+    await onboard(p2, lang, `crew2-${lang}`);
+    try {
+      // me: create the crew
+      await page.goto(`${base}#/crew`);
+      await page.waitForSelector('#crew-nick');
+      await page.screenshot({ path: `${shots}${lang}-crew-start.png`, fullPage: true });
+      await page.getByRole('button', { name: T('יצירת קבוצה', 'Create a crew') }).click();
+      await page.fill('#crew-name', 'Gym bros'); await page.fill('#crew-nick', 'Elia');
+      await page.getByRole('button', { name: T('צור את הקבוצה', 'Create the crew') }).click();
+      await page.waitForSelector('.crew-code');
+      const code = await page.textContent('.crew-code');
+      assert.equal(code.length, 6);
+      // a bad code and a taken nickname on the friend's phone
+      await p2.goto(`${base}#/crew`); await p2.waitForSelector('#crew-code');
+      await p2.fill('#crew-code', 'ZZZZZZ'); await p2.fill('#crew-nick', 'Dan');
+      await p2.getByRole('button', { name: T('הצטרף', 'Join'), exact: true }).click();
+      await p2.waitForSelector('.field-error:not([hidden])');
+      assert.ok((await p2.textContent('.field-error')).includes(T('אין קבוצה', 'No crew')));
+      await p2.fill('#crew-code', code.toLowerCase()); await p2.fill('#crew-nick', 'elia');
+      await p2.getByRole('button', { name: T('הצטרף', 'Join'), exact: true }).click();
+      await p2.waitForFunction(() => /כבר בשימוש|already used/.test(document.querySelector('.field-error')?.textContent ?? ''));
+      await p2.fill('#crew-nick', 'Dan');
+      await p2.getByRole('button', { name: T('הצטרף', 'Join'), exact: true }).click();
+      await p2.waitForSelector('.crew-board');
+      // the board shows both, I am marked
+      await p2.waitForFunction(() => document.querySelectorAll('.crew-row').length === 2);
+      // friend posts a status and a chat message
+      await p2.getByRole('button', { name: T('פיד', 'Feed') }).click();
+      await p2.waitForSelector('#crew-say');
+      await p2.getByRole('button', { name: T('הולך להתאמן', 'Going to train') }).click();
+      await p2.waitForFunction(() => document.querySelectorAll('.crew-msg').length === 1);
+      await p2.fill('#crew-say', 'Legs today, who is in?'); await p2.keyboard.press('Enter');
+      await p2.waitForFunction(() => document.querySelectorAll('.crew-msg').length === 2);
+      // my phone: unread appears on the workout home and the profile tab, then clears when I open the feed
+      await page.evaluate(async () => { const m = await import('./src/ui/crew-state.js'); await m.refreshUnread(); });
+      await page.goto(`${base}#/workout`);
+      await page.waitForSelector('.crew-unread');
+      assert.ok((await page.textContent('.crew-unread')).includes('2'));
+      assert.equal(await page.locator('.tab-dot').count(), 1);
+      await page.goto(`${base}#/crew`);
+      await page.waitForSelector('.crew-board');
+      assert.equal(await page.locator('.crew-row').count(), 2);
+      assert.ok(await page.locator('.crew-row.me').count() === 1);
+      await page.getByRole('button', { name: new RegExp(T('פיד', 'Feed')) }).click();
+      await page.waitForFunction(() => document.querySelectorAll('.crew-msg').length === 2);
+      await page.screenshot({ path: `${shots}${lang}-crew-feed.png`, fullPage: true });
+      await page.getByRole('button', { name: T('סטטוס', 'Status'), exact: true }).click();
+      await page.fill('#crew-say', 'Going to the gym at 18:00'); await page.keyboard.press('Enter');
+      await page.waitForFunction(() => document.querySelectorAll('.crew-msg.mine.status').length >= 1);
+      await page.goto(`${base}#/workout`);
+      assert.equal(await page.locator('.tab-dot').count(), 0, 'read: no dot');
+      // my numbers are on the board, and nothing private is sent
+      await page.goto(`${base}#/crew`);
+      await page.waitForSelector('.crew-board');
+      const sent = fake.calls.filter((c) => c.name === 'update_stats').map((c) => Object.keys(c.args.p_stats));
+      assert.ok(sent.length >= 1);
+      for (const keys of sent) for (const k of keys) assert.ok(['level', 'streak', 'workouts', 'weekVolume', 'monthWorkouts', 'rating', 'tier', 'division'].includes(k), `unexpected shared field ${k}`);
+      await page.waitForSelector('.crew-push h2');
+      await page.screenshot({ path: `${shots}${lang}-crew-board.png`, fullPage: true });
+      // sorting chips work
+      await page.getByRole('button', { name: T('רמה', 'Level'), exact: true }).click();
+      await page.waitForSelector('.crew-row');
+      // leaving
+      await p2.goto(`${base}#/crew`);
+      await p2.getByRole('button', { name: T('עזוב את הקבוצה', 'Leave the crew') }).click();
+      await p2.locator('.sheet .btn-danger').click();
+      await p2.waitForSelector('#crew-code');
+      await page.reload();
+      await page.waitForSelector('.crew-board');
+      await page.waitForFunction(() => document.querySelectorAll('.crew-row').length === 1);
+    } finally {
+      await ctx2.close();
+      await ctx.unroute(/supabase\.co\/rest\/v1\/rpc\//);
+      await page.evaluate(async () => { const { dbPut } = await import('./src/ui/db.js'); await dbPut('kv', null, 'crew'); });
+    }
   });
 
   await check(`${lang}: settings, backup export + restore, reminder, numbers page, reset`, async () => {

@@ -8,6 +8,7 @@ import { initStore, store, saveProfile, subscribe, onAchievements } from './ui/s
 import { onboarding } from './ui/onboarding.js';
 import { initRestTimer, refreshRestTimer } from './ui/rest-timer.js';
 import { keepAwake } from './ui/wakelock.js';
+import { initCrew, onCrew, crew, startCrewWatcher } from './ui/crew-state.js';
 
 const TABS = [
   { id: 'workout', icon: 'workout' }, { id: 'exercises', icon: 'exercises' }, { id: 'ranks', icon: 'ranks' },
@@ -17,6 +18,8 @@ const app = document.getElementById('app');
 const nav = document.getElementById('nav-root');
 let screens;
 let dispose = null;
+let currentTab = null;
+const drawNav = () => nav.replaceChildren(store.profile && TABS.some((x) => x.id === currentTab) ? tabBar({ tabs: TABS, current: currentTab, badges: { profile: crew.unread > 0 } }) : '');
 
 const lang2 = () => document.documentElement.lang;
 function hexToRgb(hex) { const n = parseInt(hex.slice(1), 16); return `${(n >> 16) & 255} ${(n >> 8) & 255} ${n & 255}`; }
@@ -55,8 +58,9 @@ function render() {
   const el = screens[id](param);
   dispose = el._dispose ?? null;
   app.replaceChildren(el);
-  const tab = { exercise: 'exercises', custom: 'exercises', history: 'profile', achievements: 'profile', settings: 'profile', requests: 'exercises', calendar: 'profile', numbers: 'profile', result: 'workout', routines: 'workout', routine: 'workout', plans: 'workout', plan: 'workout', progress: 'ranks', card: 'ranks' }[id] ?? id;
-  nav.replaceChildren(TABS.some((x) => x.id === tab) ? tabBar({ tabs: TABS, current: tab }) : '');
+  const tab = { exercise: 'exercises', custom: 'exercises', history: 'profile', achievements: 'profile', crew: 'profile', settings: 'profile', requests: 'exercises', calendar: 'profile', numbers: 'profile', result: 'workout', routines: 'workout', routine: 'workout', plans: 'workout', plan: 'workout', progress: 'ranks', card: 'ranks' }[id] ?? id;
+  currentTab = tab;
+  drawNav();
   keepAwake(!!store.draft);
   window.scrollTo(0, 0);
 }
@@ -83,6 +87,7 @@ async function boot() {
   const settings = await loadSettings();
   await loadData();
   await initStore();
+  await initCrew();
   const lang = settings.lang ?? store.profile?.lang ?? detectLanguage(navigator.language);
   setLanguage(lang);
   document.documentElement.lang = lang;
@@ -101,6 +106,8 @@ async function boot() {
     if (next.lang && next.lang !== document.documentElement.lang) { setLanguage(next.lang); document.documentElement.lang = next.lang; refreshRestTimer(); }
     applyDocument(); applyAccent();
   });
+  onCrew(drawNav);
+  startCrewWatcher();
   window.addEventListener('hashchange', render);
   document.documentElement.dataset.ready = '1';
   requestPersistence();
@@ -123,6 +130,7 @@ function registerServiceWorker() {
     });
   }).catch(() => { /* offline support is optional; app still runs */ });
   let reloading = false;
+  navigator.serviceWorker.addEventListener('message', (e) => { if (e.data?.type === 'GO' && typeof e.data.hash === 'string') location.hash = e.data.hash; });
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (reloading) return; reloading = true; location.reload();
   });

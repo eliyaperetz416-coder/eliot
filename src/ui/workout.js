@@ -1,5 +1,6 @@
 import { h } from './dom.js';
 import { getSettings, updateSettings } from './storage.js';
+import { crew } from './crew-state.js';
 import { exportDue, daysSince } from '../core/backup.mjs';
 import { icon } from './icons.js';
 import { t, getLanguage } from '../core/i18n.mjs';
@@ -60,6 +61,7 @@ export function startScreen() {
   const kids = [
     h('header', { class: 'screen-head' }, icon('bolt', 'mark'), h('h1', { text: t('workout.title') })),
     backupReminder(),
+    crew.local && crew.unread ? h('a', { class: 'card card-accent crew-unread', href: '#/crew' }, h('b', { text: t('crew.unread.card', { n: crew.unread }) }), h('span', { class: 'row-sub', text: t('crew.unread.open') })) : null,
     gameStrip(),
     rankCard(store.overall),
     h('div', { class: 'stack', style: 'padding-block:16px' }, button({ label: t('wk.start'), icon: 'workout', block: true, onClick: openChooseWorkout })),

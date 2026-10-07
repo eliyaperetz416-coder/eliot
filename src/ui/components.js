@@ -55,11 +55,11 @@ export function emptyState({ icon: ic, title, body }) {
     h('p', { text: body }));
 }
 
-export function tabBar({ tabs, current }) {
+export function tabBar({ tabs, current, badges = {} }) {
   return h('nav', { class: 'tabbar', 'aria-label': t('nav.label') },
     tabs.map((tab) => h('a', {
       class: 'tab', href: `#/${tab.id}`, 'aria-current': tab.id === current ? 'page' : null,
-    }, icon(tab.icon), h('span', { text: t(`tab.${tab.id}`) }))));
+    }, icon(tab.icon), badges[tab.id] ? h('i', { class: 'tab-dot', 'aria-label': t('crew.unread.label') }) : null, h('span', { text: t(`tab.${tab.id}`) }))));
 }
 
 /* ---------- sheet ---------- */

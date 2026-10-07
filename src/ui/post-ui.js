@@ -12,6 +12,8 @@ import { button, emptyState, openSheet } from './components.js';
 import { data } from './data.js';
 import { store, commitPost, clearDraft, bodyweightKg, saveRoutine } from './store.js';
 import { getSettings } from './storage.js';
+import { crew, syncStats, sendMessage } from './crew-state.js';
+import { showToast } from './components.js';
 import { bumpPlannedWeights } from '../core/routines.mjs';
 import { skipRest } from './rest-timer.js';
 import { keepAwake } from './wakelock.js';
@@ -56,6 +58,7 @@ export function openFinishSheet() {
     const after = result.summary.overallAfter;
     const g = applyPost({ game: store.game, workout: result.workout, workouts: result.workouts, byId, now, overallRankIndex: after.pending ? -1 : rankIndex(after.rating), customCount: store.custom.length, plansCount: store.plans.length, achievements: data().achievements, pool: data().quests });
     await commitPost(result, g.game);
+    syncStats(true);
     lastResult = { ...result, game: g.game, rewards: g.rewards, routineUpdate: await updateSavedWorkout(result.workout) };
     skipRest(); keepAwake(false);
     sh.close();
@@ -146,6 +149,12 @@ export function resultScreen() {
     kids.push(h('div', { class: 'section-label', text: t('res.prs') }),
       h('div', { class: 'list' }, s.prs.map((p) => h('div', { class: 'row' }, h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: nameOf(byId[p.exerciseId]) })),
         h('span', { class: `pr-badge pr-${p.kind === 'allTime' ? 'all' : p.kind === 'weekly' ? 'week' : 'first'}`, text: t(p.kind === 'allTime' ? 'fb.pr.all' : p.kind === 'weekly' ? 'fb.pr.week' : 'fb.pr.first') })))));
+  }
+  if (crew.local) {
+    kids.push(h('div', { class: 'stack', style: 'padding-block-start:16px' }, button({ label: t('crew.share.workout'), icon: 'share', variant: 'secondary', block: true, onClick: async (e) => {
+      e.currentTarget.disabled = true;
+      try { await sendMessage('status', t('crew.status.done', { sets: s.stats.workingSets, volume: formatNum(s.stats.volume, 0) })); showToast({ message: t('crew.shared') }); } catch { e.currentTarget.disabled = false; showToast({ message: t('crew.err.generic') }); }
+    } })));
   }
   kids.push(h('div', { class: 'stack', style: 'padding-block-start:16px' }, button({ label: t('res.done'), block: true, onClick: () => { location.hash = '#/workout'; } })));
   const root = h('main', { class: 'screen' }, kids);
