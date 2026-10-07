@@ -24,11 +24,11 @@
   --text-dim: #b0b5cc;
   --text-mute: #8a90ab;
 
-  --accent-rgb: 255 196 61;            /* follows overall rank later */
+  --accent-rgb: 124 92 255;            /* follows overall rank later */
   --accent: rgb(var(--accent-rgb));
   --accent-soft: rgb(var(--accent-rgb) / .14);
   --accent-glow: rgb(var(--accent-rgb) / .38);
-  --accent-ink: #1a1305;
+  --accent-ink: #ffffff;
   --danger: #ff5577;
   --ok: #4fe3a0;
 
@@ -37,7 +37,7 @@
 
   --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-pill: 999px;
   --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 24px; --s-6: 32px; --s-7: 48px;
-  --tap: 44px;
+  --tap: 48px;
   --tabbar-h: 64px;
   --gutter: 16px;
 

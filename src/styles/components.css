@@ -61,7 +61,7 @@ button.row:active { background: var(--surface-2); }
   position: fixed; inset-inline: 0; inset-block-end: 0; z-index: 20;
   height: calc(var(--tabbar-h) + var(--safe-b)); padding-block-end: var(--safe-b);
   padding-inline: var(--safe-l) var(--safe-r);
-  display: grid; grid-template-columns: repeat(5, 1fr);
+  display: grid; grid-template-columns: repeat(4, 1fr);
   background: rgb(10 11 18 / .86); backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4);
   border-block-start: 1px solid var(--line);
 }

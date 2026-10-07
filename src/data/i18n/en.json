@@ -1,9 +1,9 @@
 {
   "app.name": "Demigod",
   "app.tagline": "Lift. Rank. Ascend.",
-  "tab.workout": "Workout",
+  "tab.workout": "Today",
   "tab.exercises": "Exercises",
-  "tab.ranks": "Ranks",
+  "tab.ranks": "Progress",
   "tab.shop": "Shop",
   "tab.profile": "Profile",
   "nav.label": "Main navigation",

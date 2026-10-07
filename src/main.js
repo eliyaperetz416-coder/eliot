@@ -11,8 +11,7 @@ import { keepAwake } from './ui/wakelock.js';
 import { initCrew, onCrew, crew, startCrewWatcher } from './ui/crew-state.js';
 
 const TABS = [
-  { id: 'workout', icon: 'workout' }, { id: 'exercises', icon: 'exercises' }, { id: 'ranks', icon: 'ranks' },
-  { id: 'shop', icon: 'shop' }, { id: 'profile', icon: 'profile' },
+  { id: 'workout', icon: 'workout' }, { id: 'exercises', icon: 'exercises' }, { id: 'ranks', icon: 'ranks' }, { id: 'profile', icon: 'profile' },
 ];
 const app = document.getElementById('app');
 const nav = document.getElementById('nav-root');
@@ -27,12 +26,13 @@ function hexToRgb(hex) { const n = parseInt(hex.slice(1), 16); return `${(n >> 1
 /** The accent follows the overall rank (OUR DESIGN); gold while unranked or when set to fixed. */
 function applyAccent() {
   const root = document.documentElement.style;
-  let hex = '#ffc43d';
+  let hex = '#7c5cff';
   if (getSettings().accentMode === 'rank' && !store.overall.pending) {
     const tier = ['wood', 'bronze', 'silver', 'gold', 'platinum', 'diamond', 'champion', 'titan', 'olympian', 'greekgod'];
     for (const id of tier) if (store.overall.rating >= ({ wood: 1, bronze: 200, silver: 300, gold: 400, platinum: 500, diamond: 600, champion: 700, titan: 800, olympian: 900, greekgod: 1000 })[id]) hex = TIER_COLORS[id];
   }
   root.setProperty('--accent-rgb', hexToRgb(hex));
+  root.setProperty('--accent-ink', hex === '#7c5cff' ? '#ffffff' : '#1a1305');
 }
 
 function applyDocument() {
@@ -58,7 +58,7 @@ function render() {
   const el = screens[id](param);
   dispose = el._dispose ?? null;
   app.replaceChildren(el);
-  const tab = { exercise: 'exercises', custom: 'exercises', history: 'profile', achievements: 'profile', crew: 'profile', settings: 'profile', requests: 'exercises', calendar: 'profile', numbers: 'profile', result: 'workout', routines: 'workout', routine: 'workout', plans: 'workout', plan: 'workout', progress: 'ranks', card: 'ranks' }[id] ?? id;
+  const tab = { exercise: 'exercises', custom: 'exercises', history: 'profile', achievements: 'profile', crew: 'profile', settings: 'profile', requests: 'exercises', calendar: 'profile', numbers: 'profile', result: 'workout', routines: 'workout', routine: 'workout', plans: 'workout', plan: 'workout', progress: 'ranks', card: 'ranks', shop: 'profile' }[id] ?? id;
   currentTab = tab;
   drawNav();
   keepAwake(!!store.draft);
