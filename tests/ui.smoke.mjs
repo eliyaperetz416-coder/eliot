@@ -668,7 +668,7 @@ for (const lang of ['he', 'en']) {
     await startEmpty(page);
     await addExercise(page, 'barbell bench press');
     const chip = page.locator('.weight-chip');
-    assert.ok((await chip.textContent()).includes(T('כולל', 'total')));
+    assert.ok((await chip.textContent()).includes(T('כולל המוט', 'Bar included')));
     await chip.click();
     await page.waitForSelector('#wb-input');
     await page.screenshot({ path: `${shots}${lang}-weight-sheet.png` });
@@ -696,7 +696,7 @@ for (const lang of ['he', 'en']) {
     await startEmpty(page);
     await addExercise(page, 'dumbbell curl');
     const dchip = page.locator('.weight-chip').first();
-    assert.ok((await dchip.textContent()).includes(T('לכל יד', 'Per hand')));
+    assert.ok((await dchip.textContent()).includes(T('לכל יד', 'per hand')));
     await dchip.click();
     await page.waitForSelector('.sheet');
     assert.equal(await page.locator('#wb-input').count(), 0);

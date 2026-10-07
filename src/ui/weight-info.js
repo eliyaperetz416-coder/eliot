@@ -13,7 +13,7 @@ export function weightChip(ex, onChange) {
   const m = weightMode(ex);
   if (!m || m === 'added') return null;
   const base = supportsBase(ex) ? baseOf(ex.id) : 0;
-  const label = base > 0 ? t('weight.chip.base', { n: formatKg(base) }) : t(m === 'perhand' ? 'weight.chip.perhand' : 'weight.chip.total');
+  const label = base > 0 ? t(`weight.chip.base.${m}`, { n: formatKg(base) }) : t(`weight.chip.${m}`);
   return h('button', { class: 'chip chip-select weight-chip', type: 'button', onclick: () => openWeightSheet(ex, onChange) }, label);
 }
 
