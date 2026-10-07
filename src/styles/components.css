@@ -482,3 +482,4 @@ a.btn { text-decoration: none; }
 .cal-key.pr { background: var(--surface-3); border: 1px solid var(--line); position: relative; }
 .cal-key.pr::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--accent); }
 .routine-update { margin-block-end: var(--s-2); }
+.cal-streak { margin-block-start: var(--s-3); }

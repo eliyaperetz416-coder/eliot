@@ -65,9 +65,9 @@ export function calendarScreen() {
       h('div', { class: 'stats-grid', style: 'padding-block-start:16px' },
         stat(t('cal.days'), String(st.days)), stat(t('cal.workouts', { n: st.workouts }), String(st.workouts)),
         stat(t('fin.volume'), `${formatNum(st.volume, 0)} ${t('unit.kg')}`), stat(t('fin.prs'), String(st.prs))),
-      list([
+      h('div', { class: 'cal-streak' }, list([
         listRow({ title: t('cal.streak.title'), sub: t('cal.streak.best', { n: sk.best }), icon: 'flame', end: h('span', { class: 'num', text: t('cal.streak.now', { n: sk.current }) }) }),
-      ]));
+      ])));
   }
   draw();
   return root;
