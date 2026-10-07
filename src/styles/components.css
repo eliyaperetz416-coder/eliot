@@ -504,3 +504,26 @@ a.btn { text-decoration: none; }
 .crew-compose .field-box { flex: 1; min-width: 0; }
 .crew-unread { display: grid; gap: 2px; margin-block-end: var(--s-3); text-decoration: none; color: inherit; }
 .center { text-align: center; }
+
+/* Home: one big card, one calm week row */
+.home-head h1 { font-size: 34px; }
+.hero { position: relative; overflow: hidden; border-radius: var(--r-lg); background: var(--surface-1); border: 1px solid var(--line); margin-block: var(--s-3); min-height: 230px; display: grid; align-items: end; }
+.hero-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .32; }
+.hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, var(--surface-1) 8%, rgb(17 19 31 / .55) 70%, rgb(17 19 31 / .2)); }
+.hero-body { position: relative; z-index: 1; padding: var(--s-5) var(--s-4) var(--s-4); display: grid; gap: var(--s-2); }
+.hero-kicker { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+.hero-title { font-size: 30px; font-weight: 800; line-height: 1.1; }
+.hero-sub { color: var(--text-dim); font-size: 14px; padding-block-end: var(--s-2); }
+.hero .btn { min-height: 52px; font-size: 17px; }
+.week-card { display: grid; gap: var(--s-3); text-decoration: none; color: inherit; margin-block-end: var(--s-3); }
+.week-top { display: flex; justify-content: space-between; align-items: baseline; }
+.week-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.week-day { display: grid; justify-items: center; gap: 6px; font-size: 11px; color: var(--text-mute); }
+.week-day i { width: 100%; max-width: 38px; aspect-ratio: 1; border-radius: 50%; border: 1.5px solid var(--line); background: none; display: block; }
+.week-day.on i { background: var(--accent); border-color: var(--accent); }
+.week-day.today { color: var(--text); font-weight: 700; }
+.week-day.today:not(.on) i { border-color: var(--text-mute); }
+.home-more { margin-block: var(--s-3); }
+.home-more > summary { display: flex; align-items: center; justify-content: space-between; min-height: 52px; padding-inline: var(--s-4); background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-lg); font-weight: 700; cursor: pointer; list-style: none; }
+.home-more > summary::-webkit-details-marker { display: none; }
+.home-more[open] > summary { margin-block-end: var(--s-3); }

@@ -44,7 +44,7 @@ export function questsCard(rerender) {
     h('div', { class: 'quest-main' },
       h('div', { class: 'quest-text', text: questText(q) }),
       h('div', { class: 'lp small', 'aria-hidden': 'true' }, h('span', { class: 'lp-fill', style: `width:${(q.progress / q.target) * 100}%` })),
-      h('div', { class: 'row-sub num', text: `${formatNum(q.progress, 0)} / ${formatNum(q.target, 0)}` })),
+      h('div', { class: 'row-sub num' }, h('bdi', { dir: 'ltr', text: `${formatNum(q.progress, 0)} / ${formatNum(q.target, 0)}` }))),
     q.claimed ? h('span', { class: 'pr-badge pr-week', text: t('quest.claimed') })
       : button({ label: q.complete ? t('quest.claim', { n: q.reward }) : t('quest.reward', { n: q.reward }), variant: q.complete ? 'primary' : 'secondary', disabled: !q.complete, onClick: async () => {
         const r = claimQuest(store.game, board, q.claimKey, Date.now());

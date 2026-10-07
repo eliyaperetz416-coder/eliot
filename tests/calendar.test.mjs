@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { monthGrid, addMonths, byDay, monthStats, firstMonth, keyOf } from '../src/core/calendar.mjs';
+import { weekKeys, monthGrid, addMonths, byDay, monthStats, firstMonth, keyOf } from '../src/core/calendar.mjs';
 
 test('month grid: whole weeks, correct leading days, Sunday or Monday first', () => {
   // October 2026 starts on a Thursday and has 31 days
@@ -49,4 +49,12 @@ test('month stats count distinct days and sums', () => {
 test('first month with a workout', () => {
   assert.deepEqual(firstMonth(list, { year: 2030, month: 0 }), { year: 2026, month: 8 });
   assert.deepEqual(firstMonth([], { year: 2030, month: 0 }), { year: 2030, month: 0 });
+});
+
+test('week keys: Sunday-first and Monday-first, across a month end', () => {
+  assert.deepEqual(weekKeys('2026-10-07', 0), ['2026-10-04', '2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09', '2026-10-10']);
+  assert.deepEqual(weekKeys('2026-10-07', 1), ['2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09', '2026-10-10', '2026-10-11']);
+  assert.equal(weekKeys('2026-10-04', 0)[0], '2026-10-04', 'Sunday itself, Sunday first');
+  assert.equal(weekKeys('2026-10-04', 1)[0], '2026-09-28', 'Sunday itself, Monday first');
+  assert.deepEqual(weekKeys('2026-12-31', 1).slice(-3), ['2027-01-01', '2027-01-02', '2027-01-03']);
 });

@@ -1,5 +1,6 @@
 // Training calendar helpers. Pure. Days are local date keys "YYYY-MM-DD" (the workout's own dateKey), so time zones and DST cannot move a day.
 import { dateKey } from './workout.mjs';
+import { dayNumber, addDays } from './streak.mjs';
 
 const pad = (n) => String(n).padStart(2, '0');
 export const keyOf = (y, m0, d) => `${y}-${pad(m0 + 1)}-${pad(d)}`;
@@ -54,4 +55,11 @@ export function firstMonth(workouts, fallback) {
   if (!workouts.length) return fallback;
   const k = workouts.map(dayOf).sort()[0];
   return { year: Number(k.slice(0, 4)), month: Number(k.slice(5, 7)) - 1 };
+}
+
+/** The 7 date keys of the week that contains todayKey. firstDay: 0 = Sunday first, 1 = Monday first. */
+export function weekKeys(todayKey, firstDay = 0) {
+  const dow = (dayNumber(todayKey) + 4) % 7; // day number 0 is 1970-01-01, a Thursday; Sunday = 0
+  const start = addDays(todayKey, -((dow - firstDay + 7) % 7));
+  return Array.from({ length: 7 }, (_, i) => addDays(start, i));
 }

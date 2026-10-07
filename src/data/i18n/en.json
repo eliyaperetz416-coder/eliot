@@ -771,5 +771,23 @@
   "crew.push.state.on": "You get a notification when someone in the crew posts a status or a message.",
   "crew.push.state.off": "Get a notification when someone in the crew posts a status or a message.",
   "crew.push.state.denied": "Notifications are blocked. Allow them in the phone settings: Settings, Notifications, Demigod.",
-  "crew.push.state.unsupported": "Notifications need the app on your home screen (Share, then Add to Home Screen) and iOS 16.4 or newer."
+  "crew.push.state.unsupported": "Notifications need the app on your home screen (Share, then Add to Home Screen) and iOS 16.4 or newer.",
+  "home.title": "Today",
+  "home.next": "Next workout",
+  "home.new": "New workout",
+  "home.free": "Free workout",
+  "home.free.sub": "Pick exercises as you go",
+  "home.saved": "Saved workout",
+  "home.exercises": {
+    "one": "{n} exercise",
+    "other": "{n} exercises"
+  },
+  "home.start": "Start workout",
+  "home.other": "Another workout",
+  "home.week": "This week",
+  "home.week.count": {
+    "one": "{n} workout",
+    "other": "{n} workouts"
+  },
+  "home.quests": "Quests and streak"
 }

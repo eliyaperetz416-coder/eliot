@@ -47,8 +47,8 @@ async function onboard(page, lang, shotPrefix) {
 }
 
 async function startEmpty(page) {
-  await page.waitForSelector('main .btn-primary');
-  await page.click('main .btn-primary');
+  await page.waitForSelector('.choose-other');
+  await page.click('.choose-other');
   await page.waitForSelector('.sheet .row');
   await page.locator('.sheet .row', { hasText: /Empty workout|אימון ריק/ }).click();
   await page.waitForSelector('.sheet .pick-row');
@@ -201,6 +201,7 @@ for (const lang of ['he', 'en']) {
     await page.waitForSelector('main .stats-grid');
     await page.screenshot({ path: `${shots}${lang}-result.png`, fullPage: true });
     await page.click('main .btn-primary');
+    await page.goto(`${base}#/ranks`);
     await page.waitForSelector('.rank-card');
     assert.equal(await page.locator('.rank-pending').count(), 0);
     assert.equal(await page.locator('.rank-card .lp').count(), 1, 'overall rank with LP bar after 3 ranked exercises');
@@ -223,7 +224,7 @@ for (const lang of ['he', 'en']) {
     await page.waitForSelector('.sheet .btn-danger');
     await page.click('.sheet .btn-danger');
     await page.waitForSelector('.empty');
-    await page.goto(`${base}#/workout`);
+    await page.goto(`${base}#/ranks`);
     await page.waitForSelector('.rank-card');
     assert.equal(await page.locator('.rank-card .lp').count(), 0, 'rank pending again after deleting the only workout');
   });
@@ -345,8 +346,8 @@ for (const lang of ['he', 'en']) {
     await page.waitForFunction(() => document.querySelectorAll('.routine-row').length >= 5);
     // start workout -> "which workout today?" -> pick the first saved workout
     await page.goto(`${base}#/workout`);
-    await page.waitForSelector('main .btn-primary');
-    await page.click('main .btn-primary');
+    await page.waitForSelector('.choose-other');
+    await page.click('.choose-other');
     await page.waitForSelector('.sheet .row');
     await page.waitForTimeout(400);
     await page.screenshot({ path: `${shots}${lang}-choose.png` });
@@ -994,7 +995,7 @@ for (const lang of ['he', 'en']) {
     await page.goto(`${base}#/workout`);
     await page.reload();
     await page.waitForSelector('.screen h1', { timeout: 5000 });
-    await page.click('main .btn-primary');
+    await page.click('.choose-other');
     await page.waitForSelector('.sheet .row', { timeout: 5000 });
     await ctx.setOffline(false);
   });
