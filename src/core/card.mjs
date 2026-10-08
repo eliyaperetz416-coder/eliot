@@ -13,6 +13,7 @@ export function cardModel({ profile, overall, workoutsCount = 0, game = null, to
     tier: t?.tier ?? null, division: t?.division ?? null, divisionIndex: t?.divisionIndex ?? 0, lp: t?.lp ?? null, rating: overall.pending ? 0 : overall.rating,
     level: game ? levelFromXp(game.xp).level : null, streak: game && todayKey ? view(game.streak, todayKey).current : null, achievements: game ? Object.keys(game.achievements.unlocked).length : null,
     workoutsCount,
+    titleItem: find(eq.title), // equipped title (text under the name)
     slots: [find(eq.background), find(eq.frame), find(eq.effect)], // equipped cosmetics: background, frame, effect
   };
 }

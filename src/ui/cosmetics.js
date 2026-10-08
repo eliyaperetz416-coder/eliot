@@ -53,6 +53,24 @@ export function paintBackground(g, art, W, H) {
       for (let i = 0; i < 140; i++) { g.fillStyle = `rgba(255,255,255,${0.2 + r() * 0.8})`; g.beginPath(); g.arc(r() * W, r() * H, 0.6 + r() * 2, 0, Math.PI * 2); g.fill(); }
       break;
     }
+    case 'sunset': {
+      grad([[0, '#2a1240'], [0.45, '#b4435a'], [0.75, '#ff9a4d'], [1, '#ffd37a']]);
+      g.fillStyle = 'rgba(255,240,200,.85)'; g.beginPath(); g.arc(W * 0.5, H * 0.72, W * 0.16, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#1a0f26'; g.fillRect(0, H * 0.82, W, H * 0.18);
+      for (let i = 0; i < 6; i++) { g.strokeStyle = 'rgba(255,255,255,.12)'; g.beginPath(); g.moveTo(0, H * (0.84 + i * 0.025)); g.lineTo(W, H * (0.84 + i * 0.025)); g.stroke(); }
+      break;
+    }
+    case 'ocean': {
+      grad([[0, '#031a33'], [1, '#0b4a7a']]);
+      for (let k = 0; k < 7; k++) { g.strokeStyle = `rgba(140,210,255,${0.06 + r() * 0.1})`; g.lineWidth = 2; g.beginPath(); for (let x = 0; x <= W; x += 8) { const y = H * (0.2 + k * 0.12) + Math.sin(x / 38 + k * 1.7) * 10; x ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); }
+      for (let i = 0; i < 24; i++) { g.fillStyle = `rgba(190,235,255,${0.1 + r() * 0.2})`; g.beginPath(); g.arc(r() * W, r() * H, 1 + r() * 3, 0, Math.PI * 2); g.fill(); }
+      break;
+    }
+    case 'carbon': {
+      grad([[0, '#0b0b0e'], [1, '#17181d']]);
+      for (let y = 0; y < H; y += 10) for (let x = 0; x < W; x += 10) { g.fillStyle = ((x + y) / 10) % 2 ? 'rgba(255,255,255,.045)' : 'rgba(0,0,0,.25)'; g.fillRect(x, y, 5, 5); }
+      break;
+    }
     default: grad([[0, '#0a0b12'], [1, '#11131f']]);
   }
 }
@@ -182,6 +200,8 @@ export function paintFrame(g, art, cx, cy, rad, W, H, accent) {
     case 'thunder': thunder(g, cx, cy, rad); break;
     case 'helm': helm(g, cx, cy, rad); break;
     case 'wings': wings(g, cx, cy, rad, W); break;
+    case 'ring': { const R = rad * 1.06; soft(g, 'rgba(0,0,0,.5)', rad * 0.06); g.strokeStyle = gold(g, cx - R, cy - R, cx + R, cy + R); g.lineWidth = rad * 0.06; g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.stroke(); g.shadowBlur = 0; g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = rad * 0.012; g.beginPath(); g.arc(cx, cy, R - rad * 0.03, 0, TAU); g.stroke(); break; }
+    case 'neon': { const R = rad * 1.06; g.shadowColor = accent; g.shadowBlur = rad * 0.25; g.strokeStyle = accent; g.lineWidth = rad * 0.04; g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.stroke(); g.shadowBlur = rad * 0.1; g.strokeStyle = '#ffffff'; g.lineWidth = rad * 0.012; g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.stroke(); break; }
     default: break;
   }
   g.restore();
@@ -196,6 +216,8 @@ export function paintEffect(g, art, cx, cy, rad, W, H, accent) {
     case 'ember': { for (let i = 0; i < 60; i++) { const x = r() * W, y = H - r() * H * 0.9; g.fillStyle = `rgba(255,${110 + Math.floor(r() * 100)},40,${0.25 + r() * 0.6})`; g.beginPath(); g.arc(x, y, 1.5 + r() * 3.5, 0, Math.PI * 2); g.fill(); } break; }
     case 'sparks': { g.shadowColor = '#6fe8ff'; g.shadowBlur = rad * 0.12; g.strokeStyle = '#dffcff'; g.lineWidth = rad * 0.022; g.lineJoin = 'round'; g.lineCap = 'round'; for (let i = 0; i < 14; i++) { const a = (i / 14) * Math.PI * 2 + r() * 0.2, d0 = rad * (1.08 + r() * 0.1), len = rad * (0.14 + r() * 0.16); g.beginPath(); g.moveTo(cx + Math.cos(a) * d0, cy + Math.sin(a) * d0); for (let k = 1; k <= 3; k++) { const dd = d0 + (len * k) / 3, off = (r() - 0.5) * rad * 0.1; g.lineTo(cx + Math.cos(a) * dd - Math.sin(a) * off, cy + Math.sin(a) * dd + Math.cos(a) * off); } g.stroke(); } break; }
     case 'dust': { for (let i = 0; i < 90; i++) { g.fillStyle = `rgba(255,${200 + Math.floor(r() * 40)},${90 + Math.floor(r() * 60)},${0.25 + r() * 0.6})`; g.beginPath(); g.arc(r() * W, r() * H, 1.5 + r() * 3.5, 0, Math.PI * 2); g.fill(); } break; }
+    case 'aurora': { for (let k = 0; k < 4; k++) { const y0 = H * (0.12 + k * 0.07); const l = g.createLinearGradient(0, y0, 0, y0 + H * 0.45); const c = ['80,255,190', '90,170,255', '190,120,255', '80,255,190'][k]; l.addColorStop(0, `rgba(${c},0)`); l.addColorStop(0.5, `rgba(${c},.28)`); l.addColorStop(1, `rgba(${c},0)`); g.fillStyle = l; g.beginPath(); g.moveTo(0, y0); for (let x = 0; x <= W; x += 10) g.lineTo(x, y0 + Math.sin(x / 55 + k * 2) * H * 0.04); g.lineTo(W, y0 + H * 0.45); g.lineTo(0, y0 + H * 0.45); g.closePath(); g.fill(); } break; }
+    case 'confetti': { const cols = ['#ff5577', '#ffc43d', '#4fe3a0', '#6fa8ff', '#c78bff']; for (let i = 0; i < 70; i++) { g.save(); g.translate(r() * W, r() * H); g.rotate(r() * TAU); g.fillStyle = cols[i % cols.length]; g.globalAlpha = 0.55 + r() * 0.4; g.fillRect(-4, -2, 8 + r() * 6, 4); g.restore(); } break; }
     default: break;
   }
   g.restore();

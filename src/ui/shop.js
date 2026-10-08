@@ -2,7 +2,7 @@
 import { h } from './dom.js';
 import { icon } from './icons.js';
 import { t } from '../core/i18n.mjs';
-import { purchase, toggleEquip, activateShake } from '../core/shop.mjs';
+import { purchase, toggleEquip, activateShake, activateBoost } from '../core/shop.mjs';
 import { view } from '../core/streak.mjs';
 import { button, showToast, backLink } from './components.js';
 import { data } from './data.js';
@@ -11,6 +11,7 @@ import { emblem } from './emblem.js';
 import { drawPreview } from './cosmetics.js';
 import { itemName, itemDesc } from './game-ui.js';
 import { formatNum } from './format.js';
+import { playSound } from './sounds.js';
 
 let emblemImg = null;
 async function sampleEmblem() {
@@ -32,10 +33,12 @@ export function shopScreen() {
     const consumables = shop.consumables.map((c) => {
       const owned = inv[c.id];
       const shakeActive = c.id === 'xpshake' && inv.shakeActive;
+      const boostActive = c.id === 'dboost' && inv.boostActive;
       return h('div', { class: 'row shop-row' },
         h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: itemName(c) }), h('span', { class: 'row-sub', text: itemDesc(c) }),
-          h('span', { class: 'row-sub num', text: t('shop.owned', { n: owned }) + (shakeActive ? ` · ${t('shop.shakeActive')}` : '') })),
+          h('span', { class: 'row-sub num', text: t('shop.owned', { n: owned }) + (shakeActive ? ` · ${t('shop.shakeActive')}` : '') + (boostActive ? ` · ${t('shop.boostActive')}` : '') })),
         h('div', { class: 'shop-actions' },
+          c.id === 'dboost' && owned > 0 && !inv.boostActive ? button({ label: t('shop.activate'), variant: 'secondary', onClick: () => act(activateBoost, () => t('shop.boostOn')) }) : null,
           c.id === 'xpshake' && owned > 0 && !inv.shakeActive ? button({ label: t('shop.activate'), variant: 'secondary', onClick: () => act(activateShake, () => t('shop.shakeOn')) }) : null,
           button({ label: `${c.price}`, icon: 'coin', variant: g.drachmas >= c.price ? 'primary' : 'secondary', disabled: g.drachmas < c.price, onClick: () => act((gm) => purchase(gm, shop, c.id), () => t('shop.bought', { name: itemName(c) })) })));
     });
@@ -48,6 +51,18 @@ export function shopScreen() {
         owned ? button({ label: eq ? t('shop.equipped') : t('shop.equip'), variant: eq ? 'secondary' : 'primary', block: true, onClick: () => act((gm) => toggleEquip(gm, shop, c.id)) })
           : button({ label: `${c.price}`, icon: 'coin', variant: g.drachmas >= c.price ? 'primary' : 'secondary', block: true, disabled: g.drachmas < c.price, onClick: () => act((gm) => purchase(gm, shop, c.id), () => t('shop.bought', { name: itemName(c) })) }));
     }));
+    let ac; // one audio context for sound previews (created by the tap)
+    const buyOrEquip = (c, owned, eq) => (owned ? button({ label: eq ? t('shop.equipped') : t('shop.equip'), variant: eq ? 'secondary' : 'primary', onClick: () => act((gm) => toggleEquip(gm, shop, c.id)) })
+      : button({ label: `${c.price}`, icon: 'coin', variant: g.drachmas >= c.price ? 'primary' : 'secondary', disabled: g.drachmas < c.price, onClick: () => act((gm) => purchase(gm, shop, c.id), () => t('shop.bought', { name: itemName(c) })) }));
+    // themes, titles and sounds are rows: a swatch, a title or a play button on the left
+    const rows = (kind) => h('div', { class: 'list' }, shop.cosmetics.filter((c) => c.kind === kind).map((c) => {
+      const owned = inv.owned.includes(c.id), eq = inv.equipped[kind] === c.id;
+      const lead = kind === 'theme' ? h('span', { class: 'swatch-dot', style: `background:${c.hex}`, 'aria-hidden': 'true' })
+        : kind === 'sound' ? h('button', { class: 'icon-btn', type: 'button', 'aria-label': `${t('shop.preview')}: ${itemName(c)}`, onclick: () => { try { ac ??= new (window.AudioContext || window.webkitAudioContext)(); ac.resume?.(); playSound(ac, c.sound); } catch { /* no audio */ } } }, icon('bolt')) : null;
+      return h('div', { class: `row shop-row${eq ? ' equipped' : ''}` }, lead,
+        h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: itemName(c) }), h('span', { class: 'row-sub', text: itemDesc(c) })),
+        h('div', { class: 'shop-actions' }, buyOrEquip(c, owned, eq)));
+    }));
     root.replaceChildren(
       backLink('#/profile', t('tab.profile')),
       h('header', { class: 'screen-head' }, icon('bolt', 'mark'), h('h1', { text: t('shop.title') })),
@@ -55,6 +70,9 @@ export function shopScreen() {
       broken ? h('p', { class: 'row-sub warn', text: t('shop.brokenHint', { n: broken.lostLength }) }) : null,
       h('div', { class: 'section-label', text: t('shop.consumables') }), h('div', { class: 'list' }, consumables),
       h('p', { class: 'row-sub', style: 'padding-block-start:8px', text: t('shop.restoreHint') }),
+      h('div', { class: 'section-label', text: t('shop.themes') }), h('p', { class: 'row-sub', text: t('shop.themes.hint') }), rows('theme'),
+      h('div', { class: 'section-label', text: t('shop.titles') }), h('p', { class: 'row-sub', text: t('shop.titles.hint') }), rows('title'),
+      h('div', { class: 'section-label', text: t('shop.sounds') }), h('p', { class: 'row-sub', text: t('shop.sounds.hint') }), rows('sound'),
       h('div', { class: 'section-label', text: t('shop.backgrounds') }), tiles('background'),
       h('div', { class: 'section-label', text: t('shop.frames') }), tiles('frame'),
       h('div', { class: 'section-label', text: t('shop.effects') }), tiles('effect'),

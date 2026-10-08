@@ -3,7 +3,7 @@ import { TIER_COLORS } from './core/ranks.mjs';
 import { buildScreens } from './ui/screens.js';
 import { tabBar, showToast, backLink } from './ui/components.js';
 import { loadSettings, requestPersistence, getSettings, updateSettings, onSettings } from './ui/storage.js';
-import { loadData } from './ui/data.js';
+import { loadData, data } from './ui/data.js';
 import { initStore, store, saveProfile, subscribe, onAchievements } from './ui/store.js';
 import { onboarding } from './ui/onboarding.js';
 import { initRestTimer, refreshRestTimer } from './ui/rest-timer.js';
@@ -23,16 +23,24 @@ const drawNav = () => nav.replaceChildren(store.profile && TABS.some((x) => x.id
 const lang2 = () => document.documentElement.lang;
 function hexToRgb(hex) { const n = parseInt(hex.slice(1), 16); return `${(n >> 16) & 255} ${(n >> 8) & 255} ${n & 255}`; }
 
+/** White text on dark accents, dark text on light ones. */
+function inkFor(hex) {
+  const n = parseInt(hex.slice(1), 16), lin = (v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+  const L = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+  return L > 0.4 ? '#1a1305' : '#ffffff';
+}
+
 /** The accent follows the overall rank (OUR DESIGN); gold while unranked or when set to fixed. */
 function applyAccent() {
   const root = document.documentElement.style;
-  let hex = '#7c5cff';
+  const equippedTheme = data().shop.cosmetics.find((c) => c.id === store.game.inventory.equipped.theme);
+  let hex = equippedTheme?.hex ?? '#7c5cff';
   if (getSettings().accentMode === 'rank' && !store.overall.pending) {
     const tier = ['wood', 'bronze', 'silver', 'gold', 'platinum', 'diamond', 'champion', 'titan', 'olympian', 'greekgod'];
     for (const id of tier) if (store.overall.rating >= ({ wood: 1, bronze: 200, silver: 300, gold: 400, platinum: 500, diamond: 600, champion: 700, titan: 800, olympian: 900, greekgod: 1000 })[id]) hex = TIER_COLORS[id];
   }
   root.setProperty('--accent-rgb', hexToRgb(hex));
-  root.setProperty('--accent-ink', hex === '#7c5cff' ? '#ffffff' : '#1a1305');
+  root.setProperty('--accent-ink', inkFor(hex));
 }
 
 function applyDocument() {

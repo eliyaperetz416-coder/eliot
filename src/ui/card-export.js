@@ -44,6 +44,8 @@ export async function renderCard(model) {
   // title and name
   g.fillStyle = accent; g.font = '700 54px Cinzel, serif'; g.fillText('DEMIGOD', W / 2, 130);
   g.fillStyle = '#f4f5fa'; g.font = '700 84px Heebo, system-ui, sans-serif'; g.fillText(model.name, W / 2, 250, W - 160);
+  if (store.model?.name) { g.fillStyle = '#b0b5cc'; g.font = '500 28px Heebo, system-ui, sans-serif'; g.fillText(t('model.card.line', { name: store.model.name }), W / 2, H - 46, W - 200); }
+  if (model.titleItem) { g.fillStyle = accent; g.font = '600 40px Heebo, system-ui, sans-serif'; g.fillText(getLanguage() === 'he' ? model.titleItem.nameHe : model.titleItem.nameEn, W / 2, 306, W - 200); }
   // emblem
   const em = emblem({ tier: model.tier ?? 'unranked', divisionIndex: model.divisionIndex, size: esize });
   const img = await svgToImage(em.querySelector('svg'));

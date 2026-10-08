@@ -17,7 +17,7 @@ import { openChooseWorkout, startFromRoutine, startFromPlanDay, activePlan, star
 import { nextPlanDay, planProgress } from '../core/generator.mjs';
 import { planDayLabel } from './plan-names.js';
 import { modelCard } from './model.js';
-import { planFor, isPlanned, markDone } from '../core/schedule.mjs';
+import { planFor, markDone, isDone, dayDone } from '../core/schedule.mjs';
 import { planText } from './schedule.js';
 import { gameStrip, questsCard, streakCard } from './game-ui.js';
 import { byDay, weekKeys } from '../core/calendar.mjs';
@@ -61,7 +61,7 @@ function backupReminder() {
 /** What the big card offers: the next day of the plan, else the saved workout you used last, else a free workout. */
 function nextUp() {
   const byId = data().byId;
-  const planned = planFor(store.schedule, todayKey());
+  const planned = planFor(store.schedule, todayKey()).find((x) => x.kind === 'workout');
   const count0 = (entries) => ({ exercises: entries.length, sets: entries.reduce((n, e) => n + (e.sets ?? 0), 0) });
   if (planned?.kind === 'workout' && planned.ref !== 'plan' && planned.ref !== 'free') {
     const sr = store.routines.find((x) => x.id === planned.ref);
@@ -92,16 +92,19 @@ function heroCard() {
       n.kind === 'free' ? null : h('button', { class: 'btn btn-ghost btn-block choose-other', type: 'button', onclick: openChooseWorkout }, t('home.other'))));
 }
 
-/** Today's plan when it is rest or another activity (a workout day shows on the big card). OUR DESIGN. */
+/** Today's rest or other activities, each with a done button (strength workouts show on the big card). OUR DESIGN. */
 function scheduleCard() {
   const key = todayKey();
-  const e = planFor(store.schedule, key);
-  if (!e || e.kind === 'workout') return null;
-  const done = !!store.schedule.done[key];
+  const items = planFor(store.schedule, key).filter((e) => e.kind !== 'workout');
+  if (!items.length) return null;
   return h('section', { class: 'card sched-card' },
     h('div', { class: 'row-sub', text: t('home.sched.today') }),
-    h('div', { class: 'row-title', text: planText(e) }),
-    e.kind === 'activity' ? button({ label: done ? t('home.sched.undo') : t('home.sched.done'), variant: done ? 'secondary' : 'primary', block: true, onClick: async () => { await saveSchedule(markDone(store.schedule, key, !done)); syncPlan(); window.dispatchEvent(new HashChangeEvent('hashchange')); } }) : null);
+    ...items.map((e) => {
+      const done = isDone(store.schedule, key, e.id);
+      return h('div', { class: 'sched-item-home' },
+        h('div', { class: 'row-title', text: planText([e]) }),
+        e.kind === 'activity' ? button({ label: done ? t('home.sched.undo') : t('home.sched.done'), variant: done ? 'secondary' : 'primary', block: true, onClick: async () => { await saveSchedule(markDone(store.schedule, key, e.id, !done)); syncPlan(); window.dispatchEvent(new HashChangeEvent('hashchange')); } }) : null);
+    }));
 }
 
 /** One calm card: the days of this week, and how many you trained. Tap it for the calendar. */
@@ -113,7 +116,7 @@ function weekCard() {
   const label = (k) => new Intl.DateTimeFormat(getLanguage() === 'he' ? 'he-IL' : 'en-GB', { weekday: 'short', timeZone: 'UTC' }).format(Date.UTC(+k.slice(0, 4), +k.slice(5, 7) - 1, +k.slice(8, 10)));
   return h('a', { class: 'card week-card', href: '#/calendar', 'aria-label': t('cal.title') },
     h('div', { class: 'week-top' }, h('b', { text: t('home.week') }), h('span', { class: 'row-sub', text: t('home.week.count', { n: done }) })),
-    h('div', { class: 'week-days' }, keys.map((k) => { const pl = planFor(store.schedule, k); return h('span', { class: `week-day${days.has(k) || store.schedule.done[k] ? ' on' : ''}${k === today ? ' today' : ''}${pl?.kind === 'rest' ? ' planned-rest' : ''}${pl?.kind === 'activity' ? ' planned-act' : ''}` }, h('i', {}), h('span', { text: label(k) })); })));
+    h('div', { class: 'week-days' }, keys.map((k) => { const pl = planFor(store.schedule, k); return h('span', { class: `week-day${days.has(k) || dayDone(store.schedule, k) ? ' on' : ''}${k === today ? ' today' : ''}${pl.length && pl.every((e) => e.kind === 'rest') ? ' planned-rest' : ''}${pl.some((e) => e.kind === 'activity') ? ' planned-act' : ''}` }, h('i', {}), h('span', { text: label(k) })); })));
 }
 
 /** "Make up what you missed": exercises you did not get to last time, as a one-time workout (OUR DESIGN). */

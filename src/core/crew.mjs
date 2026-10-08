@@ -93,20 +93,24 @@ export const sundayWeek = (todayKey) => { const [y, m, d] = todayKey.split('-').
  */
 export function planPayload({ schedule, routines, workouts, todayKey }) {
   const days = {};
-  for (const [d, e] of Object.entries(schedule?.days ?? {})) {
-    if (e.kind === 'rest') days[d] = { k: 'rest' };
-    else if (e.kind === 'activity') days[d] = { k: 'activity', n: e.label || e.type };
-    else days[d] = { k: 'workout', n: routines.find((r) => r.id === e.ref)?.name ?? '' };
+  for (const [d, list] of Object.entries(schedule?.days ?? {})) {
+    days[d] = list.map((e) => (e.kind === 'rest' ? { k: 'rest' }
+      : e.kind === 'activity' ? { k: 'activity', n: e.label || e.type }
+        : { k: 'workout', n: routines.find((r) => r.id === e.ref)?.name ?? '' }));
   }
   const week = sundayWeek(todayKey);
-  const trained = week.filter((k) => workouts.some((w) => w.dateKey === k) || schedule?.done?.[k]);
+  const trained = week.filter((k) => workouts.some((w) => w.dateKey === k) || Object.keys(schedule?.done ?? {}).some((x) => x === k || x.startsWith(`${k}|`)));
   return { days, trained };
 }
 
-/** Rows for a friend's plan: [{ weekday, key, kind, name, trained }] for the 7 days, or null when they share nothing. */
+/** Rows for a friend's plan: [{ weekday, key, items: [{ kind, name }], trained }] for the 7 days, or null when they share nothing. A day holds up to 4 items (older plans had one). */
 export function planRows(plan, todayKey) {
   if (!plan || typeof plan !== 'object' || !plan.days) return null;
   const week = sundayWeek(todayKey);
   const trained = new Set((plan.trained ?? []).filter((k) => DAYKEY.test(k)));
-  return week.map((key, weekday) => { const e = plan.days[weekday]; return { weekday, key, kind: e?.k ?? null, name: e?.n ?? '', trained: trained.has(key) }; });
+  return week.map((key, weekday) => {
+    const raw = plan.days[weekday];
+    const list = (Array.isArray(raw) ? raw : raw ? [raw] : []).slice(0, 4);
+    return { weekday, key, items: list.filter((e) => e && ['workout', 'rest', 'activity'].includes(e.k)).map((e) => ({ kind: e.k, name: String(e.n ?? '') })), trained: trained.has(key) };
+  });
 }

@@ -78,7 +78,8 @@ export function crewScreen() {
   }
 
   const weekday = (d) => new Intl.DateTimeFormat(getLanguage() === 'he' ? 'he-IL' : 'en-GB', { weekday: 'long', timeZone: 'UTC' }).format(Date.UTC(2026, 9, 11 + d)); // 2026-10-11 is a Sunday
-  const planName = (r) => (r.kind === 'rest' ? t('sched.rest') : r.kind === 'activity' ? (ACTIVITIES.includes(r.name) ? t(`sched.act.${r.name}`) : r.name || t('sched.act.other')) : r.name || t('crew.p.workout'));
+  const itemName = (it) => (it.kind === 'rest' ? t('sched.rest') : it.kind === 'activity' ? (ACTIVITIES.includes(it.name) ? t(`sched.act.${it.name}`) : it.name || t('sched.act.other')) : it.name || t('crew.p.workout'));
+  const dayText = (r) => (r.items.length ? r.items.map(itemName).join(' + ') : t('sched.none'));
 
   /** A friend's profile: rank, numbers and (if they share it) the week plan. Opens from the leaderboard. */
   function friendSheet(m, mine) {
@@ -87,7 +88,7 @@ export function crewScreen() {
     const stat = (label, value) => h('div', { class: 'stat' }, h('span', { class: 'stat-v display num' }, h('bdi', { text: value })), h('span', { class: 'stat-l', text: label }));
     const plan = rows
       ? h('div', { class: 'list crew-plan' }, rows.map((r) => h('div', { class: `row crew-plan-row${r.trained ? ' trained' : ''}` },
-        h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: weekday(r.weekday) }), h('span', { class: `row-sub sched-${r.kind ?? 'none'}`, text: r.kind ? planName(r) : t('sched.none') })),
+        h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: weekday(r.weekday) }), h('span', { class: `row-sub sched-${r.items.some((i) => i.kind === 'activity') ? 'activity' : (r.items[0]?.kind ?? 'none')}`, text: dayText(r) })),
         r.trained ? h('span', { class: 'plan-done', 'aria-label': t('crew.p.trained') }, icon('check')) : null)))
       : h('p', { class: 'row-sub', text: mine ? t('crew.p.mineOff') : t('crew.p.notShared', { name: m.nickname }) });
     openSheet({ title: mine ? `${m.nickname} · ${t('crew.you')}` : m.nickname, tall: true, content: h('div', { class: 'stack crew-friend' },

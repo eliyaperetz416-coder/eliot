@@ -1,25 +1,438 @@
 {
   "consumables": [
-    { "id": "super", "price": 150, "nameEn": "Super restore", "nameHe": "שחזור סופר", "descEn": "Brings back a broken streak of up to 30 days", "descHe": "מחזיר רצף שנשבר באורך של עד 30 ימים" },
-    { "id": "mega", "price": 300, "nameEn": "Mega restore", "nameHe": "שחזור מגה", "descEn": "Brings back a broken streak of up to 60 days", "descHe": "מחזיר רצף שנשבר באורך של עד 60 ימים" },
-    { "id": "revive", "price": 500, "nameEn": "Revive", "nameHe": "החייאה", "descEn": "Brings back a broken streak of any length", "descHe": "מחזיר רצף שנשבר בכל אורך" },
-    { "id": "xpshake", "price": 100, "nameEn": "XP Shake", "nameHe": "שייק XP", "descEn": "Doubles the XP of your next posted workout", "descHe": "מכפיל את ה-XP של האימון הבא שתפרסמו" }
+    {
+      "id": "super",
+      "price": 150,
+      "nameEn": "Super restore",
+      "nameHe": "שחזור סופר",
+      "descEn": "Brings back a broken streak of up to 30 days",
+      "descHe": "מחזיר רצף שנשבר באורך של עד 30 ימים"
+    },
+    {
+      "id": "mega",
+      "price": 300,
+      "nameEn": "Mega restore",
+      "nameHe": "שחזור מגה",
+      "descEn": "Brings back a broken streak of up to 60 days",
+      "descHe": "מחזיר רצף שנשבר באורך של עד 60 ימים"
+    },
+    {
+      "id": "revive",
+      "price": 500,
+      "nameEn": "Revive",
+      "nameHe": "החייאה",
+      "descEn": "Brings back a broken streak of any length",
+      "descHe": "מחזיר רצף שנשבר בכל אורך"
+    },
+    {
+      "id": "xpshake",
+      "price": 100,
+      "nameEn": "XP Shake",
+      "nameHe": "שייק XP",
+      "descEn": "Doubles the XP of your next posted workout",
+      "descHe": "מכפיל את ה-XP של האימון הבא שתפרסמו"
+    },
+    {
+      "id": "dboost",
+      "price": 120,
+      "nameEn": "Drachma Boost",
+      "nameHe": "דחיפת דרכמות",
+      "descEn": "Doubles the drachmas of your next posted workout",
+      "descHe": "מכפיל את הדרכמות של האימון הבא שתפרסמו"
+    }
   ],
   "cosmetics": [
-    { "id": "bg_storm", "kind": "background", "price": 100, "art": "storm", "nameEn": "Storm Clouds", "nameHe": "עננים סוערים", "descEn": "Thunder rolling in", "descHe": "רעמים מתקרבים" },
-    { "id": "bg_garden", "kind": "background", "price": 200, "art": "garden", "nameEn": "Laurel Garden", "nameHe": "גן הדפנה", "descEn": "Quiet green under laurel leaves", "descHe": "ירוק שקט תחת עלי דפנה" },
-    { "id": "bg_marble", "kind": "background", "price": 250, "art": "marble", "nameEn": "Marble Hall", "nameHe": "אולם השיש", "descEn": "Cold stone and gold veins", "descHe": "אבן קרה ורידי זהב" },
-    { "id": "bg_dawn", "kind": "background", "price": 300, "art": "dawn", "nameEn": "Olympus Dawn", "nameHe": "שחר באולימפוס", "descEn": "The sun rises over the summit", "descHe": "השמש זורחת מעל הפסגה" },
-    { "id": "bg_forge", "kind": "background", "price": 400, "art": "forge", "nameEn": "Forge", "nameHe": "הנפחייה", "descEn": "Embers from the divine anvil", "descHe": "גחלים מהסדן האלוהי" },
-    { "id": "bg_stars", "kind": "background", "price": 500, "art": "stars", "nameEn": "Starfield", "nameHe": "שדה כוכבים", "descEn": "A sky full of constellations", "descHe": "שמיים מלאי קבוצות כוכבים" },
-    { "id": "fr_laurel", "kind": "frame", "price": 300, "art": "laurel", "nameEn": "Laurel Wreath", "nameHe": "זר דפנה", "descEn": "The crown of victors", "descHe": "הכתר של המנצחים" },
-    { "id": "fr_meander", "kind": "frame", "price": 400, "art": "meander", "nameEn": "Greek Key", "nameHe": "מסגרת מאנדר", "descEn": "The endless pattern", "descHe": "הדוגמה שאינה נגמרת" },
-    { "id": "fr_thunder", "kind": "frame", "price": 500, "art": "thunder", "nameEn": "Thunder Frame", "nameHe": "מסגרת ברק", "descEn": "Lightning around the edge", "descHe": "ברק לאורך הקצה" },
-    { "id": "fr_helm", "kind": "frame", "price": 700, "art": "helm", "nameEn": "Warrior's Helm", "nameHe": "קסדת לוחם", "descEn": "A crest above the emblem", "descHe": "ציץ מעל הסמל" },
-    { "id": "fr_wings", "kind": "frame", "price": 800, "art": "wings", "nameEn": "Wings of Hermes", "nameHe": "כנפי הרמס", "descEn": "Wings spread wide", "descHe": "כנפיים פרושות" },
-    { "id": "fx_glow", "kind": "effect", "price": 600, "art": "glow", "nameEn": "Card Glow", "nameHe": "זוהר לכרטיס", "descEn": "A halo in your rank colour", "descHe": "הילה בצבע הדרגה" },
-    { "id": "fx_ember", "kind": "effect", "price": 700, "art": "ember", "nameEn": "Rising Embers", "nameHe": "גחלים עולות", "descEn": "Sparks drifting upward", "descHe": "ניצוצות שעולים למעלה" },
-    { "id": "fx_sparks", "kind": "effect", "price": 800, "art": "sparks", "nameEn": "Lightning Sparks", "nameHe": "ניצוצות ברק", "descEn": "Crackling bolts around the emblem", "descHe": "ברקים סביב הסמל" },
-    { "id": "fx_dust", "kind": "effect", "price": 1000, "art": "dust", "nameEn": "Golden Dust", "nameHe": "אבק זהב", "descEn": "Gold falls on the card and on every rank-up", "descHe": "זהב נופל על הכרטיס ובכל עליית דרגה" }
+    {
+      "id": "bg_storm",
+      "kind": "background",
+      "price": 100,
+      "art": "storm",
+      "nameEn": "Storm Clouds",
+      "nameHe": "עננים סוערים",
+      "descEn": "Thunder rolling in",
+      "descHe": "רעמים מתקרבים"
+    },
+    {
+      "id": "bg_garden",
+      "kind": "background",
+      "price": 200,
+      "art": "garden",
+      "nameEn": "Laurel Garden",
+      "nameHe": "גן הדפנה",
+      "descEn": "Quiet green under laurel leaves",
+      "descHe": "ירוק שקט תחת עלי דפנה"
+    },
+    {
+      "id": "bg_marble",
+      "kind": "background",
+      "price": 250,
+      "art": "marble",
+      "nameEn": "Marble Hall",
+      "nameHe": "אולם השיש",
+      "descEn": "Cold stone and gold veins",
+      "descHe": "אבן קרה ורידי זהב"
+    },
+    {
+      "id": "bg_dawn",
+      "kind": "background",
+      "price": 300,
+      "art": "dawn",
+      "nameEn": "Olympus Dawn",
+      "nameHe": "שחר באולימפוס",
+      "descEn": "The sun rises over the summit",
+      "descHe": "השמש זורחת מעל הפסגה"
+    },
+    {
+      "id": "bg_forge",
+      "kind": "background",
+      "price": 400,
+      "art": "forge",
+      "nameEn": "Forge",
+      "nameHe": "הנפחייה",
+      "descEn": "Embers from the divine anvil",
+      "descHe": "גחלים מהסדן האלוהי"
+    },
+    {
+      "id": "bg_stars",
+      "kind": "background",
+      "price": 500,
+      "art": "stars",
+      "nameEn": "Starfield",
+      "nameHe": "שדה כוכבים",
+      "descEn": "A sky full of constellations",
+      "descHe": "שמיים מלאי קבוצות כוכבים"
+    },
+    {
+      "id": "fr_laurel",
+      "kind": "frame",
+      "price": 300,
+      "art": "laurel",
+      "nameEn": "Laurel Wreath",
+      "nameHe": "זר דפנה",
+      "descEn": "The crown of victors",
+      "descHe": "הכתר של המנצחים"
+    },
+    {
+      "id": "fr_meander",
+      "kind": "frame",
+      "price": 400,
+      "art": "meander",
+      "nameEn": "Greek Key",
+      "nameHe": "מסגרת מאנדר",
+      "descEn": "The endless pattern",
+      "descHe": "הדוגמה שאינה נגמרת"
+    },
+    {
+      "id": "fr_thunder",
+      "kind": "frame",
+      "price": 500,
+      "art": "thunder",
+      "nameEn": "Thunder Frame",
+      "nameHe": "מסגרת ברק",
+      "descEn": "Lightning around the edge",
+      "descHe": "ברק לאורך הקצה"
+    },
+    {
+      "id": "fr_helm",
+      "kind": "frame",
+      "price": 700,
+      "art": "helm",
+      "nameEn": "Warrior's Helm",
+      "nameHe": "קסדת לוחם",
+      "descEn": "A crest above the emblem",
+      "descHe": "ציץ מעל הסמל"
+    },
+    {
+      "id": "fr_wings",
+      "kind": "frame",
+      "price": 800,
+      "art": "wings",
+      "nameEn": "Wings of Hermes",
+      "nameHe": "כנפי הרמס",
+      "descEn": "Wings spread wide",
+      "descHe": "כנפיים פרושות"
+    },
+    {
+      "id": "fx_glow",
+      "kind": "effect",
+      "price": 600,
+      "art": "glow",
+      "nameEn": "Card Glow",
+      "nameHe": "זוהר לכרטיס",
+      "descEn": "A halo in your rank colour",
+      "descHe": "הילה בצבע הדרגה"
+    },
+    {
+      "id": "fx_ember",
+      "kind": "effect",
+      "price": 700,
+      "art": "ember",
+      "nameEn": "Rising Embers",
+      "nameHe": "גחלים עולות",
+      "descEn": "Sparks drifting upward",
+      "descHe": "ניצוצות שעולים למעלה"
+    },
+    {
+      "id": "fx_sparks",
+      "kind": "effect",
+      "price": 800,
+      "art": "sparks",
+      "nameEn": "Lightning Sparks",
+      "nameHe": "ניצוצות ברק",
+      "descEn": "Crackling bolts around the emblem",
+      "descHe": "ברקים סביב הסמל"
+    },
+    {
+      "id": "fx_dust",
+      "kind": "effect",
+      "price": 1000,
+      "art": "dust",
+      "nameEn": "Golden Dust",
+      "nameHe": "אבק זהב",
+      "descEn": "Gold falls on the card and on every rank-up",
+      "descHe": "זהב נופל על הכרטיס ובכל עליית דרגה"
+    },
+    {
+      "id": "bg_sunset",
+      "kind": "background",
+      "price": 250,
+      "art": "sunset",
+      "nameEn": "Sunset Court",
+      "nameHe": "מגרש בשקיעה",
+      "descEn": "Warm light over the court",
+      "descHe": "אור חם מעל המגרש"
+    },
+    {
+      "id": "bg_ocean",
+      "kind": "background",
+      "price": 300,
+      "art": "ocean",
+      "nameEn": "Deep Ocean",
+      "nameHe": "עומק האוקיינוס",
+      "descEn": "Calm blue, slow waves",
+      "descHe": "כחול רגוע וגלים איטיים"
+    },
+    {
+      "id": "bg_carbon",
+      "kind": "background",
+      "price": 350,
+      "art": "carbon",
+      "nameEn": "Carbon",
+      "nameHe": "פחמן",
+      "descEn": "Dark woven fibre",
+      "descHe": "סיבים כהים ארוגים"
+    },
+    {
+      "id": "fr_ring",
+      "kind": "frame",
+      "price": 350,
+      "art": "ring",
+      "nameEn": "Gold Ring",
+      "nameHe": "טבעת זהב",
+      "descEn": "A clean gold ring",
+      "descHe": "טבעת זהב נקייה"
+    },
+    {
+      "id": "fr_neon",
+      "kind": "frame",
+      "price": 450,
+      "art": "neon",
+      "nameEn": "Neon Ring",
+      "nameHe": "טבעת ניאון",
+      "descEn": "Glowing ring in your colour",
+      "descHe": "טבעת זוהרת בצבע שלך"
+    },
+    {
+      "id": "fx_aurora",
+      "kind": "effect",
+      "price": 700,
+      "art": "aurora",
+      "nameEn": "Aurora",
+      "nameHe": "זוהר צפוני",
+      "descEn": "Ribbons of light behind the emblem",
+      "descHe": "סרטי אור מאחורי הסמל"
+    },
+    {
+      "id": "fx_confetti",
+      "kind": "effect",
+      "price": 600,
+      "art": "confetti",
+      "nameEn": "Confetti",
+      "nameHe": "קונפטי",
+      "descEn": "Celebrate every card",
+      "descHe": "חגיגה בכל כרטיס"
+    },
+    {
+      "id": "th_crimson",
+      "kind": "theme",
+      "price": 200,
+      "hex": "#ff4d5e",
+      "nameEn": "Crimson",
+      "nameHe": "ארגמן",
+      "descEn": "The app turns crimson",
+      "descHe": "האפליקציה הופכת לארגמן"
+    },
+    {
+      "id": "th_emerald",
+      "kind": "theme",
+      "price": 200,
+      "hex": "#2fd18b",
+      "nameEn": "Emerald",
+      "nameHe": "אזמרגד",
+      "descEn": "The app turns emerald",
+      "descHe": "האפליקציה הופכת לאזמרגד"
+    },
+    {
+      "id": "th_ocean",
+      "kind": "theme",
+      "price": 200,
+      "hex": "#3aa8ff",
+      "nameEn": "Ocean",
+      "nameHe": "אוקיינוס",
+      "descEn": "The app turns ocean blue",
+      "descHe": "האפליקציה הופכת לכחול אוקיינוס"
+    },
+    {
+      "id": "th_gold",
+      "kind": "theme",
+      "price": 250,
+      "hex": "#ffc43d",
+      "nameEn": "Olympian Gold",
+      "nameHe": "זהב אולימפי",
+      "descEn": "The classic gold",
+      "descHe": "הזהב הקלאסי"
+    },
+    {
+      "id": "th_sunset",
+      "kind": "theme",
+      "price": 250,
+      "hex": "#ff8a4c",
+      "nameEn": "Sunset",
+      "nameHe": "שקיעה",
+      "descEn": "The app turns sunset orange",
+      "descHe": "האפליקציה הופכת לכתום שקיעה"
+    },
+    {
+      "id": "th_rose",
+      "kind": "theme",
+      "price": 300,
+      "hex": "#ff6fb5",
+      "nameEn": "Rose",
+      "nameHe": "ורד",
+      "descEn": "The app turns rose",
+      "descHe": "האפליקציה הופכת לוורד"
+    },
+    {
+      "id": "ti_pilgrim",
+      "kind": "title",
+      "price": 150,
+      "nameEn": "Iron Pilgrim",
+      "nameHe": "עולה לרגל לברזל",
+      "descEn": "A title under your name",
+      "descHe": "תואר מתחת לשם שלך"
+    },
+    {
+      "id": "ti_rep",
+      "kind": "title",
+      "price": 200,
+      "nameEn": "Rep Hunter",
+      "nameHe": "צייד חזרות",
+      "descEn": "A title under your name",
+      "descHe": "תואר מתחת לשם שלך"
+    },
+    {
+      "id": "ti_plate",
+      "kind": "title",
+      "price": 250,
+      "nameEn": "Plate Slinger",
+      "nameHe": "מניף פלטות",
+      "descEn": "A title under your name",
+      "descHe": "תואר מתחת לשם שלך"
+    },
+    {
+      "id": "ti_early",
+      "kind": "title",
+      "price": 300,
+      "nameEn": "Early Bird",
+      "nameHe": "ציפור בוקר",
+      "descEn": "For those who train at dawn",
+      "descHe": "למי שמתאמן עם הזריחה"
+    },
+    {
+      "id": "ti_night",
+      "kind": "title",
+      "price": 300,
+      "nameEn": "Night Owl",
+      "nameHe": "ינשוף לילה",
+      "descEn": "For those who train after dark",
+      "descHe": "למי שמתאמן אחרי החשיכה"
+    },
+    {
+      "id": "ti_titan",
+      "kind": "title",
+      "price": 500,
+      "nameEn": "Titan in the Making",
+      "nameHe": "טיטאן בהתהוות",
+      "descEn": "A title under your name",
+      "descHe": "תואר מתחת לשם שלך"
+    },
+    {
+      "id": "ti_hero",
+      "kind": "title",
+      "price": 700,
+      "nameEn": "Hero of the Gym",
+      "nameHe": "גיבור חדר הכושר",
+      "descEn": "A title under your name",
+      "descHe": "תואר מתחת לשם שלך"
+    },
+    {
+      "id": "ti_olympus",
+      "kind": "title",
+      "price": 1000,
+      "nameEn": "Heir of Olympus",
+      "nameHe": "יורש האולימפוס",
+      "descEn": "The rarest title",
+      "descHe": "התואר הנדיר ביותר"
+    },
+    {
+      "id": "sd_bell",
+      "kind": "sound",
+      "price": 100,
+      "sound": "bell",
+      "nameEn": "Bell",
+      "nameHe": "פעמון",
+      "descEn": "A clear bell when rest is over",
+      "descHe": "פעמון צלול כשהמנוחה נגמרת"
+    },
+    {
+      "id": "sd_gong",
+      "kind": "sound",
+      "price": 150,
+      "sound": "gong",
+      "nameEn": "Gong",
+      "nameHe": "גונג",
+      "descEn": "A deep gong",
+      "descHe": "גונג עמוק"
+    },
+    {
+      "id": "sd_whistle",
+      "kind": "sound",
+      "price": 150,
+      "sound": "whistle",
+      "nameEn": "Whistle",
+      "nameHe": "משרוקית",
+      "descEn": "A coach's whistle",
+      "descHe": "משרוקית של מאמן"
+    },
+    {
+      "id": "sd_pulse",
+      "kind": "sound",
+      "price": 200,
+      "sound": "pulse",
+      "nameEn": "Pulse",
+      "nameHe": "דופק",
+      "descEn": "A fast electronic pulse",
+      "descHe": "דופק אלקטרוני מהיר"
+    }
   ]
 }

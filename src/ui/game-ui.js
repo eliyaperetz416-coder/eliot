@@ -90,6 +90,7 @@ export function rewardsCard(r, game) {
       h('div', { class: 'reward-num display' }, h('bdi', { class: 'num', text: `+${formatNum(r.xp, 0)}` }), h('span', { class: 'row-sub', text: 'XP' })),
       h('div', { class: 'reward-num display coin' }, h('bdi', { class: 'num', text: `+${formatNum(r.drachmas + r.achievementDrachmas, 0)}` }), h('span', { class: 'row-sub', text: t('game.drachmas') }))),
   ];
+  if (r.boost) kids.push(h('p', { class: 'shake-note', text: t('rewards.boost', { base: formatNum(r.drachmasBase, 0) }) }));
   if (r.shake) kids.push(h('p', { class: 'shake-note', text: t('rewards.shake', { base: formatNum(r.xpBase, 0) }) }));
   kids.push(levelBarFrom(lvl, r.levelAfter > r.levelBefore));
   if (r.levelAfter > r.levelBefore) kids.push(h('p', { class: 'levelup', text: t('rewards.levelup', { n: r.levelAfter }) }));

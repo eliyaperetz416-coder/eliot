@@ -79,6 +79,18 @@ test('XP Shake doubles the next rewarded workout only, then is used up', () => {
 
 test('migrateGame fills missing fields', () => {
   const g = migrateGame({ xp: 50, inventory: { super: 2 } });
-  assert.equal(g.xp, 50); assert.equal(g.inventory.super, 2); assert.deepEqual(g.inventory.equipped, { background: null, frame: null, effect: null });
+  assert.equal(g.xp, 50); assert.equal(g.inventory.super, 2); assert.deepEqual(g.inventory.equipped, { background: null, frame: null, effect: null, theme: null, title: null, sound: null }); assert.equal(g.inventory.dboost, 0); assert.equal(g.inventory.boostActive, false);
   assert.deepEqual(migrateGame(null), newGame());
+});
+
+test('Drachma Boost doubles the workout drachmas (not the milestones) once, then is used up', () => {
+  const plain = playSession(THREE, [], newGame(), T0);
+  const g = newGame(); g.inventory.boostActive = true;
+  const boosted = playSession(THREE, [], g, T0);
+  assert.equal(boosted.rewards.boost, true);
+  assert.equal(boosted.rewards.drachmasBase, plain.rewards.drachmasBase);
+  assert.equal(boosted.rewards.drachmas - boosted.rewards.milestones.reduce((n, m) => n + m.drachmas, 0), plain.rewards.drachmasBase * 2);
+  assert.equal(boosted.game.inventory.boostActive, false);
+  assert.equal(boosted.rewards.xp, plain.rewards.xp, 'xp is not affected');
+  assert.equal(playSession(THREE, boosted.workouts, boosted.game, T0 + DAY).rewards.boost, false);
 });

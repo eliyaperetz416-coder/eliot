@@ -536,7 +536,7 @@ for (const lang of ['he', 'en']) {
     // shop: buy a background, equip it, buy an XP Shake and activate it
     await page.goto(`${base}#/shop`);
     await page.waitForSelector('.cosmetic');
-    assert.equal(await page.locator('.cosmetic').count(), 15);
+    assert.equal(await page.locator('.cosmetic').count(), 22);
     const bal0 = Number((await page.textContent('.wallet-n')).replace(/[^0-9]/g, ''));
     assert.ok(bal0 >= 100, `balance ${bal0}`);
     await page.waitForTimeout(500);
@@ -902,7 +902,7 @@ for (const lang of ['he', 'en']) {
     await page.waitForSelector('.screen h1');
     await page.screenshot({ path: `${shots}${lang}-settings.png`, fullPage: true });
     // accent + reduced motion
-    await page.getByRole('button', { name: T('תמיד סגול', 'Always purple') }).click();
+    await page.getByRole('button', { name: T('צבע קבוע', 'Fixed colour') }).click();
     await page.getByRole('button', { name: T('פעיל', 'On'), exact: true }).click();
     assert.equal(await page.evaluate(() => document.documentElement.dataset.motion), 'reduce');
     await page.getByRole('button', { name: T('לפי המכשיר', 'Follow device') }).click();
@@ -1016,75 +1016,142 @@ for (const lang of ['he', 'en']) {
     await page.goto(`${base}#/profile`);
     await page.locator('.row', { hasText: T('המודל שלי', 'My role model') }).click();
     await page.waitForSelector('#model-name');
-    await page.locator('.screen .btn-primary').click();
+    await page.locator('.screen button.btn-primary').click();
     await page.waitForFunction(() => [...document.querySelectorAll('.field-error')].some((e) => !e.hidden));
     await page.fill('#model-name', 'Harley Alexander');
     await page.fill('#model-note', 'Train like him');
     await page.fill('#model-youtube', 'https://youtube.com/@harleyalexanderr?si=abc');
     await page.fill('#model-tiktok', 'https://example.com/x');
-    await page.locator('.screen .btn-primary').click();
+    await page.locator('.screen button.btn-primary').click();
     await page.waitForTimeout(200);
     assert.ok(await page.locator('#model-tiktok').isVisible(), 'a bad link keeps you on the form');
     await page.fill('#model-tiktok', 'tiktok.com/@harleyalexander.fit?_r=1');
+    await page.fill('#model-tips', 'Sleep 8 hours\nDrink water\nSleep 8 hours');
+    // a workout from pasted text: known exercises are saved, unknown ones are listed
+    await page.fill('#model-import', 'Name: Push day\n1. Barbell bench press - 4 x 6-8\n2. Holobody curls 3x12');
+    await page.locator('.screen .btn-secondary', { hasText: T('יצירת אימון', 'Create workout') }).click();
+    await page.waitForSelector('a[href^="#/routine/"]');
+    assert.ok((await page.textContent('.screen')).match(/Harley Alexander: Push day|Push day/));
+    assert.ok((await page.textContent('.screen')).includes('Holobody curls'));
+    const imported = await page.evaluate(async () => (await (await import('./src/ui/db.js')).dbAll('routines')).filter((r) => /Push day/.test(r.name)).map((r) => [r.entries.length, r.entries[0].sets, r.entries[0].repsMin, r.entries[0].repsMax]));
+    assert.deepEqual(imported, [[1, 4, 6, 8]]);
+    await page.locator('.screen .chips-wrap .chip-select', { hasText: /^4$/ }).click();
     await page.screenshot({ path: `${shots}${lang}-model-form.png`, fullPage: true });
-    await page.locator('.screen .btn-primary').click();
+    await page.locator('.screen button.btn-primary').click();
     await page.waitForSelector('.model-card');
     assert.ok((await page.textContent('.model-card')).includes('Harley Alexander'));
     assert.equal(await page.locator('.model-link').first().getAttribute('href'), 'https://youtube.com/@harleyalexanderr');
     assert.equal(await page.locator('.model-link').count(), 2);
+    assert.match(await page.textContent('.model-tip'), /Sleep 8 hours|Drink water/);
+    assert.match(await page.textContent('.model-goal'), /\/ 4/);
     await page.screenshot({ path: `${shots}${lang}-model-card.png` });
+    // the result screen quotes your model after a workout
+    await page.goto(`${base}#/workout`);
+    await startEmpty(page);
+    await addExercise(page, 'barbell bench press');
+    await logSet(page, 0, 60, 8);
+    await page.click('.live-head .btn');
+    await page.waitForSelector('.sheet .btn-primary');
+    await page.click('.sheet .btn-primary');
+    await page.waitForSelector('main .stats-grid');
+    assert.ok((await page.textContent('.model-quote')).includes('Harley Alexander'));
+    if (await page.locator('.rankup').count()) await page.click('.rankup button');
     await page.goto(`${base}#/model`);
     await page.locator('.screen .btn-danger').click();
     await page.goto(`${base}#/workout`);
     await page.waitForSelector('.hero');
     assert.equal(await page.locator('.model-card').count(), 0);
+    await page.evaluate(async () => { const db = await import('./src/ui/db.js'); for (const r of await db.dbAll('routines')) if (/Push day/.test(r.name)) await db.dbDelete('routines', r.id); });
+    await page.reload();
   });
 
-  await check(`${lang}: plan my week: basketball day, rest day, scheduled workout on Today`, async () => {
+  await check(`${lang}: plan my week: several items a day (basketball + a saved workout), rest, done marks`, async () => {
     const T = (he, en) => L(lang, he, en);
-    const today = await page.evaluate(() => new Date().getDay());
     const openToday = async () => {
       await page.goto(`${base}#/schedule`);
       await page.waitForSelector('.sched-row.today');
       await page.locator('.sched-row.today').click();
       await page.waitForSelector('.sheet .chip-select');
     };
+    await page.evaluate(async () => { const { dbPut } = await import('./src/ui/db.js'); await dbPut('routines', { id: 'r-sched', schemaVersion: 1, name: 'Sched Day A', folderId: null, notes: '', createdMs: 1, updatedMs: 1, entries: [{ id: 'e-s', exerciseId: 'barbell-bench-press-medium-grip', sets: 3, repsMin: 6, repsMax: 8, restSec: 90, weight: null, notes: '' }] }); });
+    await page.reload();
     await openToday();
     await page.screenshot({ path: `${shots}${lang}-schedule-sheet.png` });
+    // two items on the same day: basketball, then a saved workout
     await page.locator('.sheet .chip-select', { hasText: T('כדורסל', 'Basketball') }).click();
-    await page.waitForFunction(() => /כדורסל|Basketball/.test(document.querySelector('.sched-row.today')?.textContent ?? ''));
+    await page.waitForSelector('.sheet .sched-item');
+    await page.locator('.sheet .row', { hasText: 'Sched Day A' }).click();
+    await page.waitForFunction(() => document.querySelectorAll('.sheet .sched-item').length === 2);
+    await page.locator('.sheet .btn-primary').last().click(); // Done
+    await page.waitForFunction(() => /(כדורסל|Basketball).*\+.*Sched Day A/.test(document.querySelector('.sched-row.today')?.textContent ?? ''));
     await page.screenshot({ path: `${shots}${lang}-schedule.png`, fullPage: true });
+    // Today: the saved workout leads the big card, basketball has its own card with a done button
     await page.goto(`${base}#/workout`);
     await page.waitForSelector('.sched-card');
+    assert.ok((await page.textContent('.hero')).includes('Sched Day A'));
+    assert.ok((await page.textContent('.hero-kicker')).match(/מתוכנן להיום|Planned for today/));
     assert.ok((await page.textContent('.sched-card')).match(/כדורסל|Basketball/));
     await page.locator('.sched-card .btn').click();
     await page.waitForFunction(() => document.querySelector('.week-day.today.on'));
     await page.screenshot({ path: `${shots}${lang}-schedule-home.png` });
-    // rest day: no done button
+    // rest replaces everything and has no done button
     await openToday();
-    await page.locator('.sheet .row', { hasText: T('מנוחה', 'Rest') }).first().click();
+    await page.locator('.sheet .row', { hasText: T('יום החלמה', 'Recovery day') }).click();
+    await page.waitForFunction(() => document.querySelectorAll('.sheet .sched-item').length === 1);
+    await page.locator('.sheet .btn-primary').last().click();
     await page.goto(`${base}#/workout`);
     await page.waitForSelector('.sched-card');
     assert.equal(await page.locator('.sched-card .btn').count(), 0);
-    assert.ok(await page.locator('.week-day.today.planned-rest').count() === 1);
-    // a saved workout planned for today leads the big card
-    await page.evaluate(async () => { const { dbPut } = await import('./src/ui/db.js'); await dbPut('routines', { id: 'r-sched', schemaVersion: 1, name: 'Sched Day A', folderId: null, notes: '', createdMs: 1, updatedMs: 1, entries: [{ id: 'e-s', exerciseId: 'barbell-bench-press-medium-grip', sets: 3, repsMin: 6, repsMax: 8, restSec: 90, weight: null, notes: '' }] }); });
-    await page.reload();
-    await page.waitForSelector('.hero');
+    assert.ok(!(await page.textContent('.hero-kicker')).match(/מתוכנן להיום|Planned for today/), 'a rest day does not schedule a workout');
+    // limit: four items, then the add options are replaced by a note
     await openToday();
-    await page.locator('.sheet .row', { hasText: 'Sched Day A' }).click();
-    await page.goto(`${base}#/workout`);
-    await page.waitForSelector('.hero');
-    assert.ok((await page.textContent('.hero')).includes('Sched Day A'));
-    assert.ok((await page.textContent('.hero-kicker')).match(/מתוכנן להיום|Planned for today/));
-    assert.equal(await page.locator('.sched-card').count(), 0);
-    // clear the week again
-    await openToday();
+    for (let i = 0; i < 4; i++) await page.locator('.sheet .chip-select').first().click();
+    await page.waitForFunction(() => document.querySelectorAll('.sheet .sched-item').length === 4);
+    assert.equal(await page.locator('.sheet .chip-select').count(), 0);
+    // clear the day
     await page.locator('.sheet .btn-ghost').click();
-    await page.evaluate(async () => { const { dbDelete } = await import('./src/ui/db.js'); await dbDelete('routines', 'r-sched'); });
     await page.goto(`${base}#/workout`); await page.reload();
     await page.waitForSelector('.hero');
     assert.equal(await page.locator('.sched-card').count(), 0);
+    await page.evaluate(async () => { const { dbDelete } = await import('./src/ui/db.js'); await dbDelete('routines', 'r-sched'); });
+    await page.reload();
+  });
+
+  await check(`${lang}: shop: app colour, title on the profile, rest sound preview, drachma boost`, async () => {
+    const T = (he, en) => L(lang, he, en);
+    await page.evaluate(async () => { const { store, saveGame } = await import('./src/ui/store.js'); await saveGame({ ...store.game, drachmas: 3000 }); });
+    await page.goto(`${base}#/shop`);
+    await page.waitForSelector('.shop-row');
+    const rowOf = (name) => page.locator('.shop-row', { hasText: name });
+    // theme: buy Crimson, equip, the accent changes
+    await rowOf(T('ארגמן', 'Crimson')).locator('.btn').click();
+    await page.waitForFunction(() => document.querySelector('.shop-row .btn[class*="btn-primary"]'));
+    await rowOf(T('ארגמן', 'Crimson')).locator('.btn').click();
+    await page.waitForFunction(() => getComputedStyle(document.documentElement).getPropertyValue('--accent-rgb').trim().startsWith('255 77 94'));
+    await page.screenshot({ path: `${shots}${lang}-shop-themes.png`, fullPage: true });
+    // title: buy and equip, then it shows on the profile
+    await rowOf(T('צייד חזרות', 'Rep Hunter')).locator('.btn').click();
+    await page.waitForTimeout(250);
+    await rowOf(T('צייד חזרות', 'Rep Hunter')).locator('.btn').click();
+    await page.waitForTimeout(250);
+    // sound: preview works without errors, buy and equip
+    await rowOf(T('פעמון', 'Bell')).locator('.icon-btn').click();
+    await rowOf(T('פעמון', 'Bell')).locator('.btn').last().click();
+    await page.waitForTimeout(250);
+    await rowOf(T('פעמון', 'Bell')).locator('.btn').last().click();
+    await page.waitForTimeout(250);
+    // drachma boost: buy and activate
+    await rowOf(T('דחיפת דרכמות', 'Drachma Boost')).locator('.btn').last().click();
+    await page.waitForFunction((n) => [...document.querySelectorAll('.shop-row')].some((r) => r.textContent.includes(n) && r.querySelectorAll('.btn').length === 2), T('דחיפת דרכמות', 'Drachma Boost'));
+    await rowOf(T('דחיפת דרכמות', 'Drachma Boost')).locator('.btn').first().click();
+    await page.waitForFunction(() => /(פעיל לאימון הבא|Active for the next workout)/.test(document.body.textContent));
+    const inv = await page.evaluate(async () => (await import('./src/ui/store.js')).store.game.inventory);
+    assert.equal(inv.equipped.theme, 'th_crimson'); assert.equal(inv.equipped.title, 'ti_rep'); assert.equal(inv.equipped.sound, 'sd_bell'); assert.equal(inv.boostActive, true);
+    await page.goto(`${base}#/profile`);
+    await page.waitForSelector('.profile-title');
+    assert.ok((await page.textContent('.profile-title')).includes(T('צייד חזרות', 'Rep Hunter')));
+    // back to the default colour for the other checks
+    await page.evaluate(async () => { const { store, saveGame } = await import('./src/ui/store.js'); const g = structuredClone(store.game); g.inventory.equipped.theme = null; g.inventory.boostActive = false; await saveGame(g); });
   });
 
   await check(`${lang}: every sub-screen has a back link`, async () => {

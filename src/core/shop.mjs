@@ -1,11 +1,11 @@
-// Shop: purchases, equipping, XP Shake and streak restores as consumables. Cosmetics only. Pure.
+// Shop: purchases, equipping, XP Shake, Drachma Boost and streak restores as consumables. Cosmetics and comforts only: nothing here changes a rank. Pure.
 import { canRestore, restore, view, RESTORES } from './streak.mjs';
 
-export const CONSUMABLE_IDS = ['super', 'mega', 'revive', 'xpshake'];
-export const SLOT_OF = { background: 'background', frame: 'frame', effect: 'effect' };
+export const CONSUMABLE_IDS = ['super', 'mega', 'revive', 'xpshake', 'dboost'];
+export const SLOT_OF = { background: 'background', frame: 'frame', effect: 'effect', theme: 'theme', title: 'title', sound: 'sound' };
 
 export function newInventory() {
-  return { super: 0, mega: 0, revive: 0, xpshake: 0, shakeActive: false, owned: [], equipped: { background: null, frame: null, effect: null } };
+  return { super: 0, mega: 0, revive: 0, xpshake: 0, dboost: 0, shakeActive: false, boostActive: false, owned: [], equipped: { background: null, frame: null, effect: null, theme: null, title: null, sound: null } };
 }
 
 export function priceOf(shop, id) {
@@ -40,6 +40,14 @@ export function activateShake(game) {
   if (game.inventory.xpshake < 1 || game.inventory.shakeActive) return { ok: false, game };
   const g = structuredClone(game);
   g.inventory.xpshake -= 1; g.inventory.shakeActive = true;
+  return { ok: true, game: g };
+}
+
+/** One Drachma Boost can be active at a time; it doubles the drachmas of the next rewarded workout. */
+export function activateBoost(game) {
+  if ((game.inventory.dboost ?? 0) < 1 || game.inventory.boostActive) return { ok: false, game };
+  const g = structuredClone(game);
+  g.inventory.dboost -= 1; g.inventory.boostActive = true;
   return { ok: true, game: g };
 }
 

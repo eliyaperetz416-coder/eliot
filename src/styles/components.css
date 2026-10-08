@@ -611,3 +611,20 @@ a.btn { text-decoration: none; }
 .crew-plan-row.trained .row-title { color: var(--accent); }
 .plan-done { color: var(--accent); display: grid; place-items: center; }
 .plan-done svg { width: 22px; height: 22px; }
+
+.sched-item-home { display: grid; gap: var(--s-2); padding-block-start: var(--s-2); }
+.sched-item { gap: var(--s-2); }
+
+/* Shop: themes, titles, sounds (OUR DESIGN) */
+.swatch-dot { width: 32px; height: 32px; border-radius: 50%; flex: none; border: 2px solid var(--line); }
+.shop-row.equipped { border-color: rgb(var(--accent-rgb) / .6); }
+.profile-title { color: var(--accent); font-weight: 600; font-size: 14px; }
+
+/* Role model: weekly target, tip, quote (OUR DESIGN) */
+.model-goal { display: grid; gap: 6px; padding-block-start: var(--s-2); }
+.model-goal-top { display: flex; justify-content: space-between; gap: var(--s-3); font-size: 14px; color: var(--text-dim); }
+.model-tip { background: var(--surface-2); border-radius: var(--r-md); padding: var(--s-3); margin-block-start: var(--s-2); }
+.model-tip p { margin: 4px 0 0; }
+.model-tip-label { font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: .06em; text-transform: uppercase; }
+.model-quote { margin-block: var(--s-3); display: grid; gap: 4px; border-color: rgb(var(--accent-rgb) / .4); }
+.model-quote p { margin: 0; }

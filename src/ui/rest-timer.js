@@ -4,6 +4,8 @@ import { icon } from './icons.js';
 import { t } from '../core/i18n.mjs';
 import { startRest, remainingSec, isExpired, adjustRest, progress, formatClock, REST_STEP } from '../core/timer.mjs';
 import { store, touchDraft } from './store.js';
+import { data } from './data.js';
+import { playSound } from './sounds.js';
 
 let root, tick = null, doneUntil = 0, audio = null;
 
@@ -16,15 +18,8 @@ export function unlockAudio() {
 }
 function beep() {
   if (!audio) return;
-  try {
-    const now = audio.currentTime;
-    [0, 0.22, 0.44].forEach((d, i) => {
-      const o = audio.createOscillator(), g = audio.createGain();
-      o.type = 'sine'; o.frequency.value = i === 2 ? 1175 : 880;
-      g.gain.setValueAtTime(0.0001, now + d); g.gain.exponentialRampToValueAtTime(0.35, now + d + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, now + d + 0.18);
-      o.connect(g).connect(audio.destination); o.start(now + d); o.stop(now + d + 0.2);
-    });
-  } catch { /* ignore */ }
+  const id = data().shop.cosmetics.find((c) => c.id === store.game.inventory.equipped.sound)?.sound ?? 'beep';
+  playSound(audio, id);
   try { navigator.vibrate?.([120, 60, 120]); } catch { /* ignore */ }
 }
 function flash() {

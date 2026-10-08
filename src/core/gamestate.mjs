@@ -49,7 +49,10 @@ export function applyPost({ game, workout, workouts, byId, now, overallRankIndex
     rewards.xp = base.xp * (rewards.shake ? XP_SHAKE_MULTIPLIER : 1);
     if (rewards.shake) g.inventory.shakeActive = false;
     g.xp += rewards.xp;
-    rewards.drachmas = base.drachmas;
+    rewards.boost = !!g.inventory.boostActive;
+    rewards.drachmas = base.drachmas * (rewards.boost ? 2 : 1);
+    if (rewards.boost) g.inventory.boostActive = false;
+    rewards.drachmasBase = base.drachmas;
     const s = recordWorkout(g.streak, dayKey);
     g.streak = s.streak;
     rewards.streak = s.streak.current;

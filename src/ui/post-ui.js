@@ -19,6 +19,7 @@ import { skipRest } from './rest-timer.js';
 import { keepAwake } from './wakelock.js';
 import { emblem } from './emblem.js';
 import { rankCard } from './rank-card.js';
+import { modelQuote } from './model.js';
 import { formatDuration, formatNum, formatKg } from './format.js';
 
 let lastResult = null;
@@ -125,6 +126,7 @@ export function resultScreen() {
   const kids = [
     backLink('#/workout', t('workout.title')),
     h('header', { class: 'screen-head' }, icon('check', 'mark'), h('h1', { text: t('res.title') })),
+    modelQuote(),
     h('div', { class: 'stats-grid' },
       statTile(t('fin.duration'), formatDuration(s.stats.durationSec)), statTile(t('fin.sets'), String(s.stats.workingSets)),
       statTile(t('fin.volume'), `${formatNum(s.stats.volume, 0)} ${t('unit.kg')}`), statTile(t('fin.prs'), String(s.stats.prs))),

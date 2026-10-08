@@ -121,7 +121,7 @@ seasons and leaderboards exist (server features, not built here), about 600 exer
 - The app never ships anyone's photos, videos, logo or paid programs. A workout "inspired by" someone is built only from exercises the user sends.
 
 ## Weekly schedule (OUR DESIGN)
-- Today → Plan my week: for each weekday you choose a strength workout (a saved workout, the next day of your plan, or a free workout), rest, or another activity (basketball, football, running, swimming, cycling, walking, martial arts, yoga, other, with an optional name of your own).
+- Today → Plan my week: a day can hold up to 4 items (for example basketball and a strength workout; rest is alone on its day). For each weekday you choose a strength workout (a saved workout, the next day of your plan, or a free workout), rest, or another activity (basketball, football, running, swimming, cycling, walking, martial arts, yoga, other, with an optional name of your own).
 - A scheduled saved workout leads the big card on Today. Rest and activity days show a card; an activity can be marked done and then fills that day in the week row. Rest days are dashed circles, activity days have an accent ring.
 - Activities do not count as strength workouts: they do not affect ranks, the consistency bonus or the streak. The schedule is stored on the phone and included in the backup.
 
@@ -129,3 +129,15 @@ seasons and leaderboards exist (server features, not built here), about 600 exer
 - Tapping a member on the crew leaderboard opens their profile: rank, level, streak, this week's volume, workouts this month and their week plan.
 - The week plan is **private by default**. In the crew details you can switch on "Share my week plan". Then the crew sees, for each weekday, rest / activity / workout (with the name of a saved workout or the activity name you typed) and which days you trained this week. Never exercises, sets, weights or bodyweight.
 - Switching it off clears the plan on the server. Server side: `supabase/migrations/002_crew_plan.sql` (one nullable column, `update_plan`, and `my_group` returning it). The function keeps only the 7 weekdays, a kind from a fixed list, names cut to 30 characters and up to 7 valid dates.
+
+## Shop: more things to buy (OUR DESIGN)
+- The shop now has 40 cosmetics and comforts plus 5 consumables. None of it changes a rank or what a workout is worth.
+- **App colours** (6): an equipped colour becomes the accent of the whole app while the Settings accent is "fixed colour". Text on the accent is dark or white automatically.
+- **Titles** (8): shown under your name on the profile and on the player card.
+- **Rest sounds** (4): bell, gong, whistle, pulse, all synthesised with WebAudio (no sound files). You can play each one before buying.
+- **Drachma Boost** (120): doubles the workout drachmas (not the streak milestone bonus) of the next rewarded workout. One at a time, like the XP Shake.
+- More drawn cosmetics: 3 backgrounds, 2 frames, 2 effects.
+
+## My role model, more (OUR DESIGN)
+- Beyond name, links and photo: **tips** you type from their videos (one per line, a different one shows on Today each day), a **weekly target** with a progress bar on the card, a line from them on the result screen after a workout, and "training the way of <name>" on the player card.
+- **Workout from my model:** paste the exercises from a video (one per line, like "Bench press 4 x 6-8"); known exercises become a saved workout, unknown ones are listed so you can request them. Nothing is fetched from their channels and no content of theirs is shipped with the app.

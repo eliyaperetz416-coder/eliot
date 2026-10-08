@@ -6,13 +6,31 @@ import { newGame, shop } from './helpers.mjs';
 
 const rich = (n = 5000) => { const g = newGame(); g.drachmas = n; return g; };
 
-test('catalog: ~15 cosmetics priced 100-1000 with both languages, 4 consumables with the agreed prices', () => {
-  assert.equal(shop.cosmetics.length, 15);
-  for (const c of shop.cosmetics) { assert.ok(c.price >= 100 && c.price <= 1000, c.id); assert.ok(c.nameEn && c.nameHe && c.descEn && c.descHe && c.art, c.id); assert.ok(['background', 'frame', 'effect'].includes(c.kind)); }
-  assert.equal(new Set([...shop.cosmetics, ...shop.consumables].map((x) => x.id)).size, 19, 'unique ids');
-  assert.deepEqual(Object.fromEntries(shop.consumables.map((c) => [c.id, c.price])), { super: 150, mega: 300, revive: 500, xpshake: 100 });
-  for (const kind of ['background', 'frame', 'effect']) assert.ok(shop.cosmetics.filter((c) => c.kind === kind).length >= 3);
+test('catalog: cosmetics and comforts priced 100-1000 with both languages, 5 consumables with the agreed prices', () => {
+  const kinds = ['background', 'frame', 'effect', 'theme', 'title', 'sound'];
+  assert.equal(shop.cosmetics.length, 40);
+  for (const c of shop.cosmetics) {
+    assert.ok(c.price >= 100 && c.price <= 1000, c.id);
+    assert.ok(c.nameEn && c.nameHe && c.descEn && c.descHe, c.id);
+    assert.ok(kinds.includes(c.kind), c.id);
+    if (['background', 'frame', 'effect'].includes(c.kind)) assert.ok(c.art, `${c.id} needs art`);
+    if (c.kind === 'theme') assert.match(c.hex, /^#[0-9a-f]{6}$/i, c.id);
+    if (c.kind === 'sound') assert.ok(['bell', 'gong', 'whistle', 'pulse'].includes(c.sound), c.id);
+  }
+  assert.equal(new Set([...shop.cosmetics, ...shop.consumables].map((x) => x.id)).size, 45, 'unique ids');
+  assert.deepEqual(Object.fromEntries(shop.consumables.map((c) => [c.id, c.price])), { super: 150, mega: 300, revive: 500, xpshake: 100, dboost: 120 });
+  for (const kind of kinds) assert.ok(shop.cosmetics.filter((c) => c.kind === kind).length >= 4, kind);
   assert.equal(priceOf(shop, 'nope'), null);
+});
+
+test('drachma boost: activate once, doubles the next workout drachmas only', async () => {
+  const { activateBoost } = await import('../src/core/shop.mjs');
+  let g = purchase(rich(), shop, 'dboost').game;
+  assert.equal(g.inventory.dboost, 1);
+  g = activateBoost(g).game;
+  assert.deepEqual([g.inventory.dboost, g.inventory.boostActive], [0, true]);
+  assert.equal(activateBoost(g).ok, false, 'nothing left to activate');
+  assert.equal(activateBoost(purchase(g, shop, 'dboost').game).ok, false, 'one at a time');
 });
 
 test('purchase: pays, adds to the inventory, refuses without funds, unknown items and double cosmetics', () => {
@@ -33,9 +51,9 @@ test('equip: only owned items, one per slot, toggles off', () => {
   assert.equal(toggleEquip(g, shop, 'fx_glow').ok, false, 'not owned');
   g = toggleEquip(g, shop, 'bg_storm').game; assert.equal(g.inventory.equipped.background, 'bg_storm');
   g = toggleEquip(g, shop, 'bg_dawn').game; assert.equal(g.inventory.equipped.background, 'bg_dawn', 'replaces the previous background');
-  g = toggleEquip(g, shop, 'fr_laurel').game; assert.deepEqual(g.inventory.equipped, { background: 'bg_dawn', frame: 'fr_laurel', effect: null });
+  g = toggleEquip(g, shop, 'fr_laurel').game; assert.deepEqual(g.inventory.equipped, { background: 'bg_dawn', frame: 'fr_laurel', effect: null, theme: null, title: null, sound: null });
   g = toggleEquip(g, shop, 'bg_dawn').game; assert.equal(g.inventory.equipped.background, null, 'equipping again unequips');
-  assert.deepEqual(newInventory().equipped, { background: null, frame: null, effect: null });
+  assert.deepEqual(newInventory().equipped, { background: null, frame: null, effect: null, theme: null, title: null, sound: null });
 });
 
 test('XP Shake lifecycle: buy, activate once, only one active at a time', () => {
