@@ -16,6 +16,7 @@ import { list, listRow } from './components.js';
 import { openChooseWorkout, startFromRoutine, startFromPlanDay, activePlan, startMakeup } from './routines.js';
 import { nextPlanDay, planProgress } from '../core/generator.mjs';
 import { planDayLabel } from './plan-names.js';
+import { modelCard } from './model.js';
 import { gameStrip, questsCard, streakCard } from './game-ui.js';
 import { byDay, weekKeys } from '../core/calendar.mjs';
 import { view } from '../core/streak.mjs';
@@ -120,6 +121,7 @@ export function startScreen() {
     crew.local && crew.unread ? h('a', { class: 'card card-accent crew-unread', href: '#/crew' }, h('b', { text: t('crew.unread.card', { n: crew.unread }) }), h('span', { class: 'row-sub', text: t('crew.unread.open') })) : null,
     makeupCard(),
     heroCard(),
+    modelCard(),
     weekCard(),
     gameStrip(),
   ];

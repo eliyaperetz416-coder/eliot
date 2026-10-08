@@ -978,8 +978,37 @@ for (const lang of ['he', 'en']) {
     assert.equal(await page.evaluate(async () => (await (await import('./src/ui/db.js')).dbAll('routines')).length), routinesBefore);
   });
 
+  await check(`${lang}: my role model: form, link check, Today card, remove`, async () => {
+    const T = (he, en) => L(lang, he, en);
+    await page.goto(`${base}#/profile`);
+    await page.locator('.row', { hasText: T('המודל שלי', 'My role model') }).click();
+    await page.waitForSelector('#model-name');
+    await page.locator('.screen .btn-primary').click();
+    await page.waitForFunction(() => [...document.querySelectorAll('.field-error')].some((e) => !e.hidden));
+    await page.fill('#model-name', 'Harley Alexander');
+    await page.fill('#model-note', 'Train like him');
+    await page.fill('#model-youtube', 'https://youtube.com/@harleyalexanderr?si=abc');
+    await page.fill('#model-tiktok', 'https://example.com/x');
+    await page.locator('.screen .btn-primary').click();
+    await page.waitForTimeout(200);
+    assert.ok(await page.locator('#model-tiktok').isVisible(), 'a bad link keeps you on the form');
+    await page.fill('#model-tiktok', 'tiktok.com/@harleyalexander.fit?_r=1');
+    await page.screenshot({ path: `${shots}${lang}-model-form.png`, fullPage: true });
+    await page.locator('.screen .btn-primary').click();
+    await page.waitForSelector('.model-card');
+    assert.ok((await page.textContent('.model-card')).includes('Harley Alexander'));
+    assert.equal(await page.locator('.model-link').first().getAttribute('href'), 'https://youtube.com/@harleyalexanderr');
+    assert.equal(await page.locator('.model-link').count(), 2);
+    await page.screenshot({ path: `${shots}${lang}-model-card.png` });
+    await page.goto(`${base}#/model`);
+    await page.locator('.screen .btn-danger').click();
+    await page.goto(`${base}#/workout`);
+    await page.waitForSelector('.hero');
+    assert.equal(await page.locator('.model-card').count(), 0);
+  });
+
   await check(`${lang}: every sub-screen has a back link`, async () => {
-    const subs = ['exercise/plank', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'requests', 'calendar', 'crew', 'history', 'history/nope', 'routine/nope', 'plan/nope', 'exercise/nope', 'ranks-preview'];
+    const subs = ['exercise/plank', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'requests', 'calendar', 'crew', 'history', 'history/nope', 'routine/nope', 'plan/nope', 'exercise/nope', 'ranks-preview', 'model'];
     for (const r of subs) {
       await page.goto(`${base}#/${r}`);
       await page.waitForSelector('main');

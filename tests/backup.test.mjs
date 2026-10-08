@@ -98,3 +98,14 @@ test('renames and requests travel in the backup and merge without losing yours',
   // an old backup without these fields still loads
   assert.deepEqual(validateBackup(file()).backup.data.requests, []);
 });
+
+test('role model travels in the backup; on merge the one on this phone wins', async () => {
+  const { mergeData } = await import('../src/core/backup.mjs');
+  const mine = { name: 'Mine', links: {} }, theirs = { name: 'Theirs', links: {} };
+  assert.equal(mergeData({ model: mine }, { model: theirs }).model.name, 'Mine');
+  assert.equal(mergeData({ model: null }, { model: theirs }).model.name, 'Theirs');
+  const b = buildBackup({ data: { model: theirs }, appVersion: 't', now: 1 });
+  assert.equal(validateBackup(JSON.stringify(b)).ok, true);
+  const bad = buildBackup({ data: { model: [1] }, appVersion: 't', now: 1 });
+  assert.equal(validateBackup(JSON.stringify(bad)).error, 'shape');
+});

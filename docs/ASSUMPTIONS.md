@@ -114,3 +114,8 @@ seasons and leaderboards exist (server features, not built here), about 600 exer
 ## Make-up workout (OUR DESIGN)
 - If you finish a workout and some exercises have no ticked working set, the Today screen offers them for up to 4 days as a one-time "Make up" workout.
 - The make-up workout is not linked to a saved workout or plan, so it never changes planned weights or plan progress. "No thanks" removes the offer.
+
+## My role model (OUR DESIGN)
+- Profile → My role model: you type a name, an optional motivation line, optional YouTube / Instagram / TikTok links and an optional goal photo from your own gallery. A card shows on Today.
+- Links are checked to be https on the right site, and tracking parameters are removed. Nothing is fetched from those channels; the photo stays on the phone (and in your backup).
+- The app never ships anyone's photos, videos, logo or paid programs. A workout "inspired by" someone is built only from exercises the user sends.

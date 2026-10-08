@@ -17,7 +17,7 @@ export function checksum(str) {
   return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16).padStart(14, '0');
 }
 
-export const EMPTY_DATA = Object.freeze({ profile: null, bodyweight: [], workouts: [], routines: [], folders: [], plans: [], custom: [], blobs: {}, game: null, settings: {}, renames: {}, requests: [], bases: {} });
+export const EMPTY_DATA = Object.freeze({ profile: null, bodyweight: [], workouts: [], routines: [], folders: [], plans: [], custom: [], blobs: {}, game: null, settings: {}, renames: {}, requests: [], bases: {}, model: null });
 const ARRAYS = ['bodyweight', 'workouts', 'routines', 'folders', 'plans', 'custom', 'requests'];
 
 export function buildBackup({ data, appVersion, now }) {
@@ -38,6 +38,7 @@ export function validateBackup(text) {
   if (d.blobs != null && (typeof d.blobs !== 'object' || Array.isArray(d.blobs))) return { ok: false, error: 'shape' };
   for (const k of ['renames', 'bases']) if (d[k] != null && (typeof d[k] !== 'object' || Array.isArray(d[k]))) return { ok: false, error: 'shape' };
   if (d.profile != null && typeof d.profile !== 'object') return { ok: false, error: 'shape' };
+  if (d.model != null && (typeof d.model !== 'object' || Array.isArray(d.model))) return { ok: false, error: 'shape' };
   for (const w of d.workouts ?? []) if (!w || typeof w.id !== 'string' || !Number.isFinite(w.startedMs)) return { ok: false, error: 'shape' };
   for (const k of ['routines', 'folders', 'plans', 'custom', 'requests']) for (const x of d[k] ?? []) if (!x || typeof x.id !== 'string') return { ok: false, error: 'shape' };
   for (const e of d.bodyweight ?? []) if (!e || typeof e.dateKeyTime !== 'string') return { ok: false, error: 'shape' };
@@ -72,6 +73,7 @@ export function mergeData(cur, inc) {
     renames: { ...i.renames, ...c.renames },
     bases: { ...i.bases, ...c.bases },
     requests: union(c.requests, i.requests, (x) => x.id),
+    model: c.model ?? i.model ?? null, // the one on this phone wins
   };
   if (fresh || !c.profile) out.profile = i.profile ?? c.profile;
   if (fresh || !c.game) out.game = i.game ?? c.game;

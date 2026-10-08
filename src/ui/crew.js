@@ -124,13 +124,13 @@ export function crewScreen() {
 
   function joinedView() {
     return [
+      h('section', { class: 'card crew-head crew-codebar' },
+        h('div', {}, h('div', { class: 'row-sub', text: t('crew.code.label') }), h('div', { class: 'display crew-code num', dir: 'ltr', text: crew.local.code })),
+        button({ label: t('crew.invite'), icon: 'share', variant: 'secondary', onClick: invite })),
       h('div', { class: 'crew-tabs' }, segmented({ label: t('crew.title'), value: tab, onChange: (v) => { tab = v; draw(); if (v === 'feed') markRead(); }, options: [{ value: 'feed', label: `${t('crew.tab.feed')}${crew.unread ? ` (${crew.unread})` : ''}` }, { value: 'board', label: t('crew.tab.board') }] })),
       !view ? h('p', { class: 'row-sub center', text: t('common.loading') }) : tab === 'board' ? boardView() : feedView(),
       h('details', { class: 'crew-more' },
         h('summary', { text: t('crew.more') }),
-        h('section', { class: 'card crew-head' },
-          h('div', {}, h('div', { class: 'row-sub', text: t('crew.code.label') }), h('div', { class: 'display crew-code num', dir: 'ltr', text: crew.local.code })),
-          button({ label: t('crew.invite'), icon: 'share', variant: 'secondary', onClick: invite })),
         notifyBox(),
         h('div', { style: 'padding-block-start:12px' }, list([listRow({ title: t('crew.leave'), sub: t('crew.leave.sub'), icon: 'trash', onClick: leave })]))),
     ];
@@ -140,7 +140,7 @@ export function crewScreen() {
     const keep = document.getElementById('crew-say')?.value ?? '';
     root.replaceChildren(
       h('a', { class: 'back-link', href: '#/profile' }, icon('chevron', 'chev back-chev'), t('tab.profile')),
-      h('header', { class: 'screen-head' }, h('h1', { text: crew.local ? crew.local.name : t('crew.title') }), crew.local ? h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('crew.invite'), onclick: invite }, icon('plus')) : null),
+      h('header', { class: 'screen-head' }, h('h1', { text: crew.local ? crew.local.name : t('crew.title') })),
       ...(crew.local ? joinedView() : startView()));
     const say = document.getElementById('crew-say'); if (say && keep) say.value = keep;
     const feed = document.getElementById('crew-feed'); if (feed) feed.scrollTop = feed.scrollHeight;

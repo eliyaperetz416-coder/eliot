@@ -9,6 +9,7 @@ import { liveScreen } from './live.js';
 import { resultScreen } from './post-ui.js';
 import { historyScreen, historyDetailScreen } from './history.js';
 import { ranksScreen } from './ranks.js';
+import { modelScreen } from './model.js';
 import { progressScreen } from './progress.js';
 import { cardScreen } from './card-export.js';
 import { routinesScreen, routineEditScreen } from './routines.js';
@@ -89,6 +90,7 @@ export function buildScreens(ctx) {
     requests: requestsScreen,
     calendar: calendarScreen,
     crew: crewScreen,
+    model: modelScreen,
     kit,
   };
 }

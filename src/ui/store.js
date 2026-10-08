@@ -10,7 +10,7 @@ import { markPlanDone } from '../core/generator.mjs';
 import { newGame, migrateGame, evaluateAchievements } from '../core/gamestate.mjs';
 import { dateKey } from '../core/workout.mjs';
 
-export const store = { profile: null, bwLog: [], workouts: [], draft: null, bests: {}, overall: { pending: true, remaining: 3, rating: 0 }, routines: [], folders: [], plans: [], custom: [], game: newGame(), requests: [], bases: {}, makeup: null };
+export const store = { profile: null, bwLog: [], workouts: [], draft: null, bests: {}, overall: { pending: true, remaining: 3, rating: 0 }, routines: [], folders: [], plans: [], custom: [], game: newGame(), requests: [], bases: {}, makeup: null, model: null, modelPhotoUrl: '' };
 export const todayKey = () => dateKey(Date.now());
 let achievementListener = null;
 export const onAchievements = (fn) => { achievementListener = fn; };
@@ -49,6 +49,7 @@ export async function initStore() {
   store.requests = (await dbGet('kv', 'requests').catch(() => null)) ?? [];
   store.bases = (await dbGet('kv', 'bases').catch(() => null)) ?? {};
   store.makeup = (await dbGet('kv', 'makeup').catch(() => null)) ?? null;
+  await loadModel();
   store.profile = profile ?? null;
   store.bwLog = bw.sort((a, b) => a.ms - b.ms);
   store.workouts = workouts.map(migrateWorkout).filter(Boolean).sort((a, b) => a.startedMs - b.startedMs);
@@ -227,3 +228,30 @@ export const MAKEUP_DAYS = 4;
 export async function saveMakeup(m) { store.makeup = m; await dbPut('kv', m, 'makeup').catch(() => {}); emit(); }
 export async function clearMakeup() { store.makeup = null; await dbPut('kv', null, 'makeup').catch(() => {}); emit(); }
 export const activeMakeup = (now = Date.now()) => (store.makeup?.entries?.length && now - store.makeup.createdMs < MAKEUP_DAYS * 86400000 ? store.makeup : null);
+
+/* ---------- my role model (OUR DESIGN): name, links and an optional photo you pick yourself ---------- */
+async function loadModel() {
+  store.model = (await dbGet('kv', 'model').catch(() => null)) ?? null;
+  if (store.modelPhotoUrl) URL.revokeObjectURL(store.modelPhotoUrl);
+  store.modelPhotoUrl = '';
+  if (store.model?.photoBlobId) { const b = await dbGet('blobs', store.model.photoBlobId).catch(() => null); if (b) store.modelPhotoUrl = URL.createObjectURL(b); }
+}
+/** photo: a Blob to set a new photo, null to remove it, undefined to keep the current one. */
+export async function saveModel(model, photo) {
+  const old = store.model?.photoBlobId ?? null;
+  const ops = [];
+  let photoBlobId = old;
+  if (photo instanceof Blob) { photoBlobId = `model-${Date.now().toString(36)}`; ops.push(['put', 'blobs', photo, photoBlobId]); }
+  else if (photo === null) photoBlobId = null;
+  if (old && old !== photoBlobId) ops.push(['delete', 'blobs', old]);
+  ops.push(['put', 'kv', { ...model, photoBlobId }, 'model']);
+  await dbBatch(ops);
+  await loadModel();
+  emit();
+}
+export async function clearModel() {
+  const old = store.model?.photoBlobId;
+  await dbBatch([...(old ? [['delete', 'blobs', old]] : []), ['put', 'kv', null, 'model']]);
+  await loadModel();
+  emit();
+}
