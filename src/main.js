@@ -58,7 +58,7 @@ function render() {
   const el = screens[id](param);
   dispose = el._dispose ?? null;
   app.replaceChildren(el);
-  const tab = { exercise: 'exercises', custom: 'exercises', history: 'profile', achievements: 'profile', crew: 'profile', settings: 'profile', requests: 'exercises', calendar: 'profile', numbers: 'profile', result: 'workout', routines: 'workout', routine: 'workout', plans: 'workout', plan: 'workout', progress: 'ranks', card: 'ranks', shop: 'profile', model: 'profile' }[id] ?? id;
+  const tab = { exercise: 'exercises', custom: 'exercises', history: 'profile', achievements: 'profile', crew: 'profile', settings: 'profile', requests: 'exercises', calendar: 'profile', numbers: 'profile', result: 'workout', routines: 'workout', routine: 'workout', plans: 'workout', plan: 'workout', progress: 'ranks', card: 'ranks', shop: 'profile', model: 'profile', schedule: 'workout' }[id] ?? id;
   currentTab = tab;
   // Safety net: every sub-screen (any screen that is not a tab root) has a way back, even in empty/error states.
   if (id !== tab && !el.querySelector('.back-link')) el.prepend(backLink(`#/${tab}`, t(`tab.${tab}`)));

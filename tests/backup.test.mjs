@@ -109,3 +109,10 @@ test('role model travels in the backup; on merge the one on this phone wins', as
   const bad = buildBackup({ data: { model: [1] }, appVersion: 't', now: 1 });
   assert.equal(validateBackup(JSON.stringify(bad)).error, 'shape');
 });
+
+test('weekly schedule travels in the backup; on merge a planned week on this phone wins', async () => {
+  const mine = { days: { 0: { kind: 'rest' } }, done: {} }, theirs = { days: { 1: { kind: 'rest' } }, done: {} };
+  assert.deepEqual(mergeData({ schedule: mine }, { schedule: theirs }).schedule, mine);
+  assert.deepEqual(mergeData({ schedule: { days: {}, done: {} } }, { schedule: theirs }).schedule, theirs);
+  assert.equal(validateBackup(JSON.stringify(buildBackup({ data: { schedule: theirs }, appVersion: 't', now: 1 }))).ok, true);
+});

@@ -10,6 +10,7 @@ import { resultScreen } from './post-ui.js';
 import { historyScreen, historyDetailScreen } from './history.js';
 import { ranksScreen } from './ranks.js';
 import { modelScreen } from './model.js';
+import { scheduleScreen } from './schedule.js';
 import { progressScreen } from './progress.js';
 import { cardScreen } from './card-export.js';
 import { routinesScreen, routineEditScreen } from './routines.js';
@@ -91,6 +92,7 @@ export function buildScreens(ctx) {
     calendar: calendarScreen,
     crew: crewScreen,
     model: modelScreen,
+    schedule: scheduleScreen,
     kit,
   };
 }

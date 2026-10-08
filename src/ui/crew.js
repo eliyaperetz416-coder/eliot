@@ -3,9 +3,12 @@ import { h } from './dom.js';
 import { icon } from './icons.js';
 import { t, getLanguage } from '../core/i18n.mjs';
 import { button, list, listRow, openSheet, segmented, showToast } from './components.js';
-import { crew, createCrew, joinCrew, leaveCrew, fetchView, fetchMessages, sendMessage, markSeen, syncStats, onCrew, pushStatus, enablePush, disablePush } from './crew-state.js';
+import { crew, createCrew, joinCrew, leaveCrew, fetchView, fetchMessages, sendMessage, markSeen, syncStats, syncPlan, onCrew, pushStatus, enablePush, disablePush } from './crew-state.js';
 import { publicUrl } from './crew-api.js';
-import { sortBoard, SORTS, errorKey, normalizeCode, validNick, inviteText, MAX_MESSAGE } from '../core/crew.mjs';
+import { sortBoard, SORTS, errorKey, normalizeCode, validNick, inviteText, planRows, MAX_MESSAGE } from '../core/crew.mjs';
+import { ACTIVITIES } from '../core/schedule.mjs';
+import { getSettings, updateSettings } from './storage.js';
+import { todayKey } from './store.js';
 import { TIER_COLORS } from '../core/ranks.mjs';
 import { shareViaWhatsApp } from './share.js';
 import { formatDateTime, formatNum } from './format.js';
@@ -14,7 +17,7 @@ const errText = (e) => t(`crew.err.${errorKey(e)}`);
 
 export function crewScreen() {
   const root = h('main', { class: 'screen crew' });
-  let tab = 'feed', sort = 'rating';
+  let tab = 'feed', sort = 'rating', moreOpen = false;
   let view = null, messages = [], timer = null, busy = false, formMode = 'join';
   const off = onCrew(() => { if (!crew.local) draw(); });
 
@@ -63,7 +66,7 @@ export function crewScreen() {
       h('div', { class: 'list crew-board', style: 'margin-block-start:12px' }, members.map((m, i) => {
         const s = m.stats ?? {};
         const mine = m.id === crew.local.memberId;
-        return h('div', { class: `row crew-row${mine ? ' me' : ''}`, 'data-nick': m.nickname },
+        return h('button', { class: `row crew-row${mine ? ' me' : ''}`, type: 'button', 'data-nick': m.nickname, onclick: () => friendSheet(m, mine) },
           h('span', { class: 'crew-pos display num', text: String(i + 1) }),
           h('span', { class: 'row-main' },
             h('span', { class: 'row-title', text: mine ? `${m.nickname} · ${t('crew.you')}` : m.nickname }),
@@ -72,6 +75,35 @@ export function crewScreen() {
       })),
       h('p', { class: 'row-sub', style: 'padding-block-start:8px', text: t('crew.board.note') }),
     ];
+  }
+
+  const weekday = (d) => new Intl.DateTimeFormat(getLanguage() === 'he' ? 'he-IL' : 'en-GB', { weekday: 'long', timeZone: 'UTC' }).format(Date.UTC(2026, 9, 11 + d)); // 2026-10-11 is a Sunday
+  const planName = (r) => (r.kind === 'rest' ? t('sched.rest') : r.kind === 'activity' ? (ACTIVITIES.includes(r.name) ? t(`sched.act.${r.name}`) : r.name || t('sched.act.other')) : r.name || t('crew.p.workout'));
+
+  /** A friend's profile: rank, numbers and (if they share it) the week plan. Opens from the leaderboard. */
+  function friendSheet(m, mine) {
+    const s = m.stats ?? {};
+    const rows = planRows(m.plan, todayKey());
+    const stat = (label, value) => h('div', { class: 'stat' }, h('span', { class: 'stat-v display num' }, h('bdi', { text: value })), h('span', { class: 'stat-l', text: label }));
+    const plan = rows
+      ? h('div', { class: 'list crew-plan' }, rows.map((r) => h('div', { class: `row crew-plan-row${r.trained ? ' trained' : ''}` },
+        h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: weekday(r.weekday) }), h('span', { class: `row-sub sched-${r.kind ?? 'none'}`, text: r.kind ? planName(r) : t('sched.none') })),
+        r.trained ? h('span', { class: 'plan-done', 'aria-label': t('crew.p.trained') }, icon('check')) : null)))
+      : h('p', { class: 'row-sub', text: mine ? t('crew.p.mineOff') : t('crew.p.notShared', { name: m.nickname }) });
+    openSheet({ title: mine ? `${m.nickname} · ${t('crew.you')}` : m.nickname, tall: true, content: h('div', { class: 'stack crew-friend' },
+      h('div', { class: 'row-sub' }, s.tier ? h('span', { style: `color:${TIER_COLORS[s.tier] ?? 'inherit'}`, text: tierLabel(s) }) : t('crew.unranked'), s.rating != null ? ` · ${formatNum(s.rating, 0)}` : ''),
+      h('div', { class: 'stats-grid' },
+        stat(t('crew.sort.level'), String(s.level ?? 1)), stat(t('crew.sort.streak'), t('game.streakDays', { n: s.streak ?? 0 })),
+        stat(t('crew.p.week'), `${formatNum(s.weekVolume ?? 0, 0)} ${t('unit.kg')}`), stat(t('crew.p.month'), String(s.monthWorkouts ?? 0))),
+      h('div', { class: 'section-label', text: t('crew.p.plan') }), plan) });
+  }
+
+  function shareBox() {
+    const on = !!getSettings().sharePlan;
+    return h('section', { class: 'card crew-share', style: 'margin-block-start:12px' },
+      h('h2', { text: t('crew.share.plan.title') }),
+      h('p', { text: t('crew.share.plan.body') }),
+      segmented({ label: t('crew.share.plan.title'), value: on ? 'on' : 'off', onChange: async (v) => { await updateSettings({ sharePlan: v === 'on' }); await syncPlan(); view = null; refreshFeed(true); }, options: [{ value: 'off', label: t('crew.share.plan.off') }, { value: 'on', label: t('crew.share.plan.on') }] }));
   }
 
   const sysText = (m) => t(m.body === 'created' ? 'crew.sys.created' : 'crew.sys.joined', { name: m.nickname });
@@ -129,8 +161,9 @@ export function crewScreen() {
         button({ label: t('crew.invite'), icon: 'share', variant: 'secondary', onClick: invite })),
       h('div', { class: 'crew-tabs' }, segmented({ label: t('crew.title'), value: tab, onChange: (v) => { tab = v; draw(); if (v === 'feed') markRead(); }, options: [{ value: 'feed', label: `${t('crew.tab.feed')}${crew.unread ? ` (${crew.unread})` : ''}` }, { value: 'board', label: t('crew.tab.board') }] })),
       !view ? h('p', { class: 'row-sub center', text: t('common.loading') }) : tab === 'board' ? boardView() : feedView(),
-      h('details', { class: 'crew-more' },
+      h('details', { class: 'crew-more', open: moreOpen, ontoggle: (e) => { moreOpen = e.currentTarget.open; } },
         h('summary', { text: t('crew.more') }),
+        shareBox(),
         notifyBox(),
         h('div', { style: 'padding-block-start:12px' }, list([listRow({ title: t('crew.leave'), sub: t('crew.leave.sub'), icon: 'trash', onClick: leave })]))),
     ];

@@ -119,3 +119,13 @@ seasons and leaderboards exist (server features, not built here), about 600 exer
 - Profile → My role model: you type a name, an optional motivation line, optional YouTube / Instagram / TikTok links and an optional goal photo from your own gallery. A card shows on Today.
 - Links are checked to be https on the right site, and tracking parameters are removed. Nothing is fetched from those channels; the photo stays on the phone (and in your backup).
 - The app never ships anyone's photos, videos, logo or paid programs. A workout "inspired by" someone is built only from exercises the user sends.
+
+## Weekly schedule (OUR DESIGN)
+- Today → Plan my week: for each weekday you choose a strength workout (a saved workout, the next day of your plan, or a free workout), rest, or another activity (basketball, football, running, swimming, cycling, walking, martial arts, yoga, other, with an optional name of your own).
+- A scheduled saved workout leads the big card on Today. Rest and activity days show a card; an activity can be marked done and then fills that day in the week row. Rest days are dashed circles, activity days have an accent ring.
+- Activities do not count as strength workouts: they do not affect ranks, the consistency bonus or the streak. The schedule is stored on the phone and included in the backup.
+
+## Friend profile and optional plan sharing (OUR DESIGN)
+- Tapping a member on the crew leaderboard opens their profile: rank, level, streak, this week's volume, workouts this month and their week plan.
+- The week plan is **private by default**. In the crew details you can switch on "Share my week plan". Then the crew sees, for each weekday, rest / activity / workout (with the name of a saved workout or the activity name you typed) and which days you trained this week. Never exercises, sets, weights or bodyweight.
+- Switching it off clears the plan on the server. Server side: `supabase/migrations/002_crew_plan.sql` (one nullable column, `update_plan`, and `my_group` returning it). The function keeps only the 7 weekdays, a kind from a fixed list, names cut to 30 characters and up to 7 valid dates.

@@ -79,3 +79,34 @@ export function base64UrlToBytes(s) {
   const b = String(s).replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(String(s).length / 4) * 4, '=');
   return Uint8Array.from(atob(b), (c) => c.charCodeAt(0));
 }
+
+/* ---------- sharing your weekly plan (opt-in; OUR DESIGN) ---------- */
+const DAYKEY = /^\d{4}-\d{2}-\d{2}$/;
+const addDays = (key, n) => { const [y, m, d] = key.split('-').map(Number); const t = new Date(Date.UTC(y, m - 1, d + n)); return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, '0')}-${String(t.getUTCDate()).padStart(2, '0')}`; };
+/** The 7 date keys of the Sunday-first week containing todayKey; index = weekday (0 = Sunday). */
+export const sundayWeek = (todayKey) => { const [y, m, d] = todayKey.split('-').map(Number); const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); return Array.from({ length: 7 }, (_, i) => addDays(todayKey, i - dow)); };
+
+/**
+ * What a friend sees: for each weekday the kind and a short name, plus which days of this week you trained.
+ * Names are only what you typed yourself (a saved workout's name, an activity name) or a code like 'basketball'.
+ * Never exercises, sets, weights or bodyweight.
+ */
+export function planPayload({ schedule, routines, workouts, todayKey }) {
+  const days = {};
+  for (const [d, e] of Object.entries(schedule?.days ?? {})) {
+    if (e.kind === 'rest') days[d] = { k: 'rest' };
+    else if (e.kind === 'activity') days[d] = { k: 'activity', n: e.label || e.type };
+    else days[d] = { k: 'workout', n: routines.find((r) => r.id === e.ref)?.name ?? '' };
+  }
+  const week = sundayWeek(todayKey);
+  const trained = week.filter((k) => workouts.some((w) => w.dateKey === k) || schedule?.done?.[k]);
+  return { days, trained };
+}
+
+/** Rows for a friend's plan: [{ weekday, key, kind, name, trained }] for the 7 days, or null when they share nothing. */
+export function planRows(plan, todayKey) {
+  if (!plan || typeof plan !== 'object' || !plan.days) return null;
+  const week = sundayWeek(todayKey);
+  const trained = new Set((plan.trained ?? []).filter((k) => DAYKEY.test(k)));
+  return week.map((key, weekday) => { const e = plan.days[weekday]; return { weekday, key, kind: e?.k ?? null, name: e?.n ?? '', trained: trained.has(key) }; });
+}

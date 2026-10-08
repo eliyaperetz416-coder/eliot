@@ -4,13 +4,14 @@ import { migrateWorkout, newestDraft } from '../core/draft.mjs';
 import { bestsFrom, ratingsOf, afterEdit } from '../core/post.mjs';
 import { overallRating } from '../core/ranks.mjs';
 import { consistencyBonus } from '../core/consistency.mjs';
+import { cleanSchedule } from '../core/schedule.mjs';
 import { latestBodyweight, bodyweightEntry } from '../core/profile.mjs';
 import { data, registerCustom, unregisterCustom, setRenames, renameExercise } from './data.js';
 import { markPlanDone } from '../core/generator.mjs';
 import { newGame, migrateGame, evaluateAchievements } from '../core/gamestate.mjs';
 import { dateKey } from '../core/workout.mjs';
 
-export const store = { profile: null, bwLog: [], workouts: [], draft: null, bests: {}, overall: { pending: true, remaining: 3, rating: 0 }, routines: [], folders: [], plans: [], custom: [], game: newGame(), requests: [], bases: {}, makeup: null, model: null, modelPhotoUrl: '' };
+export const store = { profile: null, bwLog: [], workouts: [], draft: null, bests: {}, overall: { pending: true, remaining: 3, rating: 0 }, routines: [], folders: [], plans: [], custom: [], game: newGame(), requests: [], bases: {}, makeup: null, model: null, modelPhotoUrl: '', schedule: { days: {}, done: {} } };
 export const todayKey = () => dateKey(Date.now());
 let achievementListener = null;
 export const onAchievements = (fn) => { achievementListener = fn; };
@@ -50,6 +51,7 @@ export async function initStore() {
   store.bases = (await dbGet('kv', 'bases').catch(() => null)) ?? {};
   store.makeup = (await dbGet('kv', 'makeup').catch(() => null)) ?? null;
   await loadModel();
+  store.schedule = cleanSchedule(await dbGet('kv', 'schedule').catch(() => null));
   store.profile = profile ?? null;
   store.bwLog = bw.sort((a, b) => a.ms - b.ms);
   store.workouts = workouts.map(migrateWorkout).filter(Boolean).sort((a, b) => a.startedMs - b.startedMs);
@@ -253,5 +255,12 @@ export async function clearModel() {
   const old = store.model?.photoBlobId;
   await dbBatch([...(old ? [['delete', 'blobs', old]] : []), ['put', 'kv', null, 'model']]);
   await loadModel();
+  emit();
+}
+
+/* ---------- weekly schedule (OUR DESIGN) ---------- */
+export async function saveSchedule(next) {
+  store.schedule = cleanSchedule(next);
+  await dbPut('kv', store.schedule, 'schedule').catch(() => {});
   emit();
 }

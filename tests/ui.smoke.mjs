@@ -848,6 +848,36 @@ for (const lang of ['he', 'en']) {
       // sorting chips work
       await page.getByRole('button', { name: T('רמה', 'Level'), exact: true }).click();
       await page.waitForSelector('.crew-row');
+      // friend profile + plan sharing (off until switched on)
+      await page.evaluate(async () => { const { saveSchedule } = await import('./src/ui/store.js'); await saveSchedule({ days: { 0: { kind: 'rest' }, 1: { kind: 'activity', type: 'basketball' }, 2: { kind: 'workout', ref: 'free' } }, done: {} }); });
+      await p2.goto(`${base}#/crew`);
+      await p2.waitForSelector('#crew-say');
+      await p2.getByRole('button', { name: T('לידרבורד', 'Leaderboard') }).click();
+      await p2.locator('.crew-row', { hasText: 'Elia' }).click();
+      await p2.waitForSelector('.crew-friend');
+      assert.ok((await p2.textContent('.crew-friend')).match(/לא שיתף|not shared/), 'plan is private by default');
+      assert.equal(await p2.locator('.crew-plan-row').count(), 0);
+      await p2.keyboard.press('Escape');
+      await page.reload();
+      await page.waitForSelector('#crew-say');
+      await page.locator('.crew-more summary').click();
+      await page.locator('.crew-share .seg button', { hasText: T('פעיל', 'On') }).click();
+      await page.waitForTimeout(400);
+      assert.ok(fake.calls.some((c) => c.name === 'update_plan' && c.args.p_plan && c.args.p_plan.days), 'plan sent after switching on');
+      const sentPlan = JSON.stringify(fake.calls.filter((c) => c.name === 'update_plan').map((c) => c.args.p_plan));
+      assert.ok(!/weight|sets|exercise|bodyweight/i.test(sentPlan), 'no exercises or weights in the shared plan');
+      await p2.reload();
+      await p2.waitForSelector('#crew-say');
+      await p2.getByRole('button', { name: T('לידרבורד', 'Leaderboard') }).click();
+      await p2.locator('.crew-row', { hasText: 'Elia' }).click();
+      await p2.waitForSelector('.crew-plan-row');
+      assert.equal(await p2.locator('.crew-plan-row').count(), 7);
+      assert.ok((await p2.textContent('.crew-friend')).match(/כדורסל|Basketball/));
+      await p2.screenshot({ path: `${shots}${lang}-crew-friend.png` });
+      await p2.keyboard.press('Escape');
+      await page.locator('.crew-share .seg button', { hasText: T('כבוי', 'Off') }).click();
+      await page.waitForTimeout(300);
+      await page.evaluate(async () => { const { saveSchedule } = await import('./src/ui/store.js'); await saveSchedule({ days: {}, done: {} }); });
       // leaving
       await p2.goto(`${base}#/crew`);
       await p2.locator('.crew-more summary').click();
@@ -1010,8 +1040,55 @@ for (const lang of ['he', 'en']) {
     assert.equal(await page.locator('.model-card').count(), 0);
   });
 
+  await check(`${lang}: plan my week: basketball day, rest day, scheduled workout on Today`, async () => {
+    const T = (he, en) => L(lang, he, en);
+    const today = await page.evaluate(() => new Date().getDay());
+    const openToday = async () => {
+      await page.goto(`${base}#/schedule`);
+      await page.waitForSelector('.sched-row.today');
+      await page.locator('.sched-row.today').click();
+      await page.waitForSelector('.sheet .chip-select');
+    };
+    await openToday();
+    await page.screenshot({ path: `${shots}${lang}-schedule-sheet.png` });
+    await page.locator('.sheet .chip-select', { hasText: T('כדורסל', 'Basketball') }).click();
+    await page.waitForFunction(() => /כדורסל|Basketball/.test(document.querySelector('.sched-row.today')?.textContent ?? ''));
+    await page.screenshot({ path: `${shots}${lang}-schedule.png`, fullPage: true });
+    await page.goto(`${base}#/workout`);
+    await page.waitForSelector('.sched-card');
+    assert.ok((await page.textContent('.sched-card')).match(/כדורסל|Basketball/));
+    await page.locator('.sched-card .btn').click();
+    await page.waitForFunction(() => document.querySelector('.week-day.today.on'));
+    await page.screenshot({ path: `${shots}${lang}-schedule-home.png` });
+    // rest day: no done button
+    await openToday();
+    await page.locator('.sheet .row', { hasText: T('מנוחה', 'Rest') }).first().click();
+    await page.goto(`${base}#/workout`);
+    await page.waitForSelector('.sched-card');
+    assert.equal(await page.locator('.sched-card .btn').count(), 0);
+    assert.ok(await page.locator('.week-day.today.planned-rest').count() === 1);
+    // a saved workout planned for today leads the big card
+    await page.evaluate(async () => { const { dbPut } = await import('./src/ui/db.js'); await dbPut('routines', { id: 'r-sched', schemaVersion: 1, name: 'Sched Day A', folderId: null, notes: '', createdMs: 1, updatedMs: 1, entries: [{ id: 'e-s', exerciseId: 'barbell-bench-press-medium-grip', sets: 3, repsMin: 6, repsMax: 8, restSec: 90, weight: null, notes: '' }] }); });
+    await page.reload();
+    await page.waitForSelector('.hero');
+    await openToday();
+    await page.locator('.sheet .row', { hasText: 'Sched Day A' }).click();
+    await page.goto(`${base}#/workout`);
+    await page.waitForSelector('.hero');
+    assert.ok((await page.textContent('.hero')).includes('Sched Day A'));
+    assert.ok((await page.textContent('.hero-kicker')).match(/מתוכנן להיום|Planned for today/));
+    assert.equal(await page.locator('.sched-card').count(), 0);
+    // clear the week again
+    await openToday();
+    await page.locator('.sheet .btn-ghost').click();
+    await page.evaluate(async () => { const { dbDelete } = await import('./src/ui/db.js'); await dbDelete('routines', 'r-sched'); });
+    await page.goto(`${base}#/workout`); await page.reload();
+    await page.waitForSelector('.hero');
+    assert.equal(await page.locator('.sched-card').count(), 0);
+  });
+
   await check(`${lang}: every sub-screen has a back link`, async () => {
-    const subs = ['exercise/plank', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'requests', 'calendar', 'crew', 'history', 'history/nope', 'routine/nope', 'plan/nope', 'exercise/nope', 'ranks-preview', 'model'];
+    const subs = ['exercise/plank', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'requests', 'calendar', 'crew', 'history', 'history/nope', 'routine/nope', 'plan/nope', 'exercise/nope', 'ranks-preview', 'model', 'schedule'];
     for (const r of subs) {
       await page.goto(`${base}#/${r}`);
       await page.waitForSelector('main');

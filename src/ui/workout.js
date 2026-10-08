@@ -1,13 +1,13 @@
 import { h } from './dom.js';
 import { getSettings, updateSettings } from './storage.js';
-import { crew } from './crew-state.js';
+import { crew, syncPlan } from './crew-state.js';
 import { exportDue, daysSince } from '../core/backup.mjs';
 import { icon } from './icons.js';
 import { t, getLanguage } from '../core/i18n.mjs';
 import * as W from '../core/workout.mjs';
 import { button, card } from './components.js';
 import { data } from './data.js';
-import { store, setDraft, todayKey, activeMakeup, clearMakeup } from './store.js';
+import { store, setDraft, todayKey, activeMakeup, clearMakeup, saveSchedule } from './store.js';
 import { openExercisePicker } from './picker.js';
 import { formatDate, formatNum } from './format.js';
 import { keepAwake } from './wakelock.js';
@@ -17,6 +17,8 @@ import { openChooseWorkout, startFromRoutine, startFromPlanDay, activePlan, star
 import { nextPlanDay, planProgress } from '../core/generator.mjs';
 import { planDayLabel } from './plan-names.js';
 import { modelCard } from './model.js';
+import { planFor, isPlanned, markDone } from '../core/schedule.mjs';
+import { planText } from './schedule.js';
 import { gameStrip, questsCard, streakCard } from './game-ui.js';
 import { byDay, weekKeys } from '../core/calendar.mjs';
 import { view } from '../core/streak.mjs';
@@ -59,6 +61,12 @@ function backupReminder() {
 /** What the big card offers: the next day of the plan, else the saved workout you used last, else a free workout. */
 function nextUp() {
   const byId = data().byId;
+  const planned = planFor(store.schedule, todayKey());
+  const count0 = (entries) => ({ exercises: entries.length, sets: entries.reduce((n, e) => n + (e.sets ?? 0), 0) });
+  if (planned?.kind === 'workout' && planned.ref !== 'plan' && planned.ref !== 'free') {
+    const sr = store.routines.find((x) => x.id === planned.ref);
+    if (sr?.entries.length) return { kind: 'routine', scheduled: true, title: sr.name || t('routines.untitled'), sub: t('home.saved'), ...count0(sr.entries), image: byId[sr.entries[0]?.exerciseId]?.image, start: () => startFromRoutine(sr) };
+  }
   const plan = activePlan();
   const day = plan ? nextPlanDay(plan) : null;
   const count = (entries) => ({ exercises: entries.length, sets: entries.reduce((n, e) => n + (e.sets ?? 0), 0) });
@@ -77,11 +85,23 @@ function heroCard() {
   return h('section', { class: `hero${n.kind === 'plan' ? ' plan-next' : ''}` },
     n.image ? h('img', { class: 'hero-img', src: n.image, alt: '', decoding: 'async' }) : null,
     h('div', { class: 'hero-body' },
-      h('div', { class: 'hero-kicker', text: t(n.kind === 'free' ? 'home.new' : 'home.next') }),
+      h('div', { class: 'hero-kicker', text: t(n.scheduled ? 'home.sched.today' : n.kind === 'free' ? 'home.new' : 'home.next') }),
       h('div', { class: 'hero-title', text: n.title }),
       h('div', { class: 'hero-sub' }, n.sub, meta ? ` · ${meta}` : ''),
       startBtn,
       n.kind === 'free' ? null : h('button', { class: 'btn btn-ghost btn-block choose-other', type: 'button', onclick: openChooseWorkout }, t('home.other'))));
+}
+
+/** Today's plan when it is rest or another activity (a workout day shows on the big card). OUR DESIGN. */
+function scheduleCard() {
+  const key = todayKey();
+  const e = planFor(store.schedule, key);
+  if (!e || e.kind === 'workout') return null;
+  const done = !!store.schedule.done[key];
+  return h('section', { class: 'card sched-card' },
+    h('div', { class: 'row-sub', text: t('home.sched.today') }),
+    h('div', { class: 'row-title', text: planText(e) }),
+    e.kind === 'activity' ? button({ label: done ? t('home.sched.undo') : t('home.sched.done'), variant: done ? 'secondary' : 'primary', block: true, onClick: async () => { await saveSchedule(markDone(store.schedule, key, !done)); syncPlan(); window.dispatchEvent(new HashChangeEvent('hashchange')); } }) : null);
 }
 
 /** One calm card: the days of this week, and how many you trained. Tap it for the calendar. */
@@ -93,7 +113,7 @@ function weekCard() {
   const label = (k) => new Intl.DateTimeFormat(getLanguage() === 'he' ? 'he-IL' : 'en-GB', { weekday: 'short', timeZone: 'UTC' }).format(Date.UTC(+k.slice(0, 4), +k.slice(5, 7) - 1, +k.slice(8, 10)));
   return h('a', { class: 'card week-card', href: '#/calendar', 'aria-label': t('cal.title') },
     h('div', { class: 'week-top' }, h('b', { text: t('home.week') }), h('span', { class: 'row-sub', text: t('home.week.count', { n: done }) })),
-    h('div', { class: 'week-days' }, keys.map((k) => h('span', { class: `week-day${days.has(k) ? ' on' : ''}${k === today ? ' today' : ''}` }, h('i', {}), h('span', { text: label(k) })))));
+    h('div', { class: 'week-days' }, keys.map((k) => { const pl = planFor(store.schedule, k); return h('span', { class: `week-day${days.has(k) || store.schedule.done[k] ? ' on' : ''}${k === today ? ' today' : ''}${pl?.kind === 'rest' ? ' planned-rest' : ''}${pl?.kind === 'activity' ? ' planned-act' : ''}` }, h('i', {}), h('span', { text: label(k) })); })));
 }
 
 /** "Make up what you missed": exercises you did not get to last time, as a one-time workout (OUR DESIGN). */
@@ -120,6 +140,7 @@ export function startScreen() {
     backupReminder(),
     crew.local && crew.unread ? h('a', { class: 'card card-accent crew-unread', href: '#/crew' }, h('b', { text: t('crew.unread.card', { n: crew.unread }) }), h('span', { class: 'row-sub', text: t('crew.unread.open') })) : null,
     makeupCard(),
+    scheduleCard(),
     heroCard(),
     modelCard(),
     weekCard(),
@@ -138,6 +159,7 @@ export function startScreen() {
       h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('routines.start'), disabled: !r.entries.length, onclick: () => startFromRoutine(r) }, icon('bolt'))))));
   } else kids.push(card({ title: t('routines.empty.title'), body: t('routines.empty.body') }));
   kids.push(list([
+    listRow({ title: t('home.sched.plan'), sub: t('home.sched.row.sub'), icon: 'history', onClick: () => { location.hash = '#/schedule'; } }),
     listRow({ title: t('routines.title'), sub: t('routines.sub'), icon: 'workout', end: h('span', { class: 'num', text: String(store.routines.length) }), onClick: () => { location.hash = '#/routines'; } }),
     listRow({ title: t('plans.title'), sub: t('plans.sub'), icon: 'bolt', end: h('span', { class: 'num', text: String(store.plans.length) }), onClick: () => { location.hash = '#/plans'; } }),
   ]));

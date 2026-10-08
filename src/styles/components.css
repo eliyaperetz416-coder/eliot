@@ -595,3 +595,19 @@ a.btn { text-decoration: none; }
 
 /* Plates per side under a set (OUR DESIGN) */
 .set-plates { font-size: 13px; padding-inline-start: 46px; padding-block: 2px 4px; color: var(--accent); }
+
+/* Weekly schedule (OUR DESIGN) */
+.sched-row { width: 100%; text-align: start; }
+.sched-row.today .row-title { color: var(--accent); }
+.sched-none { color: var(--text-mute); }
+.sched-activity { color: var(--accent); }
+.week-day.planned-rest i { border-style: dashed; }
+.week-day.planned-act i { border-color: var(--accent); }
+.sched-card { display: grid; gap: 4px; margin-block: var(--s-3); border-color: rgb(var(--accent-rgb) / .5); }
+.sched-card .btn { margin-block-start: var(--s-2); }
+
+/* Crew: friend profile and plan sharing (OUR DESIGN) */
+.crew-row { width: 100%; text-align: start; }
+.crew-plan-row.trained .row-title { color: var(--accent); }
+.plan-done { color: var(--accent); display: grid; place-items: center; }
+.plan-done svg { width: 22px; height: 22px; }

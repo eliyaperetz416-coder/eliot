@@ -2,8 +2,9 @@
 import { dbGet, dbPut } from './db.js';
 import { rpc, newToken, vapidKey } from './crew-api.js';
 import { store, todayKey } from './store.js';
-import { statsFromState, unreadCount, errorKey, base64UrlToBytes } from '../core/crew.mjs';
+import { statsFromState, planPayload, unreadCount, errorKey, base64UrlToBytes } from '../core/crew.mjs';
 import { view } from '../core/streak.mjs';
+import { getSettings } from './storage.js';
 
 export const crew = { local: null, unread: 0 };
 const listeners = new Set();
@@ -63,7 +64,17 @@ export async function syncStats(force = false) {
   lastSync = Date.now();
   try {
     const today = todayKey();
+    syncPlan();
     await rpc('update_stats', { p_token: tok(), p_stats: statsFromState({ workouts: store.workouts, overall: store.overall, game: store.game, streakNow: view(store.game.streak, today).current, todayKey: today }) });
+  } catch { /* next time */ }
+}
+
+/** Shares your weekly plan with the crew when you switched that on; clears it on the server when it is off. Silent on failure. */
+export async function syncPlan() {
+  if (!crew.local) return;
+  try {
+    const plan = getSettings().sharePlan ? planPayload({ schedule: store.schedule, routines: store.routines, workouts: store.workouts, todayKey: todayKey() }) : null;
+    await rpc('update_plan', { p_token: tok(), p_plan: plan });
   } catch { /* next time */ }
 }
 
