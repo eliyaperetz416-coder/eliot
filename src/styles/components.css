@@ -496,7 +496,7 @@ a.btn { text-decoration: none; }
 .crew-row.me { background: var(--accent-soft); }
 .crew-pos { width: 28px; text-align: center; font-size: 18px; color: var(--text-mute); flex: none; }
 .crew-val { font-size: 18px; text-align: end; white-space: nowrap; }
-.crew-feed { display: grid; gap: var(--s-2); height: 52dvh; max-height: 52dvh; overflow-y: auto; padding: var(--s-2); background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-lg); align-content: start; min-height: 160px; }
+.crew-feed { display: grid; gap: var(--s-2); height: 62dvh; max-height: 62dvh; overflow-y: auto; padding: var(--s-2); background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-lg); align-content: start; min-height: 160px; }
 .crew-msg { max-width: 88%; background: var(--surface-3); border-radius: 12px; padding: var(--s-2) var(--s-3); justify-self: start; }
 .crew-msg.mine { justify-self: end; background: var(--accent-soft); }
 .crew-msg.status { border-inline-start: 3px solid var(--accent); }
@@ -636,3 +636,6 @@ a.btn { text-decoration: none; }
 .compare-lead { color: var(--text-dim); font-size: 14px; }
 .compare-name { font-size: 24px; font-weight: 800; }
 .compare-times { color: var(--accent); }
+
+.crew-gear { flex: none; }
+.crew-settings .crew-push, .crew-settings .crew-share { margin-block: 0 !important; }

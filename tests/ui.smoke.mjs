@@ -803,8 +803,15 @@ for (const lang of ['he', 'en']) {
       await page.getByRole('button', { name: T('יצירת קבוצה', 'Create a crew') }).click();
       await page.fill('#crew-name', 'Gym bros'); await page.fill('#crew-nick', 'Elia');
       await page.getByRole('button', { name: T('צור את הקבוצה', 'Create the crew') }).click();
-      await page.waitForSelector('.crew-code', { state: 'attached' });
-      const code = await page.textContent('.crew-code');
+      await page.waitForSelector('.crew-gear');
+      await page.locator('.crew-gear').click();
+      await page.waitForSelector('.sheet .crew-code');
+      const code = await page.textContent('.sheet .crew-code');
+      assert.ok(await page.locator('.sheet .crew-push').count() === 1, 'notifications are in the group settings');
+      await page.screenshot({ path: `${shots}${lang}-crew-settings.png` });
+      await page.keyboard.press('Escape');
+      await page.waitForFunction(() => !document.querySelector('.sheet'));
+      assert.equal(await page.locator('main .crew-code').count(), 0, 'the code is not in the way of the chat');
       assert.equal(code.length, 6);
       // a bad code and a taken nickname on the friend's phone
       await p2.goto(`${base}#/crew`); await p2.waitForSelector('#crew-code');
@@ -855,8 +862,10 @@ for (const lang of ['he', 'en']) {
       const sent = fake.calls.filter((c) => c.name === 'update_stats').map((c) => Object.keys(c.args.p_stats));
       assert.ok(sent.length >= 1);
       for (const keys of sent) for (const k of keys) assert.ok(['level', 'streak', 'workouts', 'weekVolume', 'monthWorkouts', 'rating', 'tier', 'division'].includes(k), `unexpected shared field ${k}`);
-      await page.locator('.crew-more summary').click();
-      await page.waitForSelector('.crew-push h2');
+      await page.locator('.crew-gear').click();
+      await page.waitForSelector('.sheet .crew-push h2');
+      await page.keyboard.press('Escape');
+      await page.waitForFunction(() => !document.querySelector('.sheet'));
       await page.screenshot({ path: `${shots}${lang}-crew-board.png`, fullPage: true });
       // sorting chips work
       await page.getByRole('button', { name: T('רמה', 'Level'), exact: true }).click();
@@ -873,8 +882,8 @@ for (const lang of ['he', 'en']) {
       await p2.keyboard.press('Escape');
       await page.reload();
       await page.waitForSelector('#crew-say');
-      await page.locator('.crew-more summary').click();
-      await page.locator('.crew-share .seg button', { hasText: T('פעיל', 'On') }).click();
+      await page.locator('.crew-gear').click();
+      await page.locator('.sheet .crew-share .seg button', { hasText: T('פעיל', 'On') }).click();
       await page.waitForTimeout(400);
       assert.ok(fake.calls.some((c) => c.name === 'update_plan' && c.args.p_plan && c.args.p_plan.days), 'plan sent after switching on');
       const sentPlan = JSON.stringify(fake.calls.filter((c) => c.name === 'update_plan').map((c) => c.args.p_plan));
@@ -888,12 +897,13 @@ for (const lang of ['he', 'en']) {
       assert.ok((await p2.textContent('.crew-friend')).match(/כדורסל|Basketball/));
       await p2.screenshot({ path: `${shots}${lang}-crew-friend.png` });
       await p2.keyboard.press('Escape');
-      await page.locator('.crew-share .seg button', { hasText: T('כבוי', 'Off') }).click();
+      await page.locator('.sheet .crew-share .seg button', { hasText: T('כבוי', 'Off') }).click();
+      await page.keyboard.press('Escape');
       await page.waitForTimeout(300);
       await page.evaluate(async () => { const { saveSchedule } = await import('./src/ui/store.js'); await saveSchedule({ days: {}, done: {} }); });
       // leaving
       await p2.goto(`${base}#/crew`);
-      await p2.locator('.crew-more summary').click();
+      await p2.locator('.crew-gear').click();
       await p2.getByRole('button', { name: T('עזוב את הקבוצה', 'Leave the crew') }).click();
       await p2.locator('.sheet .btn-danger').click();
       await p2.waitForSelector('#crew-code');

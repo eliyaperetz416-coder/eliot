@@ -149,4 +149,4 @@ seasons and leaderboards exist (server features, not built here), about 600 exer
 - Weight sheet of a dumbbell exercise: "One dumbbell" (default) or "Both together". With "both together" you type the total of the two dumbbells (28) and the app shows "each hand 14 kg". The stored weight is always per hand, so ranks and history never change.
 
 ## Crew notifications card
-- The notifications card (turn on / off, and why they might be unavailable) is visible on the crew screen, not folded away.
+- The crew screen is the chat. The group code, invite, notifications (turn on / off, and why they might be unavailable), plan sharing and leaving are in a small settings sheet behind the gear button in the header (v1.24).

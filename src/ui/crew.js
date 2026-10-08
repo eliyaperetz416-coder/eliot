@@ -17,7 +17,7 @@ const errText = (e) => t(`crew.err.${errorKey(e)}`);
 
 export function crewScreen() {
   const root = h('main', { class: 'screen crew' });
-  let tab = 'feed', sort = 'rating', moreOpen = false;
+  let tab = 'feed', sort = 'rating';
   let view = null, messages = [], timer = null, busy = false, formMode = 'join';
   const off = onCrew(() => { if (!crew.local) draw(); });
 
@@ -99,12 +99,12 @@ export function crewScreen() {
       h('div', { class: 'section-label', text: t('crew.p.plan') }), plan) });
   }
 
-  function shareBox() {
+  function shareBox(again = draw) {
     const on = !!getSettings().sharePlan;
     return h('section', { class: 'card crew-share', style: 'margin-block-start:12px' },
       h('h2', { text: t('crew.share.plan.title') }),
       h('p', { text: t('crew.share.plan.body') }),
-      segmented({ label: t('crew.share.plan.title'), value: on ? 'on' : 'off', onChange: async (v) => { await updateSettings({ sharePlan: v === 'on' }); await syncPlan(); view = null; refreshFeed(true); }, options: [{ value: 'off', label: t('crew.share.plan.off') }, { value: 'on', label: t('crew.share.plan.on') }] }));
+      segmented({ label: t('crew.share.plan.title'), value: on ? 'on' : 'off', onChange: async (v) => { await updateSettings({ sharePlan: v === 'on' }); await syncPlan(); again(); }, options: [{ value: 'off', label: t('crew.share.plan.off') }, { value: 'on', label: t('crew.share.plan.on') }] }));
   }
 
   const sysText = (m) => t(m.body === 'created' ? 'crew.sys.created' : 'crew.sys.joined', { name: m.nickname });
@@ -143,30 +143,36 @@ export function crewScreen() {
     const sh = openSheet({ title: t('crew.leave'), content: body });
   }
 
-  function notifyBox() {
+  function notifyBox(again = draw) {
     const box = h('section', { class: 'card crew-push', style: 'margin-block: 12px' });
     pushStatus().then((st) => box.replaceChildren(
       h('h2', { text: t('crew.push.title') }),
       h('p', { text: t(`crew.push.state.${st}`) }),
       st === 'off' ? button({ label: t('crew.push.enable'), icon: 'bolt', block: true, onClick: async () => {
-        try { await enablePush(); showToast({ message: t('crew.push.enabled') }); draw(); } catch (e) { showToast({ message: t(e.message === 'denied' ? 'crew.push.state.denied' : e.message === 'unsupported' ? 'crew.push.state.unsupported' : 'crew.err.generic'), duration: 6000 }); }
+        try { await enablePush(); showToast({ message: t('crew.push.enabled') }); again(); } catch (e) { showToast({ message: t(e.message === 'denied' ? 'crew.push.state.denied' : e.message === 'unsupported' ? 'crew.push.state.unsupported' : 'crew.err.generic'), duration: 6000 }); }
       } }) : null,
-      st === 'on' ? button({ label: t('crew.push.disable'), variant: 'secondary', block: true, onClick: async () => { await disablePush(); draw(); } }) : null));
+      st === 'on' ? button({ label: t('crew.push.disable'), variant: 'secondary', block: true, onClick: async () => { await disablePush(); again(); } }) : null));
     return box;
+  }
+
+  /** Code, notifications, plan sharing and leaving live in a small sheet behind the gear, so the chat has the whole screen. */
+  function openGroupSheet() {
+    const body = h('div', { class: 'stack crew-settings' });
+    const render = () => body.replaceChildren(
+      h('section', { class: 'card crew-head crew-codebar' },
+        h('div', {}, h('div', { class: 'row-sub', text: t('crew.code.label') }), h('div', { class: 'display crew-code num', dir: 'ltr', text: crew.local.code })),
+        button({ label: t('crew.invite'), icon: 'share', variant: 'secondary', onClick: invite })),
+      notifyBox(render),
+      shareBox(render),
+      list([listRow({ title: t('crew.leave'), sub: t('crew.leave.sub'), icon: 'trash', onClick: () => { sh.close(); leave(); } })]));
+    const sh = openSheet({ title: t('crew.settings'), content: body, tall: true });
+    render();
   }
 
   function joinedView() {
     return [
-      h('section', { class: 'card crew-head crew-codebar' },
-        h('div', {}, h('div', { class: 'row-sub', text: t('crew.code.label') }), h('div', { class: 'display crew-code num', dir: 'ltr', text: crew.local.code })),
-        button({ label: t('crew.invite'), icon: 'share', variant: 'secondary', onClick: invite })),
-      notifyBox(),
       h('div', { class: 'crew-tabs' }, segmented({ label: t('crew.title'), value: tab, onChange: (v) => { tab = v; draw(); if (v === 'feed') markRead(); }, options: [{ value: 'feed', label: `${t('crew.tab.feed')}${crew.unread ? ` (${crew.unread})` : ''}` }, { value: 'board', label: t('crew.tab.board') }] })),
       !view ? h('p', { class: 'row-sub center', text: t('common.loading') }) : tab === 'board' ? boardView() : feedView(),
-      h('details', { class: 'crew-more', open: moreOpen, ontoggle: (e) => { moreOpen = e.currentTarget.open; } },
-        h('summary', { text: t('crew.more') }),
-        shareBox(),
-        h('div', { style: 'padding-block-start:12px' }, list([listRow({ title: t('crew.leave'), sub: t('crew.leave.sub'), icon: 'trash', onClick: leave })]))),
     ];
   }
 
@@ -174,7 +180,7 @@ export function crewScreen() {
     const keep = document.getElementById('crew-say')?.value ?? '';
     root.replaceChildren(
       h('a', { class: 'back-link', href: '#/profile' }, icon('chevron', 'chev back-chev'), t('tab.profile')),
-      h('header', { class: 'screen-head' }, h('h1', { text: crew.local ? crew.local.name : t('crew.title') })),
+      h('header', { class: 'screen-head' }, h('h1', { text: crew.local ? crew.local.name : t('crew.title') }), crew.local ? h('button', { class: 'icon-btn crew-gear', type: 'button', 'aria-label': t('crew.settings'), onclick: openGroupSheet }, icon('settings')) : null),
       ...(crew.local ? joinedView() : startView()));
     const say = document.getElementById('crew-say'); if (say && keep) say.value = keep;
     const feed = document.getElementById('crew-feed'); if (feed) feed.scrollTop = feed.scrollHeight;
