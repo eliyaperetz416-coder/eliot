@@ -84,6 +84,7 @@ export function setField(w, entryId, idx, field, value) {
   const s = find(w, entryId).sets[idx];
   const n = value === '' || value == null ? null : Number(String(value).replace(',', '.'));
   s[field] = Number.isFinite(n) ? n : null;
+  s.touched = true; // typed by the user (prefilled numbers from last time are not)
 }
 
 export function adjustRestSec(w, entryId, delta) {

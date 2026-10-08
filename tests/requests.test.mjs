@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildRequest, parseLinks, requestsMessage } from '../src/core/requests.mjs';
 import { filledOpenSets, completeFilled } from '../src/core/live.mjs';
-import { newWorkout, addEntry } from '../src/core/workout.mjs';
+import { newWorkout, addEntry, setField } from '../src/core/workout.mjs';
 
 test('links: only http(s) urls, any separator, max 10', () => {
   assert.deepEqual(parseLinks('https://youtu.be/a\njavascript:alert(1)\n  http://x.com/y  ftp://z'), ['https://youtu.be/a', 'http://x.com/y']);
@@ -35,21 +35,31 @@ function draft() {
 test('filled-but-unticked sets are found by exercise type', () => {
   const w = draft();
   const [bp, pu, pl] = w.entries;
-  bp.sets[0].reps = 8; bp.sets[0].weight = 60;       // ok
-  bp.sets[1].reps = 8;                               // weight missing: not usable
-  pu.sets[0].reps = 10;                              // bodyweight needs no weight
-  pl.sets[0].reps = 30;                              // timed hold: seconds only
-  bp.sets[2].reps = 5; bp.sets[2].weight = 50; bp.sets[2].done = true; // already done
+  const typed = (e, i, f, v) => setField(w, e.id, i, f, v);
+  typed(bp, 0, 'reps', 8); typed(bp, 0, 'weight', 60); // ok
+  typed(bp, 1, 'reps', 8);                             // weight missing: not usable
+  typed(pu, 0, 'reps', 10);                            // bodyweight needs no weight
+  typed(pl, 0, 'reps', 30);                            // timed hold: seconds only
+  typed(bp, 2, 'reps', 5); typed(bp, 2, 'weight', 50); bp.sets[2].done = true; // already done
   const found = filledOpenSets(w, byId);
   assert.deepEqual(found.map((f) => `${f.entryId === bp.id ? 'bp' : f.entryId === pu.id ? 'pu' : 'pl'}${f.idx}`).sort(), ['bp0', 'pl0', 'pu0']);
 });
 
 test('completeFilled ticks them so the workout can be posted', () => {
   const w = draft();
-  w.entries[0].sets[0].reps = 8; w.entries[0].sets[0].weight = 60;
+  setField(w, w.entries[0].id, 0, 'reps', 8); setField(w, w.entries[0].id, 0, 'weight', 60);
   const n = completeFilled({ workout: w, now: 2000, bodyweightKg: 80, sex: 'm', workouts: [], byId });
   assert.equal(n, 1);
   assert.equal(w.entries[0].sets[0].done, true);
   assert.equal(w.entries[0].sets[0].bwAtSet, 80);
   assert.equal(filledOpenSets(w, byId).length, 0);
+});
+
+test('numbers prefilled from last time do not count as done (only what you typed)', () => {
+  const w = draft();
+  const bp = w.entries[0];
+  for (const st of bp.sets) { st.reps = 8; st.weight = 60; } // prefilled by "start from saved workout"
+  assert.equal(filledOpenSets(w, byId).length, 0);
+  setField(w, bp.id, 1, 'reps', 7);                        // you typed into one set
+  assert.deepEqual(filledOpenSets(w, byId).map((f) => f.idx), [1]);
 });

@@ -1,6 +1,6 @@
 {
   "name": "demigod",
-  "version": "1.9.0",
+  "version": "1.9.1",
   "private": true,
   "type": "module",
   "description": "Demigod - free, offline-first PWA for ranked gym lifting.",

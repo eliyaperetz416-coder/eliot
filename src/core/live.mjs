@@ -41,13 +41,14 @@ export function refreshWorkout(workout, workouts, byId) {
   computeWorkout(workout, buildEvents(workouts), byId);
 }
 
-/** Sets that have usable numbers but were never ticked with the V (people often fill the numbers and forget the tick). */
+/** Sets the user typed numbers into but never ticked with the V (people often fill the numbers and forget the tick).
+ *  Numbers prefilled from last time or the plan do not count: an untouched set was not done. */
 export function filledOpenSets(workout, byId) {
   const out = [];
   for (const e of workout.entries) {
     const ex = byId[e.exerciseId];
     for (const s of e.sets) {
-      if (s.done || !(s.reps > 0)) continue;
+      if (s.done || !s.touched || !(s.reps > 0)) continue;
       const needsWeight = ex && (ex.type === 'weight' || (ex.type !== 'bodyweight' && ex.type !== 'time' && ex.type !== 'cardio'));
       if (needsWeight && !(s.weight > 0)) continue;
       out.push({ entryId: e.id, idx: s.idx });
