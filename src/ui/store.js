@@ -3,13 +3,14 @@ import { dbAll, dbGet, dbPut, dbBatch, dbDelete } from './db.js';
 import { migrateWorkout, newestDraft } from '../core/draft.mjs';
 import { bestsFrom, ratingsOf, afterEdit } from '../core/post.mjs';
 import { overallRating } from '../core/ranks.mjs';
+import { consistencyBonus } from '../core/consistency.mjs';
 import { latestBodyweight, bodyweightEntry } from '../core/profile.mjs';
 import { data, registerCustom, unregisterCustom, setRenames, renameExercise } from './data.js';
 import { markPlanDone } from '../core/generator.mjs';
 import { newGame, migrateGame, evaluateAchievements } from '../core/gamestate.mjs';
 import { dateKey } from '../core/workout.mjs';
 
-export const store = { profile: null, bwLog: [], workouts: [], draft: null, bests: {}, overall: { pending: true, remaining: 3, rating: 0 }, routines: [], folders: [], plans: [], custom: [], game: newGame(), requests: [], bases: {} };
+export const store = { profile: null, bwLog: [], workouts: [], draft: null, bests: {}, overall: { pending: true, remaining: 3, rating: 0 }, routines: [], folders: [], plans: [], custom: [], game: newGame(), requests: [], bases: {}, makeup: null };
 export const todayKey = () => dateKey(Date.now());
 let achievementListener = null;
 export const onAchievements = (fn) => { achievementListener = fn; };
@@ -22,7 +23,7 @@ const lsDraft = () => { try { return JSON.parse(localStorage.getItem(LS_DRAFT));
 
 export function recompute() {
   store.bests = bestsFrom(store.workouts);
-  store.overall = overallRating(ratingsOf(store.bests), data().byId);
+  store.overall = overallRating(ratingsOf(store.bests), data().byId, consistencyBonus(store.workouts, Date.now()).total);
 }
 
 const urls = new Map();
@@ -47,6 +48,7 @@ export async function initStore() {
   setRenames(await dbGet('kv', 'renames').catch(() => null));
   store.requests = (await dbGet('kv', 'requests').catch(() => null)) ?? [];
   store.bases = (await dbGet('kv', 'bases').catch(() => null)) ?? {};
+  store.makeup = (await dbGet('kv', 'makeup').catch(() => null)) ?? null;
   store.profile = profile ?? null;
   store.bwLog = bw.sort((a, b) => a.ms - b.ms);
   store.workouts = workouts.map(migrateWorkout).filter(Boolean).sort((a, b) => a.startedMs - b.startedMs);
@@ -219,3 +221,9 @@ export async function saveBase(exerciseId, kg) {
   emit();
 }
 export const baseOf = (exerciseId) => store.bases[exerciseId] ?? 0;
+
+/* ---------- make-up workout (OUR DESIGN): exercises you did not get to, offered once as a one-time workout ---------- */
+export const MAKEUP_DAYS = 4;
+export async function saveMakeup(m) { store.makeup = m; await dbPut('kv', m, 'makeup').catch(() => {}); emit(); }
+export async function clearMakeup() { store.makeup = null; await dbPut('kv', null, 'makeup').catch(() => {}); emit(); }
+export const activeMakeup = (now = Date.now()) => (store.makeup?.entries?.length && now - store.makeup.createdMs < MAKEUP_DAYS * 86400000 ? store.makeup : null);

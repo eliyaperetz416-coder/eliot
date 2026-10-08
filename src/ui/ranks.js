@@ -11,6 +11,7 @@ import { list, listRow, segmented } from './components.js';
 import { data } from './data.js';
 import { store } from './store.js';
 import { rankCard } from './rank-card.js';
+import { consistencyBonus, BONUS } from '../core/consistency.mjs';
 import { muscleMap } from './muscle-map.js';
 import { emblem } from './emblem.js';
 import { openNeedSheet } from './need.js';
@@ -24,6 +25,16 @@ function setText(ex, b) {
   const w = Number(b.weight) > 0 ? `${formatKg(b.weight)}` : '';
   const sets = ex.type === 'bodyweight' ? `${w ? '+' + w : ''}${w ? '×' : ''}${b.reps}` : `${w}×${b.reps}`;
   return `${sets} · ${t('ranks.oneRM')} ${formatKg(b.oneRM)}`;
+}
+
+/** How the consistency bonus is made up (OUR DESIGN). */
+function bonusCard() {
+  const b = consistencyBonus(store.workouts, Date.now());
+  return h('section', { class: 'card bonus-card' },
+    h('div', { class: 'bonus-head' }, h('span', { class: 'row-title', text: t('bonus.title') }), h('b', { class: 'num bonus-total', dir: 'ltr', text: `+${b.total} / ${BONUS.MAX}` })),
+    h('div', { class: 'row-sub', text: t('bonus.days', { n: b.days, pts: b.dayPoints, cap: BONUS.DAY_POINTS_CAP }) }),
+    h('div', { class: 'row-sub', text: t('bonus.streak', { n: b.streakWeeks, pts: b.streakPoints, cap: BONUS.STREAK_POINTS_CAP }) }),
+    h('p', { class: 'row-sub bonus-note', text: t('bonus.note') }));
 }
 
 export function ranksScreen() {
@@ -76,6 +87,7 @@ export function ranksScreen() {
     const kids = [
       h('header', { class: 'screen-head' }, icon('bolt', 'mark'), h('h1', { text: t('ranks.title') })),
       rankCard(store.overall),
+      bonusCard(),
       h('div', { class: 'section-label', text: t('ranks.map') }),
       segmented({ label: t('ranks.map'), value: view.mode, onChange: (m) => { view.mode = m; draw(); }, options: [{ value: 'rank', label: t('ranks.mode.rank') }, { value: 'recovery', label: t('ranks.mode.recovery') }] }),
       h('div', { style: 'padding-block-start:12px' }, muscleMap({ muscles: d.muscles, mode: view.mode, paint, onSelect })),

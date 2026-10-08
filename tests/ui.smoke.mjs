@@ -945,6 +945,39 @@ for (const lang of ['he', 'en']) {
     assert.equal(after.g, parsed.data.game.xp);
   });
 
+  await check(`${lang}: make-up workout for exercises you did not get to (one-time, nothing saved)`, async () => {
+    const T = (he, en) => L(lang, he, en);
+    if (ONLY) await postThree(page);
+    const routinesBefore = await page.evaluate(async () => (await (await import('./src/ui/db.js')).dbAll('routines')).length);
+    await page.goto(`${base}#/workout`);
+    await startEmpty(page);
+    await addExercise(page, 'barbell bench press');
+    await logSet(page, 0, 60, 8);
+    await page.click('.live-actions .btn-secondary');
+    await addExercise(page, 'barbell squat');
+    await page.click('.live-head .btn');
+    await page.waitForSelector('.sheet .btn-primary');
+    await page.click('.sheet .btn-primary');
+    await page.waitForSelector('main .stats-grid');
+    if (await page.locator('.rankup').count()) await page.click('.rankup button');
+    await page.goto(`${base}#/workout`);
+    await page.waitForSelector('.makeup-card');
+    assert.ok((await page.textContent('.makeup-card')).includes(T('סקוואט', 'Squat')));
+    await page.screenshot({ path: `${shots}${lang}-makeup.png` });
+    await page.locator('.makeup-card .btn-primary').click();
+    await page.waitForSelector('.live-head');
+    assert.equal(await page.locator('.ent-card').count(), 1);
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('dg.draft')).routineId), null);
+    // discard the make-up workout; the card is gone and no saved workout was created
+    await page.click('.live-head .btn');
+    await page.locator('.sheet .btn-danger').click();
+    await page.locator('.sheet .btn-danger').last().click();
+    await page.goto(`${base}#/workout`);
+    await page.waitForSelector('.hero');
+    assert.equal(await page.locator('.makeup-card').count(), 0);
+    assert.equal(await page.evaluate(async () => (await (await import('./src/ui/db.js')).dbAll('routines')).length), routinesBefore);
+  });
+
   await check(`${lang}: every sub-screen has a back link`, async () => {
     const subs = ['exercise/plank', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'requests', 'calendar', 'crew', 'history', 'history/nope', 'routine/nope', 'plan/nope', 'exercise/nope', 'ranks-preview'];
     for (const r of subs) {

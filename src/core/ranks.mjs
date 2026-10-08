@@ -112,14 +112,16 @@ export function rankedCount(bests, exercisesById) {
   return Object.entries(bests).filter(([id, r]) => r > 0 && exercisesById[id]?.ranked !== false && exercisesById[id]?.muscleGroup !== 'other').length;
 }
 
-/** { pending, remaining, rating } - overall appears only after MIN_RANKED_EXERCISES ranked exercises. */
-export function overallRating(bests, exercisesById) {
+/** { pending, remaining, rating, strength, bonus } - overall appears only after MIN_RANKED_EXERCISES ranked exercises.
+ *  rating = strength + bonus (the consistency bonus, see consistency.mjs; OUR DESIGN). */
+export function overallRating(bests, exercisesById, bonus = 0) {
   const count = rankedCount(bests, exercisesById);
   if (count < CALIBRATION.MIN_RANKED_EXERCISES) {
-    return { pending: true, remaining: CALIBRATION.MIN_RANKED_EXERCISES - count, rating: 0 };
+    return { pending: true, remaining: CALIBRATION.MIN_RANKED_EXERCISES - count, rating: 0, strength: 0, bonus: 0 };
   }
   const groups = Object.values(muscleRatings(bests, exercisesById)).filter((r) => r > 0);
-  return { pending: false, remaining: 0, rating: aggregate(groups) };
+  const strength = aggregate(groups);
+  return { pending: false, remaining: 0, rating: strength + bonus, strength, bonus };
 }
 
 // OUR DESIGN: tier colours (also the app accent while that tier is the overall rank).

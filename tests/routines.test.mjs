@@ -136,3 +136,16 @@ test('bumpPlannedWeights matches a repeated exercise entry by entry', async () =
   R.bumpPlannedWeights(r, w);
   assert.deepEqual(r.entries.map((e) => e.weight), [65, 45]);
 });
+
+test('missedEntries: exercises with no ticked working set, ready for a one-time make-up workout', async () => {
+  const { missedEntries } = await import('../src/core/routines.mjs');
+  const w = { entries: [
+    { exerciseId: 'a', restSec: 90, target: { repsMin: 6, repsMax: 8 }, sets: [{ type: 'normal', done: true, weight: 60, reps: 8 }, { type: 'normal', done: false, weight: 60, reps: 8 }] },
+    { exerciseId: 'b', restSec: 120, target: { repsMin: 8, repsMax: 10 }, sets: [{ type: 'warmup', done: true, weight: 20, reps: 10 }, { type: 'normal', done: false, weight: 40, reps: 10 }, { type: 'normal', done: false, weight: null, reps: null }] },
+    { exerciseId: 'c', restSec: 60, sets: [{ type: 'normal', done: false, weight: null, reps: 12 }] },
+  ] };
+  assert.deepEqual(missedEntries(w), [
+    { exerciseId: 'b', sets: 2, repsMin: 8, repsMax: 10, restSec: 120, weight: 40, notes: '' },
+    { exerciseId: 'c', sets: 1, repsMin: 12, repsMax: 12, restSec: 60, weight: null, notes: '' },
+  ]);
+});

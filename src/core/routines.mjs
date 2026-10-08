@@ -113,3 +113,23 @@ export function bumpPlannedWeights(routine, workout, now = Date.now()) {
   if (changes.length) routine.updatedMs = now;
   return changes;
 }
+
+/**
+ * Exercises of a workout you did not get to (no working set ticked), as saved-workout entries, so you can make them up
+ * another day in a one-time workout (OUR DESIGN). Weight and reps targets are kept; nothing is saved as a routine.
+ */
+export function missedEntries(workout) {
+  const out = [];
+  for (const e of workout.entries) {
+    const working = e.sets.filter((s) => s.type !== 'warmup');
+    if (!working.length || working.some((s) => s.done)) continue;
+    const reps = working.map((s) => s.reps).filter((r) => r > 0);
+    const weight = working.map((s) => s.weight).find((x) => x > 0) ?? null;
+    out.push({
+      exerciseId: e.exerciseId, sets: working.length,
+      repsMin: e.target?.repsMin ?? (reps.length ? Math.min(...reps) : 8), repsMax: e.target?.repsMax ?? (reps.length ? Math.max(...reps) : 12),
+      restSec: e.restSec, weight, notes: '',
+    });
+  }
+  return out;
+}

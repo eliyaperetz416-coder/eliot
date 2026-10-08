@@ -7,13 +7,13 @@ import { t, getLanguage } from '../core/i18n.mjs';
 import * as W from '../core/workout.mjs';
 import { button, card } from './components.js';
 import { data } from './data.js';
-import { store, setDraft, todayKey } from './store.js';
+import { store, setDraft, todayKey, activeMakeup, clearMakeup } from './store.js';
 import { openExercisePicker } from './picker.js';
 import { formatDate, formatNum } from './format.js';
 import { keepAwake } from './wakelock.js';
 import { unlockAudio } from './rest-timer.js';
 import { list, listRow } from './components.js';
-import { openChooseWorkout, startFromRoutine, startFromPlanDay, activePlan } from './routines.js';
+import { openChooseWorkout, startFromRoutine, startFromPlanDay, activePlan, startMakeup } from './routines.js';
 import { nextPlanDay, planProgress } from '../core/generator.mjs';
 import { planDayLabel } from './plan-names.js';
 import { gameStrip, questsCard, streakCard } from './game-ui.js';
@@ -95,6 +95,21 @@ function weekCard() {
     h('div', { class: 'week-days' }, keys.map((k) => h('span', { class: `week-day${days.has(k) ? ' on' : ''}${k === today ? ' today' : ''}` }, h('i', {}), h('span', { text: label(k) })))));
 }
 
+/** "Make up what you missed": exercises you did not get to last time, as a one-time workout (OUR DESIGN). */
+function makeupCard() {
+  const m = activeMakeup();
+  if (!m) return null;
+  const byId = data().byId;
+  const names = m.entries.map((e) => byId[e.exerciseId]).filter(Boolean).map((ex) => (getLanguage() === 'he' ? ex.nameHe : ex.nameEn));
+  return h('section', { class: 'card makeup-card' },
+    h('div', { class: 'row-title', text: t('makeup.title') }),
+    h('div', { class: 'row-sub', text: t('makeup.sub', { n: m.entries.length, name: m.name || t('makeup.last') }) }),
+    h('div', { class: 'row-sub makeup-names', text: names.slice(0, 3).join(' · ') + (names.length > 3 ? ' …' : '') }),
+    h('div', { class: 'btn-pair' },
+      button({ label: t('makeup.start'), icon: 'workout', onClick: () => startMakeup(m) }),
+      button({ label: t('makeup.dismiss'), variant: 'secondary', onClick: async () => { await clearMakeup(); window.dispatchEvent(new HashChangeEvent('hashchange')); } })));
+}
+
 export function startScreen() {
   const last = store.workouts[store.workouts.length - 1];
   const today = new Intl.DateTimeFormat(getLanguage() === 'he' ? 'he-IL' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' }).format(Date.now());
@@ -103,6 +118,7 @@ export function startScreen() {
     h('header', { class: 'screen-head home-head' }, h('div', {}, h('div', { class: 'row-sub', text: today }), h('h1', { text: t('home.title') }))),
     backupReminder(),
     crew.local && crew.unread ? h('a', { class: 'card card-accent crew-unread', href: '#/crew' }, h('b', { text: t('crew.unread.card', { n: crew.unread }) }), h('span', { class: 'row-sub', text: t('crew.unread.open') })) : null,
+    makeupCard(),
     heroCard(),
     weekCard(),
     gameStrip(),

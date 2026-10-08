@@ -22,6 +22,7 @@ export function rankCard(overall, { title = true } = {}) {
       title ? h('div', { class: 'rank-title', text: t('rank.title') }) : null,
       h('div', { class: 'rank-name display', text: gg ? t(`tier.${tr.tier}`) : `${t(`tier.${tr.tier}`)} ${tr.division}` }),
       h('div', { class: 'rank-score num', text: gg ? t('rank.score', { n: formatNum(tr.rating, 0) }) : t('rank.rating', { n: formatNum(tr.rating, 0) }) }),
+      overall.bonus > 0 ? h('div', { class: 'rank-split row-sub num', text: t('rank.split', { s: formatNum(overall.strength, 0), b: formatNum(overall.bonus, 0) }) }) : null,
       gg ? null : h('div', { class: 'lp', role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': tr.lp, 'aria-label': t('rank.lp', { n: tr.lp }) },
         h('span', { class: 'lp-fill', style: `width:${tr.lp}%` }), h('span', { class: 'lp-text num', dir: 'ltr', text: t('rank.lp', { n: tr.lp }) }))));
 }

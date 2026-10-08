@@ -557,3 +557,14 @@ a.btn { text-decoration: none; }
 .ent-card .chip, .ent-card .chip-select { min-height: 36px; padding: 4px 10px; font-size: 13px; }
 .ent-card .weight-line { padding-block-end: var(--s-1); }
 .ent-card .target-line { padding-block: var(--s-1) var(--s-3); }
+
+/* Consistency bonus (OUR DESIGN) */
+.bonus-card { display: grid; gap: 4px; margin-block-start: var(--s-3); }
+.bonus-head { display: flex; justify-content: space-between; align-items: center; gap: var(--s-3); }
+.bonus-total { color: var(--accent); font-size: 18px; }
+.bonus-note { margin: var(--s-1) 0 0; font-size: 13px; }
+.rank-split { font-size: 13px; }
+
+/* Make-up workout card (OUR DESIGN) */
+.makeup-card { display: grid; gap: 4px; margin-block: var(--s-3); border-color: rgb(var(--accent-rgb) / .5); }
+.makeup-card .btn-pair { padding-block-start: var(--s-2); }

@@ -105,3 +105,12 @@ seasons and leaderboards exist (server features, not built here), about 600 exer
 
 ## Simpler home screen (after seeing a friend's app)
 **OUR DESIGN:** the Workout tab opens on "Today": the date, one big card with the next workout and one big Start button (the next day of your plan, else the saved workout you used last, else a free workout), a row of this week's days (tap for the calendar), one line with level, coins and streak, then the rest. Quests and streak are folded into one row that opens by itself when there is something to collect or a streak to restore. The big rank card moved to the Ranks tab. "Another workout" opens the "Which workout today?" sheet. We took the idea (one clear next step), not the look of any other app.
+
+## Consistency bonus on the overall rank (OUR DESIGN)
+- The overall rank is strength plus a small consistency bonus, at most 20 points (one division).
+- 1 point per training day in the last 4 weeks (up to 12), plus 2 points per full week of streak (up to 8). The streak breaks after a gap of more than 3 days.
+- It is worked out from your workouts, so it fades by itself if you stop. Exercise and muscle ranks stay strength only.
+
+## Make-up workout (OUR DESIGN)
+- If you finish a workout and some exercises have no ticked working set, the Today screen offers them for up to 4 days as a one-time "Make up" workout.
+- The make-up workout is not linked to a saved workout or plan, so it never changes planned weights or plan progress. "No thanks" removes the offer.

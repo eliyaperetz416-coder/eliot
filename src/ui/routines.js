@@ -8,7 +8,7 @@ import { nextPlanDay, planDayId, templateRoutines, ROUTINE_TEMPLATES } from '../
 import { suggestLoad, bestE1RM, stepFor } from '../core/progression.mjs';
 import { button, emptyState, exThumb, miniStepper, numberField, openSheet, showToast } from './components.js';
 import { data } from './data.js';
-import { store, saveRoutine, deleteRoutine, saveFolder, removeFolder, setDraft } from './store.js';
+import { store, saveRoutine, deleteRoutine, saveFolder, removeFolder, setDraft, clearMakeup } from './store.js';
 import { openExercisePicker } from './picker.js';
 import { keepAwake } from './wakelock.js';
 import { unlockAudio } from './rest-timer.js';
@@ -59,6 +59,12 @@ export function startFromPlanDay(plan, day) {
     return sg;
   };
   begin(R.draftFromEntries(day.entries, { name: planDayLabel(plan, day), planDayId: planDayId(plan, day.week, day.day), suggest, previous: (id) => previousPerformance(store.workouts, id) }));
+}
+
+/** One-time make-up workout: not linked to a saved workout or plan, so nothing there changes. */
+export function startMakeup(m) {
+  begin(R.draftFromEntries(m.entries, { name: m.name ? t('makeup.name', { name: m.name }) : t('makeup.title'), previous: (id) => previousPerformance(store.workouts, id) }));
+  clearMakeup();
 }
 
 export function activePlan() { return store.plans[store.plans.length - 1] ?? null; }
