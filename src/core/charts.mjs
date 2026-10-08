@@ -35,17 +35,24 @@ export function weekStart(ms) {
 }
 
 /** Total volume (kg) per local week for the last `weeks` weeks, ending with the current week: [{t (week start), v}] */
-export function weeklyVolume(workouts, nowMs, weeks = 12) {
+function weekly(workouts, nowMs, weeks, valueOf) {
   const start = new Date(weekStart(nowMs));
   const buckets = [];
   for (let i = weeks - 1; i >= 0; i--) buckets.push({ t: new Date(start.getFullYear(), start.getMonth(), start.getDate() - 7 * i).getTime(), v: 0 });
   const index = new Map(buckets.map((b, i) => [dateKey(b.t), i]));
   for (const w of workouts) {
     const k = dateKey(weekStart(w.startedMs));
-    if (index.has(k)) buckets[index.get(k)].v += w.stats?.volume ?? 0;
+    if (index.has(k)) buckets[index.get(k)].v += valueOf(w);
   }
   return buckets;
 }
+
+export const weeklyVolume = (workouts, nowMs, weeks = 12) => weekly(workouts, nowMs, weeks, (w) => w.stats?.volume ?? 0);
+export const weeklyCount = (workouts, nowMs, weeks = 8) => weekly(workouts, nowMs, weeks, () => 1);
+
+/** Sets that set an all-time best since `sinceMs`. */
+export const prsSince = (workouts, sinceMs) => workouts.filter((w) => (w.endedMs ?? w.startedMs) >= sinceMs)
+  .reduce((n, w) => n + w.entries.reduce((m, e) => m + e.sets.filter((s) => s.prAllTime).length, 0), 0);
 
 export const bodyweightSeries = (log) => [...log].sort((a, b) => a.ms - b.ms).map((e) => ({ t: e.ms, v: e.kg }));
 

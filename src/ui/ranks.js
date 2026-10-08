@@ -11,6 +11,8 @@ import { list, listRow, segmented } from './components.js';
 import { data } from './data.js';
 import { store } from './store.js';
 import { rankCard } from './rank-card.js';
+import { weeklyCount, weeklyVolume, prsSince } from '../core/charts.mjs';
+import { barChart, chartCard } from './charts.js';
 import { consistencyBonus, BONUS } from '../core/consistency.mjs';
 import { muscleMap } from './muscle-map.js';
 import { emblem } from './emblem.js';
@@ -25,6 +27,22 @@ function setText(ex, b) {
   const w = Number(b.weight) > 0 ? `${formatKg(b.weight)}` : '';
   const sets = ex.type === 'bodyweight' ? `${w ? '+' + w : ''}${w ? '×' : ''}${b.reps}` : `${w}×${b.reps}`;
   return `${sets} · ${t('ranks.oneRM')} ${formatKg(b.oneRM)}`;
+}
+
+/** This week at a glance + workouts per week (OUR DESIGN). */
+function summary() {
+  const now = Date.now();
+  const tile = (label, value) => h('div', { class: 'stat' }, h('span', { class: 'stat-v display num', text: value }), h('span', { class: 'stat-l', text: label }));
+  const counts = weeklyCount(store.workouts, now, 8);
+  const vol = weeklyVolume(store.workouts, now, 1)[0].v;
+  return [
+    h('div', { class: 'stats-grid progress-tiles' },
+      tile(t('prog.week.workouts'), String(counts[counts.length - 1].v)),
+      tile(t('prog.week.volume'), `${formatNum(vol, 0)} ${t('unit.kg')}`),
+      tile(t('prog.prs30'), String(prsSince(store.workouts, now - 30 * 86400000))),
+      tile(t('prog.total'), String(store.workouts.length))),
+    chartCard({ title: t('prog.perWeek'), subtitle: t('prog.perWeek.sub'), chart: barChart({ series: counts, title: t('prog.perWeek') }), empty: store.workouts.length ? null : t('progress.nodata') }),
+  ];
 }
 
 /** How the consistency bonus is made up (OUR DESIGN). */
@@ -85,7 +103,9 @@ export function ranksScreen() {
 
     const table = exerciseRankTable(store.bests, d.byId, view.sort, nameOf);
     const kids = [
-      h('header', { class: 'screen-head' }, icon('bolt', 'mark'), h('h1', { text: t('ranks.title') })),
+      h('header', { class: 'screen-head' }, icon('bolt', 'mark'), h('h1', { text: t('tab.ranks') })),
+      ...summary(),
+      h('div', { class: 'section-label', text: t('ranks.title') }),
       rankCard(store.overall),
       bonusCard(),
       h('div', { class: 'section-label', text: t('ranks.map') }),

@@ -184,6 +184,12 @@
   "bonus.days": "{n} training days in the last 4 weeks: +{pts} (up to {cap})",
   "bonus.streak": "Streak of {n} full weeks: +{pts} (up to {cap})",
   "bonus.note": "Strength is the main thing. Showing up adds up to one division, and it fades by itself if you stop training.",
+  "prog.week.workouts": "Workouts this week",
+  "prog.week.volume": "Volume this week",
+  "prog.prs30": "PRs in 30 days",
+  "prog.total": "Total workouts",
+  "prog.perWeek": "Workouts per week",
+  "prog.perWeek.sub": "Last 8 weeks",
   "rank.title": "Overall rank",
   "rank.unranked": "Unranked",
   "rank.pending": {

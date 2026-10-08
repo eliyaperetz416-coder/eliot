@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { e1rmSeries, exercisesWithData, weekStart, weeklyVolume, bodyweightSeries, niceTicks, layoutSeries, linePath, areaPath } from '../src/core/charts.mjs';
+import { e1rmSeries, exercisesWithData, weekStart, weeklyVolume, weeklyCount, prsSince, bodyweightSeries, niceTicks, layoutSeries, linePath, areaPath } from '../src/core/charts.mjs';
 import { cardModel, cardFileName } from '../src/core/card.mjs';
 import { byId, session, DAY, ID } from './helpers.mjs';
 
@@ -80,4 +80,14 @@ test('card model: pending vs ranked, placeholders, file name', () => {
   assert.equal(ranked.slots.length, 3);
   assert.equal(cardModel({ profile, overall: { pending: false, rating: 1100 } }).division, null);
   assert.equal(cardFileName('Elia B.'), 'demigod-elia-b.png'); assert.equal(cardFileName(''), 'demigod-card.png'); assert.equal(cardFileName('אליה'), 'demigod-אליה.png');
+});
+
+test('weeklyCount counts workouts per week; prsSince counts all-time bests in a window', () => {
+  const ws = [{ startedMs: T0, endedMs: T0, entries: [{ sets: [{ prAllTime: true }, {}] }] }, { startedMs: T0 + DAY, endedMs: T0 + DAY, entries: [] }, { startedMs: T0 + 8 * DAY, endedMs: T0 + 8 * DAY, entries: [{ sets: [{ prAllTime: true }] }] }];
+  const c = weeklyCount(ws, T0 + 9 * DAY, 4);
+  assert.equal(c.length, 4);
+  assert.equal(c.reduce((n, b) => n + b.v, 0), 3);
+  assert.equal(c[c.length - 1].v + c[c.length - 2].v, 3);
+  assert.equal(prsSince(ws, T0), 2);
+  assert.equal(prsSince(ws, T0 + 2 * DAY), 1);
 });

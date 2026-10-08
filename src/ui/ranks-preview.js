@@ -7,7 +7,7 @@ import { TIERS, DIVISIONS, TIER_COLORS } from '../core/ranks.mjs';
 import { emblem } from './emblem.js';
 
 export function ranksPreviewScreen() {
-  const kids = [backLink('#/ranks', t('ranks.title')), h('header', { class: 'screen-head' }, icon('bolt', 'mark'), h('h1', { text: t('ranksPreview.title') }))];
+  const kids = [backLink('#/ranks', t('tab.ranks')), h('header', { class: 'screen-head' }, icon('bolt', 'mark'), h('h1', { text: t('ranksPreview.title') }))];
   kids.push(h('div', { class: 'section-label', text: t('ranksPreview.colors') }),
     h('div', { class: 'swatches' }, TIERS.map((x) => h('span', { class: 'swatch', style: x.id === 'greekgod' ? 'background:linear-gradient(135deg,#fff1b8,#7df9ff)' : `background:${TIER_COLORS[x.id]}`, title: t(`tier.${x.id}`) }))));
   for (const tier of TIERS) {

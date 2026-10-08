@@ -11,7 +11,7 @@ import { openExercisePicker } from './picker.js';
 import { formatNum } from './format.js';
 
 const nameOf = (ex) => (getLanguage() === 'he' ? ex.nameHe : ex.nameEn);
-const back = () => h('a', { class: 'back-link', href: '#/ranks' }, icon('chevron', 'chev back-chev'), t('ranks.title'));
+const back = () => h('a', { class: 'back-link', href: '#/ranks' }, icon('chevron', 'chev back-chev'), t('tab.ranks'));
 
 export function progressScreen(exId) {
   const d = data();

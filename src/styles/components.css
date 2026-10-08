@@ -574,3 +574,6 @@ a.btn { text-decoration: none; }
 .ex-last { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--s-2); padding-block-start: var(--s-2); border-block-start: 1px solid var(--line); margin-block-start: var(--s-2); }
 .ex-curve { margin-block-start: var(--s-4); }
 .ex-curve > summary { cursor: pointer; font-weight: 600; min-height: var(--tap); display: flex; align-items: center; }
+
+/* Progress tab summary (OUR DESIGN) */
+.progress-tiles { margin-block: var(--s-2) var(--s-3); }

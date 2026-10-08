@@ -105,7 +105,7 @@ export function cardScreen() {
   let canvas = null;
   renderCard(model).then((c) => { canvas = c; c.setAttribute('role', 'img'); c.setAttribute('aria-label', t('card.title')); box.removeAttribute('aria-busy'); box.replaceChildren(c); }).catch(() => { box.replaceChildren(h('p', { text: t('card.error') })); });
   return h('main', { class: 'screen' },
-    h('a', { class: 'back-link', href: '#/ranks' }, icon('chevron', 'chev back-chev'), t('ranks.title')),
+    h('a', { class: 'back-link', href: '#/ranks' }, icon('chevron', 'chev back-chev'), t('tab.ranks')),
     h('h1', { class: 'ex-title', text: t('card.title') }),
     box,
     h('div', { class: 'stack', style: 'padding-block-start:12px' },
