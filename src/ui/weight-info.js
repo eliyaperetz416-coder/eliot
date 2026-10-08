@@ -2,7 +2,7 @@
 import { h } from './dom.js';
 import { t } from '../core/i18n.mjs';
 import { button, numberField, openSheet, showToast } from './components.js';
-import { weightMode, supportsBase, cleanBase, BASE_PRESETS } from '../core/load.mjs';
+import { weightMode, supportsBase, cleanBase, plateBase, BASE_PRESETS } from '../core/load.mjs';
 import { baseOf, saveBase } from './store.js';
 import { formatKg } from './format.js';
 
@@ -12,8 +12,8 @@ export const weightHint = (ex) => { const m = weightMode(ex); return m ? t(`weig
 export function weightChip(ex, onChange) {
   const m = weightMode(ex);
   if (!m || m === 'added') return null;
-  const base = supportsBase(ex) ? baseOf(ex.id) : 0;
-  const label = base > 0 ? t(`weight.chip.base.${m}`, { n: formatKg(base) }) : t(`weight.chip.${m}`);
+  const pb = plateBase(ex, baseOf(ex.id));
+  const label = pb != null ? t(`weight.chip.base.${m}`, { n: formatKg(pb) }) : t(`weight.chip.${m}`);
   return h('button', { class: 'chip chip-select weight-chip', type: 'button', onclick: () => openWeightSheet(ex, onChange) }, label);
 }
 

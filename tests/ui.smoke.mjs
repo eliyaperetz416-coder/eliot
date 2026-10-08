@@ -659,7 +659,7 @@ for (const lang of ['he', 'en']) {
     await page.waitForSelector('main .btn-primary');
   });
 
-  await check(`${lang}: weight convention hint + bar/machine base weight (type 10 on a 20 kg base = 30 total)`, async () => {
+  await check(`${lang}: you type the total weight; plates per side are worked out (bar 20 by default, leg press sled set by you)`, async () => {
     const T = (he, en) => L(lang, he, en);
     await page.goto(`${base}#/exercise/barbell-bench-press-medium-grip`);
     await page.waitForSelector('.weight-tip');
@@ -668,27 +668,30 @@ for (const lang of ['he', 'en']) {
     await startEmpty(page);
     await addExercise(page, 'barbell bench press');
     const chip = page.locator('.weight-chip');
-    assert.ok((await chip.textContent()).includes(T('כולל המוט', 'Bar included')));
-    await chip.click();
-    await page.waitForSelector('#wb-input');
-    await page.screenshot({ path: `${shots}${lang}-weight-sheet.png` });
-    await page.fill('#wb-input', '20');
-    await page.locator('.sheet .btn-primary').click();
-    await page.waitForFunction(() => /20/.test(document.querySelector('.weight-chip')?.textContent ?? ''));
+    assert.ok((await chip.textContent()).includes('20'), 'standard bar by default');
     const row = page.locator('.ent-card .set-row').first();
-    await row.locator('.set-input').nth(0).fill('10');
+    await row.locator('.set-input').nth(0).fill('100');
+    await page.waitForFunction(() => /20 \+ 20/.test(document.querySelector('.set-plates')?.textContent ?? ''));
+    assert.ok((await page.textContent('.set-plates')).includes('40'), '40 a side');
     await row.locator('.set-input').nth(1).fill('8');
     await row.locator('.set-v').click();
     await page.waitForTimeout(250);
     const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('dg.draft')).entries[0].sets[0].weight);
-    assert.equal(stored, 30, 'the set stores the total');
-    assert.equal(await page.locator('.ent-card .set-row .set-input').first().inputValue(), '10', 'the input shows what you typed');
-    // no base again: the same set shows the total
+    assert.equal(stored, 100, 'the set stores exactly what you typed');
+    // a lighter bar changes the plates, not the weight
+    await chip.click();
+    await page.waitForSelector('#wb-input');
+    await page.screenshot({ path: `${shots}${lang}-weight-sheet.png` });
+    await page.fill('#wb-input', '10');
+    await page.locator('.sheet .btn-primary').click();
+    await page.waitForFunction(() => /45/.test(document.querySelector('.set-plates')?.textContent ?? ''));
+    assert.equal(await page.locator('.ent-card .set-row .set-input').first().inputValue(), '100');
+    await page.screenshot({ path: `${shots}${lang}-plates.png` });
     await page.locator('.weight-chip').click();
     await page.waitForSelector('#wb-input');
     await page.fill('#wb-input', '');
     await page.locator('.sheet .btn-primary').click();
-    await page.waitForFunction(() => document.querySelector('.ent-card .set-row .set-input')?.value === '30');
+    await page.waitForFunction(() => /20 \+ 20/.test(document.querySelector('.set-plates')?.textContent ?? ''));
     // dumbbells: per hand, no base field
     await page.evaluate(async () => { const { dbDelete } = await import('./src/ui/db.js'); await dbDelete('draft', 'current'); localStorage.removeItem('dg.draft'); });
     await page.goto(`${base}#/workout`); await page.reload();

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanBase, totalFromTyped, typedFromTotal, weightMode, supportsBase } from '../src/core/load.mjs';
+import { cleanBase, totalFromTyped, typedFromTotal, weightMode, supportsBase, platesPerSide, plateBase } from '../src/core/load.mjs';
 
 test('typed plates + base = total, and back', () => {
   assert.equal(totalFromTyped(10, 20), 30);
@@ -32,4 +32,24 @@ test('weight mode by exercise kind', () => {
   assert.equal(supportsBase({ type: 'weight', equipment: 'barbell' }), true);
   assert.equal(supportsBase({ type: 'weight', equipment: 'dumbbell' }), false);
   assert.equal(supportsBase({ type: 'bodyweight' }), false);
+});
+
+test('plates per side: leg press 145 on a 75 kg sled = 35 a side = 20 + 15', () => {
+  assert.deepEqual(platesPerSide(145, 75), { perSide: 35, plates: [20, 15], left: 0 });
+  assert.deepEqual(platesPerSide(100, 20), { perSide: 40, plates: [20, 20], left: 0 }, 'fewest plates, the more even set');
+  assert.deepEqual(platesPerSide(120, 20), { perSide: 50, plates: [25, 25], left: 0 });
+  assert.deepEqual(platesPerSide(62.5, 20), { perSide: 21.25, plates: [20, 1.25], left: 0 });
+  assert.deepEqual(platesPerSide(20, 20), { perSide: 0, plates: [], left: 0 }, 'just the bar');
+  assert.deepEqual(platesPerSide(21, 20), { perSide: 0.5, plates: [], left: 0.5 }, 'cannot make it exactly');
+  assert.equal(platesPerSide(15, 20), null, 'below the bar');
+  assert.equal(platesPerSide(50, null), null, 'no base: no plates (stack machine)');
+});
+
+test('plate base: your saved base, else a standard bar, else none', () => {
+  assert.equal(plateBase({ type: 'weight', equipment: 'barbell' }), 20);
+  assert.equal(plateBase({ type: 'weight', equipment: 'ez-bar' }), 10);
+  assert.equal(plateBase({ type: 'weight', equipment: 'barbell' }, 15), 15);
+  assert.equal(plateBase({ type: 'weight', equipment: 'machine' }), null);
+  assert.equal(plateBase({ type: 'weight', equipment: 'machine' }, 75), 75);
+  assert.equal(plateBase({ type: 'weight', equipment: 'dumbbell' }, 10), null);
 });

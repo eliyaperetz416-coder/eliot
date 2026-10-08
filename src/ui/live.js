@@ -12,7 +12,7 @@ import { startRestTimer, unlockAudio } from './rest-timer.js';
 import { openFinishSheet } from './post-ui.js';
 import { openRenameSheet } from './rename.js';
 import { weightChip, openWeightSheet } from './weight-info.js';
-import { supportsBase, totalFromTyped, typedFromTotal } from '../core/load.mjs';
+import { plateBase, platesPerSide, totalFromTyped, typedFromTotal } from '../core/load.mjs';
 import { formatDuration, formatKg } from './format.js';
 import { formatClock } from '../core/timer.mjs';
 
@@ -42,6 +42,15 @@ function numInput({ value, placeholder, integer, label, onInput, onChange }) {
   el.addEventListener('change', () => onChange?.(el.value));
   el.addEventListener('focus', () => el.select?.());
   return el;
+}
+
+/** "Per side 35 kg: 20 + 15". '' when there is nothing to load. OUR DESIGN. */
+function platesText(total, base) {
+  const r = platesPerSide(Number(total), base);
+  if (!r) return '';
+  if (!r.perSide) return t('plates.barOnly');
+  const list = `\u2066${r.plates.map((p) => formatKg(p)).join(' + ')}\u2069`; // keep "20 + 15" left to right in Hebrew too
+  return t(r.left ? 'plates.sideLeft' : 'plates.side', { side: formatKg(r.perSide), list: list || '–', left: formatKg(r.left) });
 }
 
 export function liveScreen() {
@@ -97,19 +106,23 @@ export function liveScreen() {
   function setRow(entry, ex, s, workingNo) {
     const L = layoutOf(ex);
     const p = prevOf(ex.id)[s.idx];
-    const base = supportsBase(ex) ? baseOf(ex.id) : 0; // you type what you add; the set stores the total
+    const base = 0; // you type the TOTAL weight (since v1.16); the base only drives the plates line
+    const pb = plateBase(ex, baseOf(ex.id));
+    const platesEl = h('div', { class: 'set-plates row-sub num', 'aria-live': 'polite' });
+    const drawPlates = () => { const txt = platesText(s.weight, pb); platesEl.textContent = txt; platesEl.hidden = !txt; };
+    drawPlates();
     const done = s.done;
     const typeBtn = h('button', { class: `set-num type-${s.type}`, type: 'button', 'aria-label': `${t('col.set')} ${s.idx + 1}: ${t(`settype.${s.type}`)}`, onclick: () => typeSheet(entry, s) }, s.type === 'normal' ? String(workingNo) : LETTER[s.type]);
     const setNum = (field, v) => { W.setField(w, entry.id, s.idx, field, v); if (field === 'reps' && L.minutes && s.reps != null) s.reps = Math.round(s.reps * 60); save(); };
     const cells = [typeBtn, h('span', { class: 'set-prev num', text: prevText(ex, p, base) })];
     const typedNow = typedFromTotal(s.weight, base);
-    if (L.weight) cells.push(numInput({ value: typedNow == null ? '' : String(typedNow), placeholder: p && Number(p.weight) > 0 ? formatKg(typedFromTotal(p.weight, base)) : '', label: t(L.weightLabel), onInput: (v) => { const n = v === '' ? null : Number(String(v).replace(',', '.')); setNum('weight', n == null || !Number.isFinite(n) ? '' : String(totalFromTyped(n, base))); }, onChange: () => s.done && refreshDone() }));
+    if (L.weight) cells.push(numInput({ value: typedNow == null ? '' : String(typedNow), placeholder: p && Number(p.weight) > 0 ? formatKg(typedFromTotal(p.weight, base)) : '', label: t(L.weightLabel), onInput: (v) => { const n = v === '' ? null : Number(String(v).replace(',', '.')); setNum('weight', n == null || !Number.isFinite(n) ? '' : String(totalFromTyped(n, base))); drawPlates(); }, onChange: () => s.done && refreshDone() }));
     cells.push(numInput({ value: repsShown(ex, s.reps), placeholder: p?.reps != null ? repsShown(ex, p.reps) : '', integer: !L.minutes, label: t(L.repsLabel), onInput: (v) => setNum('reps', v), onChange: () => s.done && refreshDone() }));
     if (!L.weight) cells.splice(2, 0, h('span'));
     const vBtn = h('button', { class: `set-v${done ? ' on' : ''}`, type: 'button', 'aria-pressed': String(done), 'aria-label': t('set.done'), onclick: () => toggle(entry, ex, s, p) }, icon('check'));
     const row = h('div', { class: `set-row${done ? ' done' : ''}${L.weight ? '' : ' no-weight'}` }, cells, vBtn);
     const fb = done && s.type !== 'warmup' ? feedbackLine(ex, s) : (done ? h('div', { class: 'set-fb muted', text: t('fb.warmup') }) : null);
-    return h('div', { class: 'set-wrap' }, row, fb);
+    return h('div', { class: 'set-wrap' }, row, L.weight && pb != null ? platesEl : null, fb);
   }
 
   function toggle(entry, ex, s, p) {
