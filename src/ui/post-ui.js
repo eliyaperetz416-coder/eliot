@@ -20,6 +20,7 @@ import { keepAwake } from './wakelock.js';
 import { emblem } from './emblem.js';
 import { rankCard } from './rank-card.js';
 import { modelQuote } from './model.js';
+import { compareVolume } from '../core/compare.mjs';
 import { formatDuration, formatNum, formatKg } from './format.js';
 
 let lastResult = null;
@@ -118,6 +119,18 @@ export function openRankUp({ change, before, after }) {
   requestAnimationFrame(step);
 }
 
+/** "You lifted the weight of an adult elephant": a fun picture for the total volume. null for tiny totals. */
+export function compareCard(volume) {
+  const c = compareVolume(volume);
+  if (!c) return null;
+  return h('section', { class: 'card compare-card' },
+    h('div', { class: 'compare-pic', 'aria-hidden': 'true', text: c.item.icon }),
+    h('div', { class: 'compare-text' },
+      h('div', { class: 'compare-lead', text: t('cmp.lead', { kg: formatNum(volume, 0) }) }),
+      h('div', { class: 'compare-name' }, t(`cmp.${c.item.id}`), c.ratio >= 1.5 ? h('span', { class: 'compare-times num', dir: 'ltr', text: ` ×${c.ratio}` }) : null),
+      c.next ? h('div', { class: 'row-sub', text: t('cmp.next', { kg: formatNum(c.remaining, 0), name: t(`cmp.${c.next.id}`) }) }) : null));
+}
+
 export function resultScreen() {
   const r = lastResult;
   const byId = data().byId;
@@ -127,6 +140,7 @@ export function resultScreen() {
     backLink('#/workout', t('workout.title')),
     h('header', { class: 'screen-head' }, icon('check', 'mark'), h('h1', { text: t('res.title') })),
     modelQuote(),
+    compareCard(s.stats.volume),
     h('div', { class: 'stats-grid' },
       statTile(t('fin.duration'), formatDuration(s.stats.durationSec)), statTile(t('fin.sets'), String(s.stats.workingSets)),
       statTile(t('fin.volume'), `${formatNum(s.stats.volume, 0)} ${t('unit.kg')}`), statTile(t('fin.prs'), String(s.stats.prs))),

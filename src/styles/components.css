@@ -628,3 +628,11 @@ a.btn { text-decoration: none; }
 .model-tip-label { font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: .06em; text-transform: uppercase; }
 .model-quote { margin-block: var(--s-3); display: grid; gap: 4px; border-color: rgb(var(--accent-rgb) / .4); }
 .model-quote p { margin: 0; }
+
+/* Volume comparison on the result screen (OUR DESIGN) */
+.compare-card { display: flex; align-items: center; gap: var(--s-4); margin-block: var(--s-3); border-color: rgb(var(--accent-rgb) / .4); }
+.compare-pic { font-size: 64px; line-height: 1; width: 92px; height: 92px; flex: none; display: grid; place-items: center; background: var(--accent-soft); border-radius: 50%; }
+.compare-text { display: grid; gap: 2px; min-width: 0; }
+.compare-lead { color: var(--text-dim); font-size: 14px; }
+.compare-name { font-size: 24px; font-weight: 800; }
+.compare-times { color: var(--accent); }

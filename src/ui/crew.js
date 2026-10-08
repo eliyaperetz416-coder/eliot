@@ -144,7 +144,7 @@ export function crewScreen() {
   }
 
   function notifyBox() {
-    const box = h('section', { class: 'card crew-push', style: 'margin-block-start:12px' });
+    const box = h('section', { class: 'card crew-push', style: 'margin-block: 12px' });
     pushStatus().then((st) => box.replaceChildren(
       h('h2', { text: t('crew.push.title') }),
       h('p', { text: t(`crew.push.state.${st}`) }),
@@ -160,12 +160,12 @@ export function crewScreen() {
       h('section', { class: 'card crew-head crew-codebar' },
         h('div', {}, h('div', { class: 'row-sub', text: t('crew.code.label') }), h('div', { class: 'display crew-code num', dir: 'ltr', text: crew.local.code })),
         button({ label: t('crew.invite'), icon: 'share', variant: 'secondary', onClick: invite })),
+      notifyBox(),
       h('div', { class: 'crew-tabs' }, segmented({ label: t('crew.title'), value: tab, onChange: (v) => { tab = v; draw(); if (v === 'feed') markRead(); }, options: [{ value: 'feed', label: `${t('crew.tab.feed')}${crew.unread ? ` (${crew.unread})` : ''}` }, { value: 'board', label: t('crew.tab.board') }] })),
       !view ? h('p', { class: 'row-sub center', text: t('common.loading') }) : tab === 'board' ? boardView() : feedView(),
       h('details', { class: 'crew-more', open: moreOpen, ontoggle: (e) => { moreOpen = e.currentTarget.open; } },
         h('summary', { text: t('crew.more') }),
         shareBox(),
-        notifyBox(),
         h('div', { style: 'padding-block-start:12px' }, list([listRow({ title: t('crew.leave'), sub: t('crew.leave.sub'), icon: 'trash', onClick: leave })]))),
     ];
   }

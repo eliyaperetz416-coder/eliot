@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanBase, totalFromTyped, typedFromTotal, weightMode, supportsBase, platesPerSide, plateBase } from '../src/core/load.mjs';
+import { cleanBase, totalFromTyped, typedFromTotal, weightMode, supportsBase, platesPerSide, plateBase, handFactor, shownKg, storedKg } from '../src/core/load.mjs';
 
 test('typed plates + base = total, and back', () => {
   assert.equal(totalFromTyped(10, 20), 30);
@@ -52,4 +52,13 @@ test('plate base: your saved base, else a standard bar, else none', () => {
   assert.equal(plateBase({ type: 'weight', equipment: 'machine' }), null);
   assert.equal(plateBase({ type: 'weight', equipment: 'machine' }, 75), 75);
   assert.equal(plateBase({ type: 'weight', equipment: 'dumbbell' }, 10), null);
+});
+
+test('dumbbells: type both together, stored per hand (14 a hand = type 28)', () => {
+  const db = { type: 'weight', equipment: 'dumbbell' }, bar = { type: 'weight', equipment: 'barbell' };
+  assert.equal(handFactor(db, true), 2); assert.equal(handFactor(db, false), 1);
+  assert.equal(handFactor(bar, true), 1, 'only per-hand exercises');
+  assert.equal(storedKg(28, 2), 14); assert.equal(shownKg(14, 2), 28);
+  assert.equal(storedKg(27, 2), 13.5); assert.equal(shownKg(13.5, 2), 27);
+  assert.equal(shownKg(null, 2), null); assert.equal(storedKg(null, 2), null);
 });

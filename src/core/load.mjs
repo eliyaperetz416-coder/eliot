@@ -50,3 +50,11 @@ export function platesPerSide(total, base, plates = PLATES) {
   while (v > 0 && !best[v]) v--;
   return { perSide, plates: best[v].map((p) => p / U), left: round2((target - v) / U) };
 }
+
+/**
+ * Dumbbells are stored PER HAND (ranks and history use one dumbbell). With "both together" on you type the two dumbbells' total:
+ * 2 for per-hand exercises, 1 for everything else. Typed = stored x factor, stored = typed / factor.
+ */
+export const handFactor = (ex, both) => (both && weightMode(ex) === 'perhand' ? 2 : 1);
+export const shownKg = (stored, factor) => (stored == null || !Number.isFinite(stored) ? null : round2(stored * factor));
+export const storedKg = (typed, factor) => (typed == null || !Number.isFinite(typed) ? null : round2(typed / factor));

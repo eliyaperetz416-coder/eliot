@@ -703,6 +703,19 @@ for (const lang of ['he', 'en']) {
     await dchip.click();
     await page.waitForSelector('.sheet');
     assert.equal(await page.locator('#wb-input').count(), 0);
+    // both dumbbells together: type 28, it says 14 in each hand, and 14 is what is stored
+    await page.locator('.sheet .seg button', { hasText: T('שתיהן יחד', 'Both together') }).click();
+    await page.waitForFunction(() => !document.querySelector('.sheet'));
+    const drow = page.locator('.ent-card .set-row').first();
+    await drow.locator('.set-input').nth(0).fill('28');
+    await page.waitForFunction(() => /14/.test(document.querySelector('.set-plates')?.textContent ?? ''));
+    await drow.locator('.set-input').nth(1).fill('10');
+    await drow.locator('.set-v').click();
+    await page.waitForTimeout(250);
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('dg.draft')).entries[0].sets[0].weight), 14, 'stored per hand');
+    assert.equal(await drow.locator('.set-input').nth(0).inputValue(), '28', 'shown as typed');
+    await page.screenshot({ path: `${shots}${lang}-dumbbells-both.png` });
+    await page.evaluate(async () => { const { updateSettings } = await import('./src/ui/storage.js'); await updateSettings({ dumbbellTotal: false }); });
     await page.keyboard.press('Escape');
     await page.evaluate(async () => { const { dbDelete } = await import('./src/ui/db.js'); await dbDelete('draft', 'current'); localStorage.removeItem('dg.draft'); });
     await page.goto(`${base}#/workout`); await page.reload();
@@ -1055,6 +1068,9 @@ for (const lang of ['he', 'en']) {
     await page.click('.sheet .btn-primary');
     await page.waitForSelector('main .stats-grid');
     assert.ok((await page.textContent('.model-quote')).includes('Harley Alexander'));
+    // 60 kg x 8 = 480 kg: the weight of a horse
+    assert.ok((await page.textContent('.compare-card')).includes(T('סוס', 'horse')));
+    await page.screenshot({ path: `${shots}${lang}-result-compare.png` });
     if (await page.locator('.rankup').count()) await page.click('.rankup button');
     await page.goto(`${base}#/model`);
     await page.locator('.screen .btn-danger').click();

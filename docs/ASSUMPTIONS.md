@@ -141,3 +141,12 @@ seasons and leaderboards exist (server features, not built here), about 600 exer
 ## My role model, more (OUR DESIGN)
 - Beyond name, links and photo: **tips** you type from their videos (one per line, a different one shows on Today each day), a **weekly target** with a progress bar on the card, a line from them on the result screen after a workout, and "training the way of <name>" on the player card.
 - **Workout from my model:** paste the exercises from a video (one per line, like "Bench press 4 x 6-8"); known exercises become a saved workout, unknown ones are listed so you can request them. Nothing is fetched from their channels and no content of theirs is shipped with the app.
+
+## Result screen: what you lifted, in animals and cars (OUR DESIGN)
+- After a workout the result screen shows the total volume as the weight of something: the biggest of 15 comparisons you matched or passed (house cat 4 kg up to blue whale 150,000 kg, typical adult weights), how many of it from 1.5 up, and how many kg to the next one. The picture is an emoji. Under 4 kg nothing is shown.
+
+## Dumbbells: type both together (OUR DESIGN)
+- Weight sheet of a dumbbell exercise: "One dumbbell" (default) or "Both together". With "both together" you type the total of the two dumbbells (28) and the app shows "each hand 14 kg". The stored weight is always per hand, so ranks and history never change.
+
+## Crew notifications card
+- The notifications card (turn on / off, and why they might be unavailable) is visible on the crew screen, not folded away.

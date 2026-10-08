@@ -1,19 +1,20 @@
 // "Which number do I type?" Hint chip, explanation sheet and the optional bar / machine base weight.
 import { h } from './dom.js';
 import { t } from '../core/i18n.mjs';
-import { button, numberField, openSheet, showToast } from './components.js';
+import { button, numberField, openSheet, segmented, showToast } from './components.js';
+import { getSettings, updateSettings } from './storage.js';
 import { weightMode, supportsBase, cleanBase, plateBase, BASE_PRESETS } from '../core/load.mjs';
 import { baseOf, saveBase } from './store.js';
 import { formatKg } from './format.js';
 
-export const weightHint = (ex) => { const m = weightMode(ex); return m ? t(`weight.mode.${m}`) : ''; };
+export const weightHint = (ex) => { const m = weightMode(ex); return m ? t(m === 'perhand' && getSettings().dumbbellTotal ? 'weight.mode.perhandTotal' : `weight.mode.${m}`) : ''; };
 
 /** Small tappable line under the exercise name. null for exercises where it makes no sense (holds, cardio, bodyweight). */
 export function weightChip(ex, onChange) {
   const m = weightMode(ex);
   if (!m || m === 'added') return null;
   const pb = plateBase(ex, baseOf(ex.id));
-  const label = pb != null ? t(`weight.chip.base.${m}`, { n: formatKg(pb) }) : t(`weight.chip.${m}`);
+  const label = pb != null ? t(`weight.chip.base.${m}`, { n: formatKg(pb) }) : t(m === 'perhand' && getSettings().dumbbellTotal ? 'weight.chip.perhandTotal' : `weight.chip.${m}`);
   return h('button', { class: 'chip chip-select weight-chip', type: 'button', onclick: () => openWeightSheet(ex, onChange) }, label);
 }
 
@@ -22,6 +23,12 @@ export function openWeightSheet(ex, onDone) {
   const mode = weightMode(ex);
   const body = h('div', { class: 'stack' }, h('p', { text: weightHint(ex) }));
   let sh;
+  if (mode === 'perhand') {
+    body.append(
+      h('div', { class: 'section-label', text: t('weight.dumb.title') }),
+      segmented({ label: t('weight.dumb.title'), value: getSettings().dumbbellTotal ? 'both' : 'one', onChange: async (v) => { await updateSettings({ dumbbellTotal: v === 'both' }); sh.close(); onDone?.(); }, options: [{ value: 'one', label: t('weight.dumb.one') }, { value: 'both', label: t('weight.dumb.both') }] }),
+      h('p', { class: 'row-sub', text: t('weight.dumb.hint') }));
+  }
   if (can) {
     const f = numberField({ id: 'wb-input', label: t('weight.base.label'), unit: t('unit.kg'), value: baseOf(ex.id) ? String(baseOf(ex.id)) : '' });
     const input = f.querySelector('input');
