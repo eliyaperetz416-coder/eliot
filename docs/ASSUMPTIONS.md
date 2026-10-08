@@ -35,7 +35,7 @@ seasons and leaderboards exist (server features, not built here), about 600 exer
 - Rest defaults: compound 120 s, isolation 75 s, unranked 60 s; +/-15 s. The timer stores an end timestamp, so it is correct after the phone was locked. It beeps (WebAudio, unlocked by tapping V) and flashes when it ends; with reduced motion the flash becomes a static "rest is over" banner.
 - Overall rank appears after 3 ranked exercises (not 3 muscle groups).
 - Time-hold exercises store seconds and cardio stores minutes (kept as seconds) in the `reps` field.
-- The app accent colour follows the overall rank tier (gold while unranked).
+- The app accent is one steady purple by default (since v1.7). In Settings it can follow the overall rank tier instead (purple while unranked).
 
 **Not verified yet (needs a real iPhone):** Wake Lock in the installed home-screen app, audio after the screen was locked, vibration (iOS does not support it).
 

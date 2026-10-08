@@ -163,7 +163,9 @@ export function liveScreen() {
     const rows = entry.sets.map((s) => { if (s.type !== 'warmup') workingNo++; return setRow(entry, ex, s, workingNo); });
     const working = entry.sets.filter((x) => x.type !== 'warmup');
     const allDone = working.length > 0 && working.every((x) => x.done);
+    const wchip = weightChip(ex, rerender);
     const info = h('div', { class: 'target-line' },
+      wchip,
       entry.target ? h('span', { class: 'chip', text: t('target.reps', { min: entry.target.repsMin, max: entry.target.repsMax }) }) : null,
       entry.target?.action ? h('span', { class: `chip target-${entry.target.action}`, text: t(`target.${entry.target.action}`) }) : null,
       h('button', { class: 'chip chip-select rest-chip', type: 'button', 'aria-label': t('entry.rest'), onclick: () => entryMenu(entry, i) }, `${t('entry.rest')} ${formatClock(entry.restSec)}`));
@@ -173,7 +175,6 @@ export function liveScreen() {
         exThumb(ex, 48),
         h('a', { class: 'ent-name', href: `#/exercise/${ex.id}` }, nameOf(ex)),
         h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('entry.menu'), onclick: () => entryMenu(entry, i) }, icon('more'))),
-      weightChip(ex, rerender) ? h('div', { class: 'weight-line' }, weightChip(ex, rerender)) : null,
       info,
       entry.notes ? h('p', { class: 'ent-notes', text: entry.notes }) : null,
       h('div', { class: `set-head${L.weight ? '' : ' no-weight'}` },

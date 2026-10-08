@@ -35,20 +35,23 @@ export function weekStart(ms) {
 }
 
 /** Total volume (kg) per local week for the last `weeks` weeks, ending with the current week: [{t (week start), v}] */
-function weekly(workouts, nowMs, weeks, valueOf) {
-  const start = new Date(weekStart(nowMs));
+function weekly(workouts, nowMs, weeks, valueOf, firstDay = 1) {
+  const ws = (ms) => (firstDay === 1 ? weekStart(ms) : sundayStart(ms));
+  const start = new Date(ws(nowMs));
   const buckets = [];
   for (let i = weeks - 1; i >= 0; i--) buckets.push({ t: new Date(start.getFullYear(), start.getMonth(), start.getDate() - 7 * i).getTime(), v: 0 });
   const index = new Map(buckets.map((b, i) => [dateKey(b.t), i]));
   for (const w of workouts) {
-    const k = dateKey(weekStart(w.startedMs));
+    const k = dateKey(ws(w.startedMs));
     if (index.has(k)) buckets[index.get(k)].v += valueOf(w);
   }
   return buckets;
 }
 
-export const weeklyVolume = (workouts, nowMs, weeks = 12) => weekly(workouts, nowMs, weeks, (w) => w.stats?.volume ?? 0);
-export const weeklyCount = (workouts, nowMs, weeks = 8) => weekly(workouts, nowMs, weeks, () => 1);
+const sundayStart = (ms) => { const d = new Date(ms); return new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay()).getTime(); };
+/** firstDay: 1 = weeks start on Monday (default), 0 = on Sunday (the Progress tab, like the week row on Today). */
+export const weeklyVolume = (workouts, nowMs, weeks = 12, firstDay = 1) => weekly(workouts, nowMs, weeks, (w) => w.stats?.volume ?? 0, firstDay);
+export const weeklyCount = (workouts, nowMs, weeks = 8, firstDay = 1) => weekly(workouts, nowMs, weeks, () => 1, firstDay);
 
 /** Sets that set an all-time best since `sinceMs`. */
 export const prsSince = (workouts, sinceMs) => workouts.filter((w) => (w.endedMs ?? w.startedMs) >= sinceMs)
@@ -57,9 +60,9 @@ export const prsSince = (workouts, sinceMs) => workouts.filter((w) => (w.endedMs
 export const bodyweightSeries = (log) => [...log].sort((a, b) => a.ms - b.ms).map((e) => ({ t: e.ms, v: e.kg }));
 
 /** "Nice" axis ticks covering [min, max]. */
-export function niceTicks(min, max, count = 4) {
+export function niceTicks(min, max, count = 4, integer = false) {
   if (!(max > min)) { const c = min || 1; min = c * 0.9; max = c * 1.1; }
-  const rough = (max - min) / count;
+  const rough = integer ? Math.max(1, (max - min) / count) : (max - min) / count;
   const pow = Math.pow(10, Math.floor(Math.log10(rough)));
   const step = [1, 2, 2.5, 5, 10].map((m) => m * pow).find((s) => s >= rough) ?? 10 * pow;
   const lo = Math.floor(min / step) * step, hi = Math.ceil(max / step) * step;
@@ -72,14 +75,14 @@ export function niceTicks(min, max, count = 4) {
  * Layout for a line or bar chart inside width x height. rtl: time flows right to left and the value axis sits on the right.
  * Returns { points: [{x, y, t, v}], yTicks: [{y, v}], xTicks: [{x, t}], plot: {x0, x1, y0, y1}, axisX }.
  */
-export function layoutSeries(series, { width = 340, height = 200, pad = { l: 36, r: 12, t: 14, b: 26 }, rtl = false, zeroBase = false, bars = false } = {}) {
+export function layoutSeries(series, { width = 340, height = 200, pad = { l: 36, r: 12, t: 14, b: 26 }, rtl = false, zeroBase = false, bars = false, integer = false } = {}) {
   const left = rtl ? pad.r : pad.l, right = width - (rtl ? pad.l : pad.r);
   const top = pad.t, bottom = height - pad.b;
   if (!series.length) return { points: [], yTicks: [], xTicks: [], plot: { x0: left, x1: right, y0: top, y1: bottom }, axisX: rtl ? right : left };
   const vs = series.map((p) => p.v);
   let lo = zeroBase ? 0 : Math.min(...vs), hi = Math.max(...vs);
   if (!zeroBase) { const span = hi - lo || hi * 0.2 || 1; lo -= span * 0.15; hi += span * 0.15; }
-  const yTicks0 = niceTicks(lo, hi, 4);
+  const yTicks0 = niceTicks(lo, hi, 4, integer);
   const yMin = yTicks0[0], yMax = yTicks0[yTicks0.length - 1];
   const y = (v) => bottom - ((v - yMin) / (yMax - yMin || 1)) * (bottom - top);
   const t0 = series[0].t, t1 = series[series.length - 1].t;

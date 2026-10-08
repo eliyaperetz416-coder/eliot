@@ -91,3 +91,14 @@ test('weeklyCount counts workouts per week; prsSince counts all-time bests in a 
   assert.equal(prsSince(ws, T0), 2);
   assert.equal(prsSince(ws, T0 + 2 * DAY), 1);
 });
+
+test('integer ticks for counts; Sunday-first weeks when asked', () => {
+  const ticks = niceTicks(0, 2, 4, true);
+  assert.ok(ticks.every((v) => Number.isInteger(v)));
+  assert.equal(new Set(ticks).size, ticks.length);
+  const sat = new Date(2026, 9, 10, 12).getTime(), sun = new Date(2026, 9, 11, 12).getTime();
+  const ws = [{ startedMs: sat }, { startedMs: sun }];
+  const sunday = weeklyCount(ws, sun, 2, 0), monday = weeklyCount(ws, sun, 2, 1);
+  assert.deepEqual(sunday.map((b) => b.v), [1, 1]); // Saturday ends a week, Sunday starts the next
+  assert.deepEqual(monday.map((b) => b.v), [0, 2]);
+});

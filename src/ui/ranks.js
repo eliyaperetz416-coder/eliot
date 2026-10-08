@@ -33,15 +33,16 @@ function setText(ex, b) {
 function summary() {
   const now = Date.now();
   const tile = (label, value) => h('div', { class: 'stat' }, h('span', { class: 'stat-v display num', text: value }), h('span', { class: 'stat-l', text: label }));
-  const counts = weeklyCount(store.workouts, now, 8);
-  const vol = weeklyVolume(store.workouts, now, 1)[0].v;
+  const firstDay = getLanguage() === 'he' ? 0 : 1; // same week as the row on Today
+  const counts = weeklyCount(store.workouts, now, 8, firstDay);
+  const vol = weeklyVolume(store.workouts, now, 1, firstDay)[0].v;
   return [
     h('div', { class: 'stats-grid progress-tiles' },
       tile(t('prog.week.workouts'), String(counts[counts.length - 1].v)),
       tile(t('prog.week.volume'), `${formatNum(vol, 0)} ${t('unit.kg')}`),
       tile(t('prog.prs30'), String(prsSince(store.workouts, now - 30 * 86400000))),
       tile(t('prog.total'), String(store.workouts.length))),
-    chartCard({ title: t('prog.perWeek'), subtitle: t('prog.perWeek.sub'), chart: barChart({ series: counts, title: t('prog.perWeek') }), empty: store.workouts.length ? null : t('progress.nodata') }),
+    chartCard({ title: t('prog.perWeek'), subtitle: t('prog.perWeek.sub'), chart: barChart({ series: counts, title: t('prog.perWeek'), integer: true }), empty: store.workouts.length ? null : t('progress.nodata') }),
   ];
 }
 

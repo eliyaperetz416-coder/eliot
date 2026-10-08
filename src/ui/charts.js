@@ -8,9 +8,9 @@ const NS = 'http://www.w3.org/2000/svg';
 const el = (tag, attrs = {}, text) => { const e = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); if (text != null) e.textContent = text; return e; };
 let gid = 0;
 
-function frame({ title, series, rtl, bars, zeroBase, unit, height = 200 }) {
+function frame({ title, series, rtl, bars, zeroBase, unit, integer, height = 200 }) {
   const W = 340, H = height;
-  const lay = layoutSeries(series, { width: W, height: H, rtl, bars, zeroBase });
+  const lay = layoutSeries(series, { width: W, height: H, rtl, bars, zeroBase, integer });
   const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, class: 'chart', role: 'img', 'aria-label': title });
   svg.append(el('title', {}, title));
   for (const tk of lay.yTicks) {
@@ -37,8 +37,8 @@ export function lineChart({ series, title, unit = '', rtl = getLanguage() === 'h
   return svg;
 }
 
-export function barChart({ series, title, rtl = getLanguage() === 'he' }) {
-  const { svg, lay } = frame({ title, series, rtl, bars: true, zeroBase: true });
+export function barChart({ series, title, integer = false, rtl = getLanguage() === 'he' }) {
+  const { svg, lay } = frame({ title, series, rtl, bars: true, zeroBase: true, integer });
   const bw = lay.barWidth;
   series.forEach((p, i) => {
     const pt = lay.points[i];

@@ -869,7 +869,7 @@ for (const lang of ['he', 'en']) {
     await page.waitForSelector('.screen h1');
     await page.screenshot({ path: `${shots}${lang}-settings.png`, fullPage: true });
     // accent + reduced motion
-    await page.getByRole('button', { name: T('תמיד זהב', 'Always gold') }).click();
+    await page.getByRole('button', { name: T('תמיד סגול', 'Always purple') }).click();
     await page.getByRole('button', { name: T('פעיל', 'On'), exact: true }).click();
     assert.equal(await page.evaluate(() => document.documentElement.dataset.motion), 'reduce');
     await page.getByRole('button', { name: T('לפי המכשיר', 'Follow device') }).click();

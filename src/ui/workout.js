@@ -103,7 +103,7 @@ function makeupCard() {
   const names = m.entries.map((e) => byId[e.exerciseId]).filter(Boolean).map((ex) => (getLanguage() === 'he' ? ex.nameHe : ex.nameEn));
   return h('section', { class: 'card makeup-card' },
     h('div', { class: 'row-title', text: t('makeup.title') }),
-    h('div', { class: 'row-sub', text: t('makeup.sub', { n: m.entries.length, name: m.name || t('makeup.last') }) }),
+    h('div', { class: 'row-sub', text: t(m.entries.length === 1 ? 'makeup.sub.one' : 'makeup.sub', { n: m.entries.length, name: m.name || t('makeup.last') }) }),
     h('div', { class: 'row-sub makeup-names', text: names.slice(0, 3).join(' · ') + (names.length > 3 ? ' …' : '') }),
     h('div', { class: 'btn-pair' },
       button({ label: t('makeup.start'), icon: 'workout', onClick: () => startMakeup(m) }),
