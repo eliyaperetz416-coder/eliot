@@ -13,7 +13,7 @@ import { button } from './components.js';
 import { openMissingSheet } from './missing.js';
 import { openRenameSheet } from './rename.js';
 import { weightHint, openWeightSheet } from './weight-info.js';
-import { formatKg, formatNum } from './format.js';
+import { formatDate, formatKg, formatNum } from './format.js';
 
 const GROUPS = ['chest', 'back', 'shoulders', 'biceps', 'triceps', 'quads', 'hamstrings', 'glutes', 'calves', 'abs', 'other'];
 const EQUIPMENT = ['barbell', 'dumbbell', 'machine', 'cable', 'ez-bar', 'bodyweight', 'other'];
@@ -129,27 +129,37 @@ export function exerciseDetailScreen(id) {
   } else curve.push(h('p', { text: t('exercise.curve.unranked') }));
 
   const steps = getLanguage() === 'he' ? ex.instructionsHe : ex.instructionsEn;
-  return h('main', { class: 'screen' },
+  return h('main', { class: 'screen ex-detail' },
     h('a', { class: 'back-link', href: '#/exercises' }, icon('chevron', 'chev back-chev'), t('exercises.back')),
+    hasPhoto ? imgBtn : null,
+    hasPhoto && ex.image2 ? h('p', { class: 'row-sub center', text: t('exercise.tapImage') }) : null,
     h('div', { class: 'ex-title-row' }, h('h1', { class: 'ex-title', text: nameOf(ex) }),
       h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('rename.title'), onclick: () => openRenameSheet(ex, () => window.dispatchEvent(new HashChangeEvent('hashchange'))) }, icon('edit'))),
     ex.custom ? null : h('p', { class: 'ex-title-alt', lang: getLanguage() === 'he' ? 'en' : 'he', dir: 'auto', text: otherName(ex) }),
     h('div', { class: 'ex-meta' },
       h('span', { class: 'chip', text: t(`group.${ex.muscleGroup}`) }),
       h('span', { class: 'chip', text: t(`equipment.${ex.equipment}`) }),
-      h('span', { class: 'chip', text: t(`exercise.type.${ex.type}`) }),
       ex.custom ? h('span', { class: 'chip chip-primary', text: t('custom.mine') }) : null),
-    weightHint(ex) ? h('button', { class: 'card tip weight-tip', type: 'button', onclick: () => openWeightSheet(ex, () => window.dispatchEvent(new HashChangeEvent('hashchange'))) }, icon('info'), h('p', { text: weightHint(ex) })) : null,
-    muscleMap({ muscles: data().muscles, exercise: ex }),
-    hasPhoto ? imgBtn : null,
-    hasPhoto && ex.image2 ? h('p', { class: 'row-sub center', text: t('exercise.tapImage') }) : null,
-    h('div', { class: 'section-label', text: t('exercise.howto') }),
-    steps.length ? h('ol', { class: 'steps', lang: getLanguage() }, steps.map((s) => h('li', { text: s }))) : h('p', { class: 'row-sub', text: t('custom.nosteps') }),
-    h('div', { class: 'section-label', text: t('exercise.curve') }),
-    h('section', { class: 'card' }, curve),
     h('div', { class: 'section-label', text: t('exercise.best') }),
     bestCard(ex),
+    weightHint(ex) ? h('button', { class: 'card tip weight-tip', type: 'button', onclick: () => openWeightSheet(ex, () => window.dispatchEvent(new HashChangeEvent('hashchange'))) }, icon('info'), h('p', { text: weightHint(ex) })) : null,
+    h('div', { class: 'section-label', text: t('exercise.howto') }),
+    steps.length ? h('ol', { class: 'steps', lang: getLanguage() }, steps.map((s) => h('li', { text: s }))) : h('p', { class: 'row-sub', text: t('custom.nosteps') }),
+    h('div', { class: 'section-label', text: t('exercise.muscles') }),
+    muscleMap({ muscles: data().muscles, exercise: ex }),
+    h('details', { class: 'card ex-curve' }, h('summary', { text: t('exercise.curve') }), curve),
     ex.custom ? h('div', { class: 'stack', style: 'padding-block-start:12px' }, h('a', { class: 'btn btn-secondary btn-block', href: `#/custom/${ex.id}` }, t('custom.edit'))) : null);
+}
+
+/** Working sets of the most recent session with this exercise: "60×8 · 60×8 · 57.5×7". */
+function lastSession(ex) {
+  for (let i = store.workouts.length - 1; i >= 0; i--) {
+    const w = store.workouts[i];
+    const e = w.entries.find((x) => x.exerciseId === ex.id);
+    const sets = e?.sets.filter((s) => s.done && s.type !== 'warmup' && s.reps > 0);
+    if (sets?.length) return { when: w.endedMs ?? w.startedMs, text: sets.map((s) => (Number(s.weight) > 0 ? `${formatKg(s.weight)}×${s.reps}` : String(s.reps))).join(' · ') };
+  }
+  return null;
 }
 
 function bestCard(ex) {
@@ -161,6 +171,8 @@ function bestCard(ex) {
   const kids = [h('div', { class: 'bw-now display num', text: `${formatNum(best, 1)}${unit}` }),
     h('p', { class: 'row-sub', text: ex.ranked ? t('exercise.best.e1rm') : t('exercise.best.metric') })];
   if (b) { const tr = tierFor(b.rating); kids.push(h('p', { text: `${t(`tier.${tr.tier}`)}${tr.division ? ' ' + tr.division : ''} · ${formatNum(b.rating, 0)} · ${formatKg(b.weight ?? 0)}×${b.reps}` })); }
+  const last = lastSession(ex);
+  if (last) kids.push(h('div', { class: 'ex-last' }, h('span', { class: 'row-sub', text: t('exercise.last', { date: formatDate(last.when) }) }), h('bdi', { class: 'num', dir: 'ltr', text: last.text })));
   kids.push(h('div', { class: 'stack', style: 'padding-block-start:8px' },
     ex.ranked ? button({ label: t('need.title'), variant: 'secondary', block: true, onClick: () => openNeedSheet(ex) }) : null,
     h('a', { class: 'btn btn-secondary btn-block', href: `#/progress/${ex.id}` }, t('progress.title'))));

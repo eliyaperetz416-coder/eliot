@@ -568,3 +568,9 @@ a.btn { text-decoration: none; }
 /* Make-up workout card (OUR DESIGN) */
 .makeup-card { display: grid; gap: 4px; margin-block: var(--s-3); border-color: rgb(var(--accent-rgb) / .5); }
 .makeup-card .btn-pair { padding-block-start: var(--s-2); }
+
+/* Exercise page: photo first, your numbers, then how-to (OUR DESIGN) */
+.ex-detail .ex-photo { margin-block: var(--s-2) var(--s-3); }
+.ex-last { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--s-2); padding-block-start: var(--s-2); border-block-start: 1px solid var(--line); margin-block-start: var(--s-2); }
+.ex-curve { margin-block-start: var(--s-4); }
+.ex-curve > summary { cursor: pointer; font-weight: 600; min-height: var(--tap); display: flex; align-items: center; }

@@ -73,6 +73,8 @@
   "exercises.none.body": "Try another spelling or remove a filter.",
   "exercises.back": "Exercises",
   "exercise.muscles": "Muscles worked",
+  "exercise.muscles": "Muscles",
+  "exercise.last": "Last time ({date})",
   "exercise.howto": "How to",
   "exercise.curve": "Rank curve",
   "exercise.best": "Your best",

@@ -75,6 +75,8 @@
   "exercises.none.body": "כדאי לנסות כתיב אחר או להסיר סינון.",
   "exercises.back": "תרגילים",
   "exercise.muscles": "שרירים עובדים",
+  "exercise.muscles": "שרירים",
+  "exercise.last": "פעם אחרונה ({date})",
   "exercise.howto": "איך מבצעים",
   "exercise.curve": "עקומת הדרגה",
   "exercise.best": "השיא שלך",
