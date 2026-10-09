@@ -13,7 +13,7 @@ export function createFakeCrew() {
       const nick = String(p_nick ?? '').trim(); if (!nick) fail('bad_nick');
       const code = Math.random().toString(36).slice(2, 8).toUpperCase().padEnd(6, 'X');
       const g = { code, name: String(p_name).trim(), members: [], messages: [] }; groups.set(code, g);
-      const m = { id: `m${++memberSeq}`, nickname: nick, stats: {}, active: true }; g.members.push(m); byToken.set(p_token, { group: g, member: m });
+      const m = { id: `m${++memberSeq}`, nickname: nick, stats: {}, active: true, leader: true }; g.members.push(m); byToken.set(p_token, { group: g, member: m });
       add(g, m, 'system', 'created');
       return { code, name: g.name, member_id: m.id };
     },
@@ -29,7 +29,7 @@ export function createFakeCrew() {
     },
     my_group({ p_token }) {
       const { group: g, member: m } = me(p_token);
-      return { group: { name: g.name, code: g.code }, me: { id: m.id, nickname: m.nickname }, members: g.members.filter((x) => x.active).map((x) => ({ id: x.id, nickname: x.nickname, stats: x.stats, plan: x.plan ?? null, stats_updated_at: x.stats && Object.keys(x.stats).length ? new Date().toISOString() : null })) };
+      return { group: { name: g.name, code: g.code }, me: { id: m.id, nickname: m.nickname, leader: !!m.leader }, members: g.members.filter((x) => x.active).map((x) => ({ id: x.id, nickname: x.nickname, stats: x.stats, plan: x.plan ?? null, leader: !!x.leader, stats_updated_at: x.stats && Object.keys(x.stats).length ? new Date().toISOString() : null })) };
     },
     update_stats({ p_token, p_stats }) { me(p_token).member.stats = { ...p_stats }; return null; },
     update_plan({ p_token, p_plan }) { me(p_token).member.plan = p_plan ?? null; return null; },
@@ -43,7 +43,31 @@ export function createFakeCrew() {
       const { group: g } = me(p_token);
       return g.messages.filter((x) => x.id > p_after).slice(-Math.min(p_limit, 100));
     },
-    leave_group({ p_token }) { const x = me(p_token); x.member.active = false; byToken.delete(p_token); return null; },
+    leave_group({ p_token }) {
+      const x = me(p_token); x.member.active = false; byToken.delete(p_token);
+      if (x.member.leader) { x.member.leader = false; const nxt = x.group.members.find((y) => y.active); if (nxt) { nxt.leader = true; add(x.group, nxt, 'system', 'leader'); } }
+      return null;
+    },
+    kick_member({ p_token, p_member_id }) {
+      const { group: g, member: m } = me(p_token); if (!m.leader) fail('not_leader');
+      const t = g.members.find((y) => y.id === p_member_id && y.active); if (!t || t.id === m.id) fail('bad_target');
+      t.active = false; t.leader = false; for (const [tok, v] of byToken) if (v.member === t) byToken.delete(tok);
+      g.messages.push({ id: ++msgId, member_id: m.id, nickname: t.nickname, kind: 'system', body: 'removed', created_at: new Date().toISOString() });
+      return null;
+    },
+    make_leader({ p_token, p_member_id }) {
+      const { group: g, member: m } = me(p_token); if (!m.leader) fail('not_leader');
+      const t = g.members.find((y) => y.id === p_member_id && y.active); if (!t || t.id === m.id) fail('bad_target');
+      m.leader = false; t.leader = true; add(g, t, 'system', 'leader'); return null;
+    },
+    rename_group({ p_token, p_name }) {
+      const { group: g, member: m } = me(p_token); if (!m.leader) fail('not_leader');
+      const n = String(p_name ?? '').trim().slice(0, 40); if (!n) fail('bad_name'); g.name = n; return n;
+    },
+    new_code({ p_token }) {
+      const { group: g, member: m } = me(p_token); if (!m.leader) fail('not_leader');
+      groups.delete(g.code); g.code = Math.random().toString(36).slice(2, 8).toUpperCase().padEnd(6, 'Z'); groups.set(g.code, g); return g.code;
+    },
     save_push({ p_token }) { me(p_token); return null; },
     delete_push({ p_token }) { me(p_token); return null; },
   };

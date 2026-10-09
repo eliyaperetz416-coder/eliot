@@ -38,6 +38,18 @@ export async function leaveCrew() {
 }
 
 const tok = () => crew.local.token;
+
+/** The leader's tools (OUR DESIGN). The server checks the role; the app only shows the buttons to the leader. */
+export const kickMember = (id) => rpc('kick_member', { p_token: tok(), p_member_id: id });
+export const makeLeader = (id) => rpc('make_leader', { p_token: tok(), p_member_id: id });
+export async function renameGroup(name) { const n = await rpc('rename_group', { p_token: tok(), p_name: name }); crew.local = { ...crew.local, name: n }; await persist(); emit(); return n; }
+export async function newInviteCode() { const c = await rpc('new_code', { p_token: tok() }); crew.local = { ...crew.local, code: c }; await persist(); emit(); return c; }
+/** The leader may have renamed the crew or made a new code: follow the server. */
+export async function syncGroupInfo(group) {
+  if (!crew.local || !group || (group.name === crew.local.name && group.code === crew.local.code)) return;
+  crew.local = { ...crew.local, name: group.name, code: group.code };
+  await persist();
+}
 export const fetchView = () => rpc('my_group', { p_token: tok() });
 export const fetchMessages = (after = 0, limit = 60) => rpc('get_messages', { p_token: tok(), p_after: after, p_limit: limit });
 export const sendMessage = (kind, body) => rpc('post_message', { p_token: tok(), p_kind: kind, p_body: body });

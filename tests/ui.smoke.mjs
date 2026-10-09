@@ -901,6 +901,69 @@ for (const lang of ['he', 'en']) {
       await page.keyboard.press('Escape');
       await page.waitForTimeout(300);
       await page.evaluate(async () => { const { saveSchedule } = await import('./src/ui/store.js'); await saveSchedule({ days: {}, done: {} }); });
+      // leader: chip, tools only for the leader, rename, new code, remove a member, hand over and back
+      const ctx3 = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: lang === 'he' ? 'he-IL' : 'en-US', serviceWorkers: 'block' });
+      try {
+        await fake.install(ctx3);
+        const p3 = await ctx3.newPage();
+        p3.on('pageerror', (e) => errors.push(`crew third: ${e.message}`));
+        await onboard(p3, lang, `crew3-${lang}`);
+        const board = async (pg) => { await pg.reload(); await pg.waitForSelector('#crew-say'); await pg.getByRole('button', { name: T('לידרבורד', 'Leaderboard') }).click(); await pg.waitForSelector('.crew-row'); };
+        const rowOf = (pg, nick) => pg.locator(`.crew-row[data-nick="${nick}"]`);
+        const confirmGo = async (pg) => { await pg.waitForFunction(() => document.querySelectorAll('.sheet').length >= 1); await pg.locator('.sheet').last().locator('.btn-primary, .btn-danger').first().click(); };
+        await p3.goto(`${base}#/crew`); await p3.waitForSelector('#crew-code');
+        await p3.fill('#crew-code', code); await p3.fill('#crew-nick', 'Eve');
+        await p3.getByRole('button', { name: T('הצטרף', 'Join'), exact: true }).click();
+        await p3.waitForSelector('#crew-say');
+        await board(page);
+        assert.equal(await rowOf(page, 'Elia').locator('.chip-leader').count(), 1, 'the creator is the leader');
+        assert.equal(await page.locator('.crew-row .chip-leader').count(), 1, 'only one leader');
+        await board(p2);
+        await rowOf(p2, 'Elia').click(); await p2.waitForSelector('.crew-friend');
+        assert.equal(await p2.locator('.crew-leader-tools').count(), 0, 'members have no leader tools');
+        await p2.keyboard.press('Escape');
+        await p2.locator('.crew-gear').click(); await p2.waitForSelector('.sheet .crew-code');
+        assert.equal(await p2.locator('.sheet .crew-leader-box').count(), 0);
+        await p2.keyboard.press('Escape');
+        // rename and a new code
+        await page.locator('.crew-gear').click(); await page.waitForSelector('#crew-rename');
+        await page.screenshot({ path: `${shots}${lang}-crew-leader.png` });
+        await page.fill('#crew-rename', 'Gym bros 2');
+        await page.locator('.crew-leader-box .btn-secondary').click();
+        await page.waitForFunction(() => document.querySelector('main h1')?.textContent === 'Gym bros 2');
+        const codeBefore = await page.textContent('.sheet .crew-code');
+        await page.locator('.crew-leader-box .btn-ghost').click();
+        await confirmGo(page);
+        await page.waitForFunction((c) => document.querySelector('.sheet .crew-code') && document.querySelector('.sheet .crew-code').textContent !== c, codeBefore);
+        await page.keyboard.press('Escape');
+        await board(p2);
+        assert.equal(await p2.textContent('main h1'), 'Gym bros 2', 'members see the new name');
+        // remove Eve
+        await board(page);
+        await rowOf(page, 'Eve').click(); await page.waitForSelector('.crew-leader-tools');
+        await page.locator('.crew-leader-tools .btn-danger').click();
+        await confirmGo(page);
+        await page.waitForFunction(() => ![...document.querySelectorAll('.crew-row')].some((r) => r.textContent.includes('Eve')));
+        await p3.reload();
+        await p3.waitForSelector('#crew-code');
+        // hand over to Dan: he gets the tools and Elia loses them
+        await rowOf(page, 'Dan').click(); await page.waitForSelector('.crew-leader-tools');
+        await page.locator('.crew-leader-tools .btn-secondary').click();
+        await confirmGo(page);
+        await board(page);
+        assert.equal(await rowOf(page, 'Dan').locator('.chip-leader').count(), 1);
+        await rowOf(page, 'Dan').click(); await page.waitForSelector('.crew-friend');
+        assert.equal(await page.locator('.crew-leader-tools').count(), 0, 'the old leader has no tools');
+        await page.keyboard.press('Escape');
+        // and back to Elia
+        await board(p2);
+        await rowOf(p2, 'Elia').click(); await p2.waitForSelector('.crew-leader-tools');
+        await p2.locator('.crew-leader-tools .btn-secondary').click();
+        await confirmGo(p2);
+        await board(page);
+        assert.equal(await rowOf(page, 'Elia').locator('.chip-leader').count(), 1);
+        await page.reload(); await page.waitForSelector('#crew-say'); await page.getByRole('button', { name: T('לידרבורד', 'Leaderboard') }).click();
+      } finally { await ctx3.close(); }
       // leaving
       await p2.goto(`${base}#/crew`);
       await p2.locator('.crew-gear').click();

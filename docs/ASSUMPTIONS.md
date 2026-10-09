@@ -154,3 +154,9 @@ seasons and leaderboards exist (server features, not built here), about 600 exer
 ## Workouts tab instead of the Exercises tab (OUR DESIGN, v1.25)
 - The tab bar is Today, Workouts, Progress, Profile. The Workouts tab leads with a big "New workout" button and your saved workouts (with photos and folders), then "Plan my week", Plans and the exercise library (a row that opens the full library, which is still used when building a workout).
 - Today no longer repeats the list of saved workouts; it has one "All my workouts" button under the week row and quests.
+
+## Crew leader (OUR DESIGN, v1.26)
+- The person who creates a crew is its leader (the first member of every existing crew was made leader when this shipped). The leader has a "Leader" chip on the leaderboard and in the chat.
+- Only the leader can: rename the crew, make a new invite code (the old code stops working, people already in stay), remove a member, and hand leadership to someone else. Tools are in the group settings sheet (rename, new code) and in a member's profile (make leader, remove).
+- If the leader leaves, the longest-standing member becomes leader. A removed member sees "You were removed from the crew" and can only come back with the code.
+- The server checks the role in each function (`kick_member`, `make_leader`, `rename_group`, `new_code` in `supabase/migrations/004_crew_leader.sql`), so hiding the buttons is not what protects it. A kick rewrites the member's token, like leaving does.

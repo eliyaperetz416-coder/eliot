@@ -55,7 +55,7 @@ export function sortBoard(members, by = 'rating') {
 /** Server error text -> i18n key suffix. */
 export function errorKey(err) {
   const m = String(err?.message ?? err ?? '');
-  for (const k of ['nick_taken', 'no_group', 'group_full', 'already_member', 'not_member', 'too_fast', 'bad_nick', 'bad_name', 'server_full', 'empty']) if (m.includes(k)) return k;
+  for (const k of ['nick_taken', 'no_group', 'group_full', 'already_member', 'not_member', 'too_fast', 'bad_nick', 'bad_name', 'server_full', 'empty', 'not_leader', 'bad_target']) if (m.includes(k)) return k;
   if (m === 'offline' || /Failed to fetch|NetworkError|Load failed|aborted/i.test(m)) return 'offline';
   return 'generic';
 }

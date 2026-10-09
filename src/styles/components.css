@@ -639,3 +639,8 @@ a.btn { text-decoration: none; }
 
 .crew-gear { flex: none; }
 .crew-settings .crew-push, .crew-settings .crew-share { margin-block: 0 !important; }
+
+/* Crew leader (OUR DESIGN) */
+.chip-leader { background: rgb(var(--accent-rgb) / .18); border-color: rgb(var(--accent-rgb) / .6); color: var(--accent); font-weight: 700; margin-inline-start: 6px; }
+.crew-leader-box { display: grid; gap: var(--s-2); }
+.crew-leader-box h2 { display: flex; align-items: center; gap: 6px; margin: 0; }

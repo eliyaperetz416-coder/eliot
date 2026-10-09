@@ -3,7 +3,7 @@ import { h } from './dom.js';
 import { icon } from './icons.js';
 import { t, getLanguage } from '../core/i18n.mjs';
 import { button, list, listRow, openSheet, segmented, showToast } from './components.js';
-import { crew, createCrew, joinCrew, leaveCrew, fetchView, fetchMessages, sendMessage, markSeen, syncStats, syncPlan, onCrew, pushStatus, enablePush, disablePush } from './crew-state.js';
+import { crew, createCrew, joinCrew, leaveCrew, fetchView, fetchMessages, sendMessage, markSeen, syncStats, syncPlan, onCrew, pushStatus, enablePush, disablePush, kickMember, makeLeader, renameGroup, newInviteCode, syncGroupInfo } from './crew-state.js';
 import { publicUrl } from './crew-api.js';
 import { sortBoard, SORTS, errorKey, normalizeCode, validNick, inviteText, planRows, MAX_MESSAGE } from '../core/crew.mjs';
 import { ACTIVITIES } from '../core/schedule.mjs';
@@ -14,6 +14,14 @@ import { shareViaWhatsApp } from './share.js';
 import { formatDateTime, formatNum } from './format.js';
 
 const errText = (e) => t(`crew.err.${errorKey(e)}`);
+
+/** A small "are you sure" sheet. */
+function confirmSheet({ title, body, label, danger = false, onGo }) {
+  const content = h('div', { class: 'stack' }, h('p', { text: body }),
+    button({ label, variant: danger ? 'danger' : 'primary', block: true, onClick: async () => { try { await onGo(); sh.close(); } catch (e) { showToast({ message: errText(e) }); } } }),
+    button({ label: t('common.cancel'), variant: 'ghost', block: true, onClick: () => sh.close() }));
+  const sh = openSheet({ title, content });
+}
 
 export function crewScreen() {
   const root = h('main', { class: 'screen crew' });
@@ -69,7 +77,7 @@ export function crewScreen() {
         return h('button', { class: `row crew-row${mine ? ' me' : ''}`, type: 'button', 'data-nick': m.nickname, onclick: () => friendSheet(m, mine) },
           h('span', { class: 'crew-pos display num', text: String(i + 1) }),
           h('span', { class: 'row-main' },
-            h('span', { class: 'row-title', text: mine ? `${m.nickname} · ${t('crew.you')}` : m.nickname }),
+            h('span', { class: 'row-title' }, mine ? `${m.nickname} · ${t('crew.you')}` : m.nickname, m.leader ? leaderChip() : null),
             h('span', { class: 'row-sub' }, s.tier ? h('span', { style: `color:${TIER_COLORS[s.tier] ?? 'inherit'}`, text: tierLabel(s) }) : t('crew.unranked'), ` · ${t('game.level', { n: s.level ?? 1 })} · `, h('bdi', { class: 'num', text: `${formatNum(s.weekVolume ?? 0, 0)} ${t('unit.kg')}` }))),
           h('span', { class: 'crew-val display num' }, h('bdi', { text: metric[sort](s) })));
       })),
@@ -91,12 +99,18 @@ export function crewScreen() {
         h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: weekday(r.weekday) }), h('span', { class: `row-sub sched-${r.items.some((i) => i.kind === 'activity') ? 'activity' : (r.items[0]?.kind ?? 'none')}`, text: dayText(r) })),
         r.trained ? h('span', { class: 'plan-done', 'aria-label': t('crew.p.trained') }, icon('check')) : null)))
       : h('p', { class: 'row-sub', text: mine ? t('crew.p.mineOff') : t('crew.p.notShared', { name: m.nickname }) });
-    openSheet({ title: mine ? `${m.nickname} · ${t('crew.you')}` : m.nickname, tall: true, content: h('div', { class: 'stack crew-friend' },
+    const afterLeaderAction = async () => { view = null; await refreshFeed(true); };
+    const sh = openSheet({ title: mine ? `${m.nickname} · ${t('crew.you')}` : m.nickname, tall: true, content: h('div', { class: 'stack crew-friend' },
       h('div', { class: 'row-sub' }, s.tier ? h('span', { style: `color:${TIER_COLORS[s.tier] ?? 'inherit'}`, text: tierLabel(s) }) : t('crew.unranked'), s.rating != null ? ` · ${formatNum(s.rating, 0)}` : ''),
       h('div', { class: 'stats-grid' },
         stat(t('crew.sort.level'), String(s.level ?? 1)), stat(t('crew.sort.streak'), t('game.streakDays', { n: s.streak ?? 0 })),
         stat(t('crew.p.week'), `${formatNum(s.weekVolume ?? 0, 0)} ${t('unit.kg')}`), stat(t('crew.p.month'), String(s.monthWorkouts ?? 0))),
-      h('div', { class: 'section-label', text: t('crew.p.plan') }), plan) });
+      m.leader ? h('div', { class: 'row-sub' }, leaderChip(), ' ', t('crew.leader.is', { name: m.nickname })) : null,
+      h('div', { class: 'section-label', text: t('crew.p.plan') }), plan,
+      isLeader() && !mine ? h('div', { class: 'stack crew-leader-tools' },
+        h('div', { class: 'section-label', text: t('crew.leader.tools') }),
+        button({ label: t('crew.leader.make'), variant: 'secondary', block: true, onClick: () => confirmSheet({ title: t('crew.leader.make'), body: t('crew.leader.make.body', { name: m.nickname }), label: t('crew.leader.make.go'), onGo: async () => { await makeLeader(m.id); sh.close(); await afterLeaderAction(); } }) }),
+        button({ label: t('crew.kick'), variant: 'danger', block: true, onClick: () => confirmSheet({ title: t('crew.kick'), body: t('crew.kick.body', { name: m.nickname }), label: t('crew.kick.go'), danger: true, onGo: async () => { await kickMember(m.id); sh.close(); await afterLeaderAction(); } }) })) : null) });
   }
 
   function shareBox(again = draw) {
@@ -107,13 +121,15 @@ export function crewScreen() {
       segmented({ label: t('crew.share.plan.title'), value: on ? 'on' : 'off', onChange: async (v) => { await updateSettings({ sharePlan: v === 'on' }); await syncPlan(); again(); }, options: [{ value: 'off', label: t('crew.share.plan.off') }, { value: 'on', label: t('crew.share.plan.on') }] }));
   }
 
-  const sysText = (m) => t(m.body === 'created' ? 'crew.sys.created' : 'crew.sys.joined', { name: m.nickname });
+  const sysText = (m) => t(({ created: 'crew.sys.created', removed: 'crew.sys.removed', leader: 'crew.sys.leader' })[m.body] ?? 'crew.sys.joined', { name: m.nickname });
+  const isLeader = () => !!view?.me?.leader;
+  const leaderChip = () => h('span', { class: 'chip chip-leader', text: t('crew.leader') });
   function feedView() {
     const mine = crew.local.memberId;
     const bubbles = messages.length ? messages.map((m) => (m.kind === 'system'
       ? h('div', { class: 'crew-sys', text: sysText(m) })
       : h('div', { class: `crew-msg ${m.kind}${m.member_id === mine ? ' mine' : ''}` },
-        h('div', { class: 'crew-meta' }, h('b', { text: m.nickname }), m.kind === 'status' ? h('span', { class: 'chip chip-primary', text: t('crew.status') }) : null, h('span', { class: 'row-sub', text: formatDateTime(Date.parse(m.created_at)) })),
+        h('div', { class: 'crew-meta' }, h('b', { text: m.nickname }), view?.members?.find((x) => x.id === m.member_id)?.leader ? leaderChip() : null, m.kind === 'status' ? h('span', { class: 'chip chip-primary', text: t('crew.status') }) : null, h('span', { class: 'row-sub', text: formatDateTime(Date.parse(m.created_at)) })),
         h('div', { class: 'crew-body', dir: 'auto', text: m.body })))) : [h('p', { class: 'row-sub center', text: t('crew.feed.empty') })];
     const input = h('input', { class: 'text-input', type: 'text', maxlength: MAX_MESSAGE, enterkeyhint: 'send', autocomplete: 'off', placeholder: t('crew.say.ph'), 'aria-label': t('crew.say'), id: 'crew-say' });
     const send = async (body, k = 'chat') => {
@@ -155,6 +171,18 @@ export function crewScreen() {
     return box;
   }
 
+  /** Leader: rename the crew, make a new invite code. Everyone else sees who the leader is. */
+  function leaderBox(again) {
+    const lead = view?.members?.find((x) => x.leader);
+    if (!isLeader()) return lead ? h('p', { class: 'row-sub' }, leaderChip(), ' ', t('crew.leader.is', { name: lead.nickname })) : null;
+    const name = h('input', { class: 'text-input', type: 'text', maxlength: 40, value: crew.local.name, 'aria-label': t('crew.rename'), id: 'crew-rename' });
+    return h('section', { class: 'card crew-leader-box' },
+      h('h2', {}, leaderChip(), ' ', t('crew.leader.tools')),
+      h('div', { class: 'field' }, h('label', { for: 'crew-rename', text: t('crew.rename') }), h('div', { class: 'field-box' }, name)),
+      button({ label: t('common.save'), variant: 'secondary', block: true, onClick: async () => { try { await renameGroup(name.value); showToast({ message: t('crew.renamed') }); draw(); again(); } catch (e) { showToast({ message: errText(e) }); } } }),
+      button({ label: t('crew.newcode'), variant: 'ghost', block: true, onClick: () => confirmSheet({ title: t('crew.newcode'), body: t('crew.newcode.body'), label: t('crew.newcode.go'), onGo: async () => { await newInviteCode(); draw(); again(); } }) }));
+  }
+
   /** Code, notifications, plan sharing and leaving live in a small sheet behind the gear, so the chat has the whole screen. */
   function openGroupSheet() {
     const body = h('div', { class: 'stack crew-settings' });
@@ -162,6 +190,7 @@ export function crewScreen() {
       h('section', { class: 'card crew-head crew-codebar' },
         h('div', {}, h('div', { class: 'row-sub', text: t('crew.code.label') }), h('div', { class: 'display crew-code num', dir: 'ltr', text: crew.local.code })),
         button({ label: t('crew.invite'), icon: 'share', variant: 'secondary', onClick: invite })),
+      leaderBox(render),
       notifyBox(render),
       shareBox(render),
       list([listRow({ title: t('crew.leave'), sub: t('crew.leave.sub'), icon: 'trash', onClick: () => { sh.close(); leave(); } })]));
@@ -194,12 +223,13 @@ export function crewScreen() {
       const lastId = messages.length ? messages[messages.length - 1].id : 0;
       const fresh = await fetchMessages(lastId, lastId ? 100 : 60);
       const [v] = await Promise.all([fetchView()]);
-      const changed = fresh.length || JSON.stringify(v.members) !== JSON.stringify(view?.members);
+      const changed = fresh.length || JSON.stringify(v.members) !== JSON.stringify(view?.members) || JSON.stringify(v.group) !== JSON.stringify(view?.group) || !!v.me?.leader !== !!view?.me?.leader;
+      await syncGroupInfo(v.group);
       view = v; messages = [...messages, ...fresh];
       if (changed || scroll) draw();
       if (tab === 'feed') markRead();
     } catch (e) {
-      if (errorKey(e) === 'not_member') { await leaveCrew().catch(() => {}); draw(); }
+      if (errorKey(e) === 'not_member') { await leaveCrew().catch(() => {}); showToast({ message: t('crew.removed') }); draw(); }
     } finally { busy = false; }
   }
 
