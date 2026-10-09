@@ -13,7 +13,7 @@ import { modelScreen } from './model.js';
 import { scheduleScreen } from './schedule.js';
 import { progressScreen } from './progress.js';
 import { cardScreen } from './card-export.js';
-import { routinesScreen, routineEditScreen } from './routines.js';
+import { workoutsScreen, routineEditScreen } from './routines.js';
 import { plansScreen, planScreen } from './plans.js';
 import { customFormScreen } from './custom.js';
 import { shopScreen } from './shop.js';
@@ -77,7 +77,8 @@ export function buildScreens(ctx) {
     'ranks-preview': ranksPreviewScreen,
     ranks: ranksScreen,
     progress: (id) => progressScreen(id),
-    routines: routinesScreen,
+    routines: workoutsScreen,
+    workouts: workoutsScreen,
     routine: (id) => routineEditScreen(id),
     plans: plansScreen,
     plan: (id) => planScreen(id),

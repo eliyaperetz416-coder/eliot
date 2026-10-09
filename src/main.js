@@ -11,7 +11,7 @@ import { keepAwake } from './ui/wakelock.js';
 import { initCrew, onCrew, crew, startCrewWatcher } from './ui/crew-state.js';
 
 const TABS = [
-  { id: 'workout', icon: 'workout' }, { id: 'exercises', icon: 'exercises' }, { id: 'ranks', icon: 'ranks' }, { id: 'profile', icon: 'profile' },
+  { id: 'workout', icon: 'workout' }, { id: 'workouts', icon: 'bolt' }, { id: 'ranks', icon: 'ranks' }, { id: 'profile', icon: 'profile' },
 ];
 const app = document.getElementById('app');
 const nav = document.getElementById('nav-root');
@@ -66,7 +66,7 @@ function render() {
   const el = screens[id](param);
   dispose = el._dispose ?? null;
   app.replaceChildren(el);
-  const tab = { exercise: 'exercises', custom: 'exercises', history: 'profile', achievements: 'profile', crew: 'profile', settings: 'profile', requests: 'exercises', calendar: 'profile', numbers: 'profile', result: 'workout', routines: 'workout', routine: 'workout', plans: 'workout', plan: 'workout', progress: 'ranks', card: 'ranks', shop: 'profile', model: 'profile', schedule: 'workout' }[id] ?? id;
+  const tab = { exercises: 'workouts', exercise: 'workouts', custom: 'workouts', requests: 'workouts', routines: 'workouts', routine: 'workouts', plans: 'workouts', plan: 'workouts', schedule: 'workouts', history: 'profile', achievements: 'profile', crew: 'profile', settings: 'profile', calendar: 'profile', numbers: 'profile', result: 'workout', progress: 'ranks', card: 'ranks', shop: 'profile', model: 'profile' }[id] ?? id;
   currentTab = tab;
   // Safety net: every sub-screen (any screen that is not a tab root) has a way back, even in empty/error states.
   if (id !== tab && !el.querySelector('.back-link')) el.prepend(backLink(`#/${tab}`, t(`tab.${tab}`)));

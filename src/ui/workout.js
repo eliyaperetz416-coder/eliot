@@ -155,17 +155,7 @@ export function startScreen() {
   const claimable = questBox.querySelectorAll('.quest .btn-primary').length;
   kids.push(h('details', { class: 'home-more', open: !!sv.broken || claimable > 0 },
     h('summary', {}, h('span', { text: t('home.quests') }), claimable ? h('span', { class: 'badge', text: String(claimable) }) : null), questBox));
-  kids.push(h('div', { class: 'section-label', text: t('choose.mine') }));
-  if (store.routines.length) {
-    kids.push(list(store.routines.slice(-4).reverse().map((r) => h('div', { class: 'row routine-row' },
-      h('a', { class: 'row-main routine-link', href: `#/routine/${r.id}` }, h('span', { class: 'row-title', text: r.name || t('routines.untitled') }), h('span', { class: 'row-sub', text: t('routines.count', { n: r.entries.length }) })),
-      h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('routines.start'), disabled: !r.entries.length, onclick: () => startFromRoutine(r) }, icon('bolt'))))));
-  } else kids.push(card({ title: t('routines.empty.title'), body: t('routines.empty.body') }));
-  kids.push(list([
-    listRow({ title: t('home.sched.plan'), sub: t('home.sched.row.sub'), icon: 'history', onClick: () => { location.hash = '#/schedule'; } }),
-    listRow({ title: t('routines.title'), sub: t('routines.sub'), icon: 'workout', end: h('span', { class: 'num', text: String(store.routines.length) }), onClick: () => { location.hash = '#/routines'; } }),
-    listRow({ title: t('plans.title'), sub: t('plans.sub'), icon: 'bolt', end: h('span', { class: 'num', text: String(store.plans.length) }), onClick: () => { location.hash = '#/plans'; } }),
-  ]));
+  kids.push(h('a', { class: 'btn btn-ghost btn-block', href: '#/workouts' }, icon('bolt'), t('home.allWorkouts')));
   if (last) kids.push(h('div', { style: 'padding-block-start:12px' }, lastWorkoutCard(last)));
   return h('main', { class: 'screen' }, kids);
 }

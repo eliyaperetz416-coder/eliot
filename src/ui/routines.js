@@ -6,7 +6,7 @@ import * as R from '../core/routines.mjs';
 import { previousPerformance } from '../core/workout.mjs';
 import { nextPlanDay, planDayId, templateRoutines, ROUTINE_TEMPLATES } from '../core/generator.mjs';
 import { suggestLoad, bestE1RM, stepFor } from '../core/progression.mjs';
-import { button, emptyState, exThumb, miniStepper, numberField, openSheet, showToast } from './components.js';
+import { button, emptyState, exThumb, list, listRow, miniStepper, numberField, openSheet, showToast } from './components.js';
 import { data } from './data.js';
 import { store, saveRoutine, deleteRoutine, saveFolder, removeFolder, setDraft, clearMakeup } from './store.js';
 import { openExercisePicker } from './picker.js';
@@ -121,7 +121,7 @@ function templateSheet() {
         await saveRoutine(r);
       }
       showToast({ message: t('routines.created', { n: made.length }) });
-      go('#/routines');
+      go('#/workouts');
     } }, h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: t(`tpl.${id}`) }), h('span', { class: 'row-sub', text: t(`tpl.${id}.sub`) })), icon('chevron', 'chev')))) });
 }
 
@@ -156,12 +156,12 @@ function folderSheet(folder, rerender) {
   input.focus();
 }
 
-export function routinesScreen() {
+/** The Workouts tab: your saved workouts first, then plan my week, plans and the exercise library (OUR DESIGN). */
+export function workoutsScreen() {
   const root = h('main', { class: 'screen' });
   function draw() {
     const kids = [
-      h('a', { class: 'back-link', href: '#/workout' }, icon('chevron', 'chev back-chev'), t('workout.title')),
-      h('h1', { class: 'ex-title', text: t('routines.title') }),
+      h('header', { class: 'screen-head' }, icon('bolt', 'mark'), h('h1', { text: t('tab.workouts') })),
       h('p', { class: 'row-sub', text: t('routines.hint') }),
       h('div', { class: 'stack', style: 'padding-block:12px' },
         button({ label: t('routines.new'), icon: 'workout', block: true, onClick: () => go('#/routine/new') }),
@@ -181,6 +181,12 @@ export function routinesScreen() {
         h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('routines.start'), onclick: () => startFromRoutine(r), disabled: !r.entries.length }, icon('bolt')),
         h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('entry.menu'), onclick: () => routineMenu(r, draw) }, icon('more'))))));
     }
+    kids.push(h('div', { class: 'section-label', text: t('wk.more') }),
+      list([
+        listRow({ title: t('home.sched.plan'), sub: t('home.sched.row.sub'), icon: 'history', onClick: () => go('#/schedule') }),
+        listRow({ title: t('plans.title'), sub: t('plans.sub'), icon: 'bolt', end: h('span', { class: 'num', text: String(store.plans.length) }), onClick: () => go('#/plans') }),
+        listRow({ title: t('wk.library'), sub: t('wk.library.sub'), icon: 'exercises', end: h('span', { class: 'num', text: String(data().exercises.length) }), onClick: () => go('#/exercises') }),
+      ]));
     root.replaceChildren(...kids);
   }
   draw();
@@ -222,7 +228,7 @@ export function routineEditScreen(id) {
     const notes = h('textarea', { class: 'notes-input', rows: 3, placeholder: t('routines.notes'), 'aria-label': t('routines.notes') }, r.notes ?? '');
     notes.addEventListener('input', () => { r.notes = notes.value; save(); });
     root.replaceChildren(
-      h('a', { class: 'back-link', href: '#/routines' }, icon('chevron', 'chev back-chev'), t('routines.title')),
+      h('a', { class: 'back-link', href: '#/workouts' }, icon('chevron', 'chev back-chev'), t('tab.workouts')),
       h('div', { class: 'field-box routine-name-box' }, name), folderChips,
       h('div', { class: 'stack', style: 'padding-block-start:12px' },
         cards.length ? cards : [emptyState({ icon: 'workout', title: t('routines.edit.empty.title'), body: t('routines.edit.empty.body') })],

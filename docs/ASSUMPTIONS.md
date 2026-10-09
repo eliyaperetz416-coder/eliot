@@ -150,3 +150,7 @@ seasons and leaderboards exist (server features, not built here), about 600 exer
 
 ## Crew notifications card
 - The crew screen is the chat. The group code, invite, notifications (turn on / off, and why they might be unavailable), plan sharing and leaving are in a small settings sheet behind the gear button in the header (v1.24).
+
+## Workouts tab instead of the Exercises tab (OUR DESIGN, v1.25)
+- The tab bar is Today, Workouts, Progress, Profile. The Workouts tab leads with a big "New workout" button and your saved workouts (with photos and folders), then "Plan my week", Plans and the exercise library (a row that opens the full library, which is still used when building a workout).
+- Today no longer repeats the list of saved workouts; it has one "All my workouts" button under the week row and quests.

@@ -17,7 +17,7 @@ export function plansScreen() {
   const root = h('main', { class: 'screen' });
   const plans = [...store.plans].reverse();
   root.append(
-    h('a', { class: 'back-link', href: '#/workout' }, icon('chevron', 'chev back-chev'), t('workout.title')),
+    h('a', { class: 'back-link', href: '#/workouts' }, icon('chevron', 'chev back-chev'), t('tab.workouts')),
     h('h1', { class: 'ex-title', text: t('plans.title') }),
     h('p', { class: 'row-sub', text: t('plans.hint') }),
     h('div', { class: 'stack', style: 'padding-block:12px' }, button({ label: t('plans.generate'), icon: 'bolt', block: true, onClick: () => go('#/plan/new') })));

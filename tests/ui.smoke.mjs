@@ -11,7 +11,7 @@ mkdirSync(shots, { recursive: true });
 const server = await serve(0);
 const base = `http://localhost:${server.address().port}/`;
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-const ROUTES = ['workout', 'exercises', 'exercise/barbell-bench-press-medium-grip', 'exercise/plank', 'ranks', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'requests', 'calendar', 'crew', 'profile', 'history', 'kit', 'ranks-preview'];
+const ROUTES = ['workout', 'workouts', 'exercises', 'exercise/barbell-bench-press-medium-grip', 'exercise/plank', 'ranks', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'requests', 'calendar', 'crew', 'profile', 'history', 'kit', 'ranks-preview'];
 const errors = [];
 let failed = 0;
 const ONLY = process.env.ONLY;
@@ -1181,13 +1181,13 @@ for (const lang of ['he', 'en']) {
   });
 
   await check(`${lang}: every sub-screen has a back link`, async () => {
-    const subs = ['exercise/plank', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'requests', 'calendar', 'crew', 'history', 'history/nope', 'routine/nope', 'plan/nope', 'exercise/nope', 'ranks-preview', 'model', 'schedule'];
+    const subs = ['exercises', 'exercise/plank', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'requests', 'calendar', 'crew', 'history', 'history/nope', 'routine/nope', 'plan/nope', 'exercise/nope', 'ranks-preview', 'model', 'schedule'];
     for (const r of subs) {
       await page.goto(`${base}#/${r}`);
       await page.waitForSelector('main');
       assert.ok(await page.locator('main .back-link').count() >= 1, `no back link on #/${r}`);
     }
-    for (const r of ['workout', 'exercises', 'ranks', 'profile']) {
+    for (const r of ['workout', 'workouts', 'ranks', 'profile']) {
       await page.goto(`${base}#/${r}`);
       await page.waitForSelector('main');
       assert.equal(await page.locator('main > .back-link').count(), 0, `unexpected back link on tab root #/${r}`);
@@ -1195,7 +1195,7 @@ for (const lang of ['he', 'en']) {
   });
 
   await check(`${lang}: accessibility basics (names, labels, language, landmarks)`, async () => {
-    for (const r of ['workout', 'exercises', 'ranks', 'shop', 'profile', 'settings', 'numbers', 'history']) {
+    for (const r of ['workout', 'workouts', 'exercises', 'ranks', 'shop', 'profile', 'settings', 'numbers', 'history']) {
       await page.goto(`${base}#/${r}`);
       await page.waitForSelector('main h1');
       const bad = await page.evaluate(() => {
