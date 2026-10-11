@@ -17,6 +17,7 @@ import { shareViaWhatsApp } from './share.js';
 import { formatDateTime, formatNum } from './format.js';
 
 const PERMANENT_HOURS = 876000;
+const signed = (n) => (n > 0 ? `+${n}` : String(n));
 const errText = (e) => t(`crew.err.${errorKey(e)}`);
 
 /** "Tell the chat?" switch for a leader action (OUR DESIGN: the leader decides per action). */
@@ -69,8 +70,11 @@ function giftSheet(m, done) {
     const recent = (rv.recent ?? []).length
       ? h('div', { class: 'list' }, rv.recent.map((r) => h('div', { class: 'row' }, h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: nameOf(r) }), h('span', { class: 'row-sub num', dir: 'ltr', text: `${formatNum(r.w, 1)} ${t('unit.kg')} × ${r.r} · ${r.d}` })))))
       : h('p', { class: 'row-sub', text: t('crew.review.noSets') });
-    let amount = 0;
+    let amount = 0, bonus = 0;
     const ann = announceBox();
+    const bbox = h('input', { class: 'text-input', type: 'number', inputmode: 'numeric', dir: 'ltr', min: 1, id: 'crew-gift-bonus', 'aria-label': t('crew.gift.bonus.custom'), placeholder: t('crew.gift.bonus.custom') });
+    const bchips = [25, 50, 100, 250].map((n) => h('button', { class: 'chip chip-select', type: 'button', 'aria-pressed': 'false', onclick: (e) => { bonus = n; bbox.value = ''; bchips.forEach((c) => c.setAttribute('aria-pressed', String(c === e.currentTarget))); } }, `+${n}`));
+    bbox.addEventListener('input', () => { bonus = Math.floor(Number(bbox.value)) || 0; bchips.forEach((c) => c.setAttribute('aria-pressed', 'false')); });
     const box = h('input', { class: 'text-input', type: 'number', inputmode: 'numeric', dir: 'ltr', min: 1, id: 'crew-gift-amount', 'aria-label': t('crew.gift.custom'), placeholder: t('crew.gift.custom') });
     const chips = [50, 100, 250, 500, 1000].map((n) => h('button', { class: 'chip chip-select', type: 'button', 'aria-pressed': 'false', onclick: (e) => { amount = n; box.value = ''; chips.forEach((c) => c.setAttribute('aria-pressed', String(c === e.currentTarget))); } }, String(n)));
     box.addEventListener('input', () => { amount = Math.floor(Number(box.value)) || 0; chips.forEach((c) => c.setAttribute('aria-pressed', 'false')); });
@@ -80,8 +84,10 @@ function giftSheet(m, done) {
       sum ? h('p', { class: 'card crew-review-sum', text: t('crew.review.sum', { name: m.nickname, days: sum.days, w: sum.workouts, r: sum.rating >= 0 ? `+${sum.rating}` : String(sum.rating), v: formatNum(sum.week, 0), s: sum.streak }) }) : null,
       h('div', { class: 'section-label', text: t('crew.review.sets') }), recent,
       h('div', { class: 'section-label', text: t('crew.gift.amount') }),
-      h('div', { class: 'chips-wrap' }, chips), h('div', { class: 'field' }, h('div', { class: 'field-box' }, box)), ann.el,
-      button({ label: t('crew.gift.go'), variant: 'primary', block: true, onClick: async () => { if (amount < 1) { showToast({ message: t('crew.err.bad_target') }); return; } try { await giveDrachmas(m.id, amount, ann.get()); sh.close(); done(); } catch (e) { showToast({ message: errText(e) }); } } }),
+      h('div', { class: 'chips-wrap' }, chips), h('div', { class: 'field' }, h('div', { class: 'field-box' }, box)),
+      h('div', { class: 'section-label', text: t('crew.gift.bonus') }), h('p', { class: 'row-sub', text: t('crew.gift.bonus.note') }),
+      h('div', { class: 'chips-wrap' }, bchips), h('div', { class: 'field' }, h('div', { class: 'field-box' }, bbox)), ann.el,
+      button({ label: t('crew.gift.go'), variant: 'primary', block: true, onClick: async () => { if (amount < 1 && bonus < 1) { showToast({ message: t('crew.err.bad_target') }); return; } try { if (amount >= 1) await giveDrachmas(m.id, amount, ann.get()); if (bonus >= 1) await setAdjust(m.id, (Number(m.adjust) || 0) + bonus, ann.get()); sh.close(); done(); } catch (e) { showToast({ message: errText(e) }); } } }),
       button({ label: t('common.cancel'), variant: 'ghost', block: true, onClick: () => sh.close() }));
   };
   fetchReview(m.id).then(show).catch((e) => body.replaceChildren(h('p', { class: 'field-error', text: errText(e) }), button({ label: t('common.cancel'), variant: 'ghost', block: true, onClick: () => sh.close() })));
@@ -142,7 +148,7 @@ export function crewScreen() {
         return h('button', { class: `row crew-row${mine ? ' me' : ''}`, type: 'button', 'data-nick': m.nickname, onclick: () => friendSheet(m, mine) },
           h('span', { class: 'crew-pos display num', text: String(i + 1) }),
           h('span', { class: 'row-main' },
-            h('span', { class: 'row-title' }, mine ? `${m.nickname} · ${t('crew.you')}` : m.nickname, m.leader ? leaderChip() : null, m.suspended ? h('span', { class: 'chip chip-warn', text: t('crew.suspended') }) : null, m.adjust ? h('span', { class: 'chip chip-warn num', dir: 'ltr', text: String(m.adjust), title: t('crew.adjust.title') }) : null),
+            h('span', { class: 'row-title' }, mine ? `${m.nickname} · ${t('crew.you')}` : m.nickname, m.leader ? leaderChip() : null, m.suspended ? h('span', { class: 'chip chip-warn', text: t('crew.suspended') }) : null, m.adjust ? h('span', { class: 'chip chip-warn num', dir: 'ltr', text: signed(m.adjust), title: t('crew.adjust.title') }) : null),
             h('span', { class: 'row-sub' }, s.tier ? h('span', { style: `color:${TIER_COLORS[s.tier] ?? 'inherit'}`, text: tierLabel(s) }) : t('crew.unranked'), ` · ${t('game.level', { n: s.level ?? 1 })} · `, h('bdi', { class: 'num', text: `${formatNum(s.weekVolume ?? 0, 0)} ${t('unit.kg')}` }))),
           h('span', { class: 'crew-val display num' }, h('bdi', { text: metric[sort](s) })));
       })),
@@ -199,13 +205,13 @@ export function crewScreen() {
         stat(t('crew.sort.level'), String(s.level ?? 1)), stat(t('crew.sort.streak'), t('game.streakDays', { n: s.streak ?? 0 })),
         stat(t('crew.p.week'), `${formatNum(s.weekVolume ?? 0, 0)} ${t('unit.kg')}`), stat(t('crew.p.month'), String(s.monthWorkouts ?? 0))),
       m.leader ? h('div', { class: 'row-sub' }, leaderChip(), ' ', t('crew.leader.is', { name: m.nickname })) : null,
-      m.adjust ? h('div', { class: 'row-sub' }, t('crew.adjust.note', { raw: formatNum(m.rawRating ?? 0, 0), n: m.adjust })) : null,
+      m.adjust ? h('div', { class: 'row-sub' }, t('crew.adjust.note', { raw: formatNum(m.rawRating ?? 0, 0), n: signed(m.adjust) })) : null,
       m.suspended ? h('div', { class: 'row-sub' }, t('crew.suspended.until', { time: formatDateTime(Date.parse(m.suspended_until)) })) : null,
       h('div', { class: 'section-label', text: t('crew.p.plan') }), plan,
       isLeader() && !mine ? h('div', { class: 'stack crew-leader-tools' },
         h('div', { class: 'section-label', text: t('crew.leader.tools') }),
         button({ label: t('crew.suspend'), variant: 'secondary', block: true, onClick: () => choiceSheet({ title: t('crew.suspend'), body: t('crew.suspend.body', { name: m.nickname }), options: [[1, t('crew.hours', { n: 1 })], [24, t('crew.days', { n: 1 })], [72, t('crew.days', { n: 3 })], [168, t('crew.days', { n: 7 })], [720, t('crew.days', { n: 30 })], [PERMANENT_HOURS, t('crew.permanent')], ...(m.suspended ? [[0, t('crew.suspend.lift')]] : [])], custom: { label: t('crew.suspend.custom'), placeholder: t('crew.suspend.custom.ph'), go: t('crew.suspend.custom.go'), map: (n) => n * 24 }, onPick: async (v, announce) => { await suspendMember(m.id, v, announce); sh.close(); await afterLeaderAction(); } }) }),
-        button({ label: t('crew.adjust.title'), variant: 'secondary', block: true, onClick: () => choiceSheet({ title: t('crew.adjust.title'), body: t('crew.adjust.body', { name: m.nickname }), options: [[-50, '−50'], [-100, '−100'], [-200, '−200'], [-500, '−500'], [-1000, '−1000'], [0, t('crew.adjust.reset')]], custom: { label: t('crew.adjust.custom'), placeholder: t('crew.adjust.custom.ph'), go: t('crew.adjust.custom.go'), map: (n) => -n }, onPick: async (v, announce) => { await setAdjust(m.id, v, announce); sh.close(); await afterLeaderAction(); } }) }),
+        button({ label: t('crew.adjust.title'), variant: 'secondary', block: true, onClick: () => choiceSheet({ title: t('crew.adjust.title'), body: t('crew.adjust.body', { name: m.nickname }), options: [[-50, '−50'], [-100, '−100'], [-200, '−200'], [-500, '−500'], [-1000, '−1000'], [50, '+50'], [100, '+100'], [250, '+250'], [0, t('crew.adjust.reset')]], custom: { label: t('crew.adjust.custom'), placeholder: t('crew.adjust.custom.ph'), go: t('crew.adjust.custom.go'), map: (n) => -n }, onPick: async (v, announce) => { await setAdjust(m.id, v, announce); sh.close(); await afterLeaderAction(); } }) }),
         button({ label: t('crew.gift.title'), variant: 'secondary', block: true, onClick: () => giftSheet(m, async () => { sh.close(); await afterLeaderAction(); }) }),
         button({ label: t('crew.leader.make'), variant: 'secondary', block: true, onClick: () => confirmSheet({ title: t('crew.leader.make'), body: t('crew.leader.make.body', { name: m.nickname }), label: t('crew.leader.make.go'), onGo: async (announce) => { await makeLeader(m.id, announce); sh.close(); await afterLeaderAction(); } }) }),
         button({ label: t('crew.kick'), variant: 'danger', block: true, onClick: () => confirmSheet({ title: t('crew.kick'), body: t('crew.kick.body', { name: m.nickname }), label: t('crew.kick.go'), danger: true, onGo: async (announce) => { await kickMember(m.id, announce); sh.close(); await afterLeaderAction(); } }) })) : null) });
@@ -225,7 +231,7 @@ export function crewScreen() {
     const [kind, arg] = String(m.body).split(':');
     if (kind === 'suspended') return t('crew.sys.suspended', { name: m.nickname, time: hoursText(Number(arg)) });
     if (kind === 'unsuspended') return t('crew.sys.unsuspended', { name: m.nickname });
-    if (kind === 'adjust') return Number(arg) ? t('crew.sys.adjust', { name: m.nickname, n: arg }) : t('crew.sys.adjust0', { name: m.nickname });
+    if (kind === 'adjust') return Number(arg) ? t('crew.sys.adjust', { name: m.nickname, n: signed(Number(arg)) }) : t('crew.sys.adjust0', { name: m.nickname });
     if (kind === 'gift') return t('crew.sys.gift', { name: m.nickname, n: arg });
     return t(({ created: 'crew.sys.created', removed: 'crew.sys.removed', leader: 'crew.sys.leader' })[kind] ?? 'crew.sys.joined', { name: m.nickname });
   };

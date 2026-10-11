@@ -97,6 +97,7 @@ test('leader adjustment: lowers the shown rating and tier on the crew board only
   assert.equal(applyAdjust({ id: 'c', nickname: 'C', adjust: -50, stats: {} }).stats.rating, undefined, 'nothing to adjust without a rating');
   assert.equal(applyAdjust({ id: 'd', nickname: 'D', adjust: -400, stats: { rating: 1000 } }).stats.rating, 600, 'a big drop works');
   assert.equal(applyAdjust({ id: 'd2', nickname: 'D', adjust: -9999, stats: { rating: 1000 } }).stats.rating, 1, 'there is no cap on the drop, the rating stays at least 1');
+  assert.equal(applyAdjust({ id: 'p', nickname: 'P', adjust: 40, stats: { rating: 600 } }).stats.rating, 640, 'a prize raises the shown rating');
   const s = applyAdjust({ id: 's', nickname: 'S', suspended_until: '2030-01-01T00:00:00Z', stats: { rating: 900, tier: 'olympian', division: 'V' } });
   assert.deepEqual(sortBoard([s, a, b]).map((m) => m.id), ['b', 'a', 's']);
   assert.equal(errorKey(new Error('suspended')), 'suspended');

@@ -71,11 +71,11 @@ export function reviewSummary(history, days = 14) {
 const VALUE = { rating: (s) => s.rating ?? -1, level: (s) => s.level ?? -1, week: (s) => s.weekVolume ?? -1, streak: (s) => s.streak ?? -1 };
 
 /**
- * The leader's rating adjustment (0 or lower, no limit) applies to the crew leaderboard only; the member's own rank on their phone is untouched.
+ * The leader's rating adjustment (minus is a penalty, plus is a prize, no limit) applies to the crew leaderboard only; the member's own rank on their phone is untouched.
  * Returns the member with the shown rating and tier, and `rawRating` / `adjust` so the screen can say what was changed. A suspended member sorts last.
  */
 export function applyAdjust(m) {
-  const adjust = Math.min(0, Math.max(-100000, Number(m.adjust) || 0));
+  const adjust = Math.min(100000, Math.max(-100000, Number(m.adjust) || 0));
   const s = m.stats ?? {};
   if (!adjust || s.rating == null) return { ...m, adjust, rawRating: s.rating ?? null, suspended: !!m.suspended_until };
   const rating = Math.max(1, s.rating + adjust);

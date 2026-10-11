@@ -1017,9 +1017,13 @@ for (const lang of ['he', 'en']) {
         assert.ok(await page.locator('.crew-review .chart-card').count() >= 1, 'the review shows the progress charts');
         await page.screenshot({ path: `${shots}${lang}-crew-review.png` });
         await page.fill('#crew-gift-amount', '12345');
-        await page.getByRole('button', { name: T('תן את המתנה', 'Give the gift') }).click();
+        await page.fill('#crew-gift-bonus', '40');
+        await page.getByRole('button', { name: T('תן את הפרס', 'Give the prize') }).click();
         await page.waitForFunction(() => !document.querySelector('.crew-leader-tools'));
-        assert.ok(sysBodies().includes('gift:12345'));
+        assert.ok(sysBodies().includes('gift:12345') && sysBodies().includes('adjust:40'), 'drachmas and a rating prize are both announced');
+        await board(page);
+        assert.ok((await rowOf(page, 'Dan').locator('.chip-warn').textContent()).includes('+40'), 'the prize shows on the board');
+        await leaderTool('Dan', 1, T('איפוס', 'Reset'));
         await p2.reload(); await p2.waitForSelector('#crew-say');
         await p2.waitForFunction(async (b) => (await import('./src/ui/store.js')).store.game.drachmas === b + 12345, dracBefore);
         await p2.getByRole('button', { name: new RegExp(T("צ'אט", 'Chat')) }).click();

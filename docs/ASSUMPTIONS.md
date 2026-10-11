@@ -177,4 +177,5 @@ seasons and leaderboards exist (server features, not built here), about 600 exer
 - **Punishments have no limits:** suspend from the chat for any time (1 hour up to permanent), take off any number of rating points (crew board only), no cooldown between actions, and they take effect at once.
 - **Gifts have no limit on size.** Before a gift the leader sees the member's progress: rating, weekly volume and workouts over time (one history row per day, `member_history`), a short summary, and the heaviest working set of each exercise from their last 5 workouts (up to 8, in `members.recent`). **This is readable only by the leader** (`get_member_review`); it is not part of the leaderboard data and the app tells members about it in the crew settings.
 - **Announce switch:** every leader action (suspend, rating, gift, make leader, remove) has its own "announce in the chat" switch, on by default.
+- **Rating prizes (v1.32):** the leader's rating adjustment can also be positive, and the gift screen has a "rating prize" part next to the drachmas. Crew leaderboard only; the member's own rank is unchanged.
 - Server file: `supabase/migrations/007_owner_returns_review.sql`.

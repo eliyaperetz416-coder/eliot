@@ -359,11 +359,11 @@
   "crew.suspend.lift": "Lift the suspension",
   "crew.hours": "{n} hours",
   "crew.days": "{n} days",
-  "crew.adjust.title": "Crew rating adjustment",
-  "crew.adjust.body": "Lowers {name}'s rating on this crew's leaderboard only. Their own rank in their app does not change. No limit, takes effect right away.",
+  "crew.adjust.title": "Crew rating: penalty or prize",
+  "crew.adjust.body": "Changes {name}'s rating on this crew's leaderboard only (minus is a penalty, plus is a prize). Their own rank in their app does not change. No limit, takes effect right away.",
   "crew.adjust.reset": "Reset",
   "crew.adjust.note": "Rating {raw}, leader adjustment {n}",
-  "crew.gift.title": "Gift drachmas",
+  "crew.gift.title": "Prize: drachmas and rating",
   "crew.gift.body": "First look at how {name} has been doing, then decide the amount. The drachmas are added the next time they open the app.",
   "crew.gift.got": "The leader gave you {n} drachmas",
   "crew.sys.suspended": "{name} was suspended from the chat for {time}",
@@ -1015,7 +1015,7 @@
   "crew.adjust.custom.go": "Take off these points",
   "crew.gift.custom": "Or any amount",
   "crew.gift.amount": "Amount",
-  "crew.gift.go": "Give the gift",
+  "crew.gift.go": "Give the prize",
   "crew.review.loading": "Loading…",
   "crew.review.rating": "Rating over time",
   "crew.review.week": "Weekly volume",
@@ -1029,5 +1029,8 @@
   "crew.err.not_owner": "Only the app owner can open a crew.",
   "crew.err.return_limit": "You used both returns this month.",
   "shop.return.left": "Returns left this month: {n} of 2",
-  "shop.return.none": "You used both returns this month. Next month you get two more."
+  "shop.return.none": "You used both returns this month. Next month you get two more.",
+  "crew.gift.bonus": "Rating prize",
+  "crew.gift.bonus.note": "Adds points to their rating on this crew's leaderboard (their own rank in their app does not change). You can combine it with drachmas.",
+  "crew.gift.bonus.custom": "Or any number of rating points"
 }

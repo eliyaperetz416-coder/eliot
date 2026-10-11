@@ -94,7 +94,7 @@ export function createFakeCrew() {
     },
     set_adjust({ p_token, p_member_id, p_value, p_announce = true }) {
       const { group: g, member: m } = me(p_token); if (!m.leader) fail('not_leader');
-      const t = g.members.find((y) => y.id === p_member_id && y.active); if (!t || t.id === m.id || p_value > 0 || p_value < -100000) fail('bad_target');
+      const t = g.members.find((y) => y.id === p_member_id && y.active); if (!t || t.id === m.id || p_value > 100000 || p_value < -100000) fail('bad_target');
       t.adjust = p_value; if (p_announce) g.messages.push({ id: ++msgId, member_id: m.id, nickname: t.nickname, kind: 'system', body: `adjust:${p_value}`, created_at: new Date().toISOString() }); return null;
     },
     give_drachmas({ p_token, p_member_id, p_amount, p_announce = true }) {

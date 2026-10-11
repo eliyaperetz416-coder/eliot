@@ -87,7 +87,7 @@ begin
   if not m.is_leader then raise exception 'not_leader'; end if;
   select * into t from public.members where id = p_member_id and group_id = m.group_id and active;
   if not found or t.id = m.id then raise exception 'bad_target'; end if;
-  if v > 0 or v < -100000 then raise exception 'bad_target'; end if;
+  if v > 100000 or v < -100000 then raise exception 'bad_target'; end if;
   update public.members set adjust = v where id = t.id;
   if coalesce(p_announce, true) then insert into public.messages (group_id, member_id, nickname, kind, body) values (m.group_id, m.id, t.nickname, 'system', 'adjust:' || v); end if;
 end $$;
@@ -176,3 +176,5 @@ create or replace function public.create_group(p_name text, p_nick text, p_token
 begin
   raise exception 'not_owner';
 end $$;
+
+-- v1.32: a rating adjustment can also be a prize (plus), not only a penalty; set_adjust now accepts -100000..100000 (applied live, same body as above).
