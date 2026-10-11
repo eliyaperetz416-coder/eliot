@@ -25,6 +25,18 @@ export function purchase(game, shop, id) {
   return { ok: true, game: g };
 }
 
+/** Takes back an owned cosmetic for its full price (a mistaken or unwanted purchase). It is unequipped first. Returns { ok, game, refund }. */
+export function refundItem(game, shop, id) {
+  const item = shop.cosmetics.find((c) => c.id === id);
+  if (!item || !game.inventory.owned.includes(id)) return { ok: false, game };
+  const g = structuredClone(game);
+  g.inventory.owned = g.inventory.owned.filter((x) => x !== id);
+  const slot = SLOT_OF[item.kind];
+  if (g.inventory.equipped[slot] === id) g.inventory.equipped[slot] = null;
+  g.drachmas += item.price;
+  return { ok: true, game: g, refund: item.price };
+}
+
 /** Equip an owned cosmetic (or unequip it when it is already equipped). */
 export function toggleEquip(game, shop, id) {
   const item = shop.cosmetics.find((c) => c.id === id);

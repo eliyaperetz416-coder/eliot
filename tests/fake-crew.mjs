@@ -29,7 +29,7 @@ export function createFakeCrew() {
     },
     my_group({ p_token }) {
       const { group: g, member: m } = me(p_token);
-      return { group: { name: g.name, code: g.code }, me: { id: m.id, nickname: m.nickname, leader: !!m.leader }, members: g.members.filter((x) => x.active).map((x) => ({ id: x.id, nickname: x.nickname, stats: x.stats, plan: x.plan ?? null, leader: !!x.leader, stats_updated_at: x.stats && Object.keys(x.stats).length ? new Date().toISOString() : null })) };
+      return { group: { name: g.name, code: g.code }, me: { id: m.id, nickname: m.nickname, leader: !!m.leader, suspended_until: m.suspendedUntil && m.suspendedUntil > Date.now() ? new Date(m.suspendedUntil).toISOString() : null, adjust: m.adjust ?? 0 }, members: g.members.filter((x) => x.active).map((x) => ({ id: x.id, nickname: x.nickname, stats: x.stats, plan: x.plan ?? null, leader: !!x.leader, adjust: x.adjust ?? 0, suspended_until: x.suspendedUntil && x.suspendedUntil > Date.now() ? new Date(x.suspendedUntil).toISOString() : null, stats_updated_at: x.stats && Object.keys(x.stats).length ? new Date().toISOString() : null })) };
     },
     update_stats({ p_token, p_stats }) { me(p_token).member.stats = { ...p_stats }; return null; },
     update_plan({ p_token, p_plan }) {
@@ -47,6 +47,7 @@ export function createFakeCrew() {
       const { group: g, member: m } = me(p_token);
       if (!['chat', 'status'].includes(p_kind)) fail('bad_kind');
       const body = String(p_body ?? '').trim().slice(0, 280); if (!body) fail('empty');
+      if (m.suspendedUntil && m.suspendedUntil > Date.now()) fail('suspended');
       return add(g, m, p_kind, body);
     },
     get_messages({ p_token, p_after = 0, p_limit = 60 }) {
@@ -70,6 +71,23 @@ export function createFakeCrew() {
       const t = g.members.find((y) => y.id === p_member_id && y.active); if (!t || t.id === m.id) fail('bad_target');
       m.leader = false; t.leader = true; add(g, t, 'system', 'leader'); return null;
     },
+    suspend_member({ p_token, p_member_id, p_hours }) {
+      const { group: g, member: m } = me(p_token); if (!m.leader) fail('not_leader');
+      const t = g.members.find((y) => y.id === p_member_id && y.active); if (!t || t.id === m.id) fail('bad_target');
+      t.suspendedUntil = p_hours > 0 ? Date.now() + p_hours * 3600000 : null;
+      g.messages.push({ id: ++msgId, member_id: m.id, nickname: t.nickname, kind: 'system', body: p_hours > 0 ? `suspended:${p_hours}` : 'unsuspended', created_at: new Date().toISOString() }); return null;
+    },
+    set_adjust({ p_token, p_member_id, p_value }) {
+      const { group: g, member: m } = me(p_token); if (!m.leader) fail('not_leader');
+      const t = g.members.find((y) => y.id === p_member_id && y.active); if (!t || t.id === m.id || p_value > 0 || p_value < -500) fail('bad_target');
+      t.adjust = p_value; g.messages.push({ id: ++msgId, member_id: m.id, nickname: t.nickname, kind: 'system', body: `adjust:${p_value}`, created_at: new Date().toISOString() }); return null;
+    },
+    give_drachmas({ p_token, p_member_id, p_amount }) {
+      const { group: g, member: m } = me(p_token); if (!m.leader) fail('not_leader');
+      const t = g.members.find((y) => y.id === p_member_id && y.active); if (!t || t.id === m.id || !(p_amount >= 1 && p_amount <= 1000)) fail('bad_target');
+      t.gifts = (t.gifts ?? 0) + p_amount; g.messages.push({ id: ++msgId, member_id: m.id, nickname: t.nickname, kind: 'system', body: `gift:${p_amount}`, created_at: new Date().toISOString() }); return null;
+    },
+    claim_gifts({ p_token }) { const m = me(p_token).member; const n = m.gifts ?? 0; m.gifts = 0; return n; },
     rename_group({ p_token, p_name }) {
       const { group: g, member: m } = me(p_token); if (!m.leader) fail('not_leader');
       const n = String(p_name ?? '').trim().slice(0, 40); if (!n) fail('bad_name'); g.name = n; return n;

@@ -545,7 +545,7 @@ for (const lang of ['he', 'en']) {
     await page.screenshot({ path: `${shots}${lang}-shop.png`, fullPage: true });
     await page.locator('.cosmetic').first().locator('.btn').click(); // Storm Clouds, 100
     await page.waitForFunction((b) => Number(document.querySelector('.wallet-n').textContent.replace(/[^0-9]/g, '')) === b - 100, bal0);
-    await page.locator('.cosmetic').first().locator('.btn').click(); // equip
+    await page.locator('.cosmetic').first().locator('.btn').first().click(); // equip
     await page.waitForSelector('.cosmetic.equipped');
     await page.locator('.shop-row', { hasText: /XP/ }).locator('.btn').last().click(); // buy XP Shake
     await page.waitForFunction(() => [...document.querySelectorAll('.shop-row')].some((r) => /XP/.test(r.textContent) && r.querySelectorAll('.btn').length === 2));
@@ -932,7 +932,7 @@ for (const lang of ['he', 'en']) {
         const p3 = await ctx3.newPage();
         p3.on('pageerror', (e) => errors.push(`crew third: ${e.message}`));
         await onboard(p3, lang, `crew3-${lang}`);
-        const board = async (pg) => { await pg.reload(); await pg.waitForSelector('#crew-say'); await pg.getByRole('button', { name: T('לידרבורד', 'Leaderboard') }).click(); await pg.waitForSelector('.crew-row'); };
+        const board = async (pg) => { await pg.reload(); await pg.waitForSelector('#crew-say, .crew-suspended'); await pg.getByRole('button', { name: T('לידרבורד', 'Leaderboard') }).click(); await pg.waitForSelector('.crew-row'); };
         const rowOf = (pg, nick) => pg.locator(`.crew-row[data-nick="${nick}"]`);
         const confirmGo = async (pg) => { await pg.waitForFunction(() => document.querySelectorAll('.sheet').length >= 1); await pg.locator('.sheet').last().locator('.btn-primary, .btn-danger').first().click(); };
         await p3.goto(`${base}#/crew`); await p3.waitForSelector('#crew-code');
@@ -970,9 +970,39 @@ for (const lang of ['he', 'en']) {
         await page.waitForFunction(() => ![...document.querySelectorAll('.crew-row')].some((r) => r.textContent.includes('Eve')));
         await p3.reload();
         await p3.waitForSelector('#crew-code');
+        // suspend Dan from the chat, lift it, adjust his rating, give drachmas
+        const leaderTool = async (nick, toolIndex, chip) => {
+          await board(page);
+          await rowOf(page, nick).click(); await page.waitForSelector('.crew-leader-tools');
+          await page.locator('.crew-leader-tools .btn-secondary').nth(toolIndex).click();
+          await page.waitForSelector('.sheet .chip-select');
+          await page.locator('.sheet .chip-select', { hasText: chip }).last().click();
+          await page.waitForFunction(() => !document.querySelector('.crew-leader-tools'));
+        };
+        await leaderTool('Dan', 0, /^1 (שעות|hours)$/);
+        await board(p2);
+        await p2.getByRole('button', { name: T("צ'אט", 'Chat') }).click();
+        await p2.waitForSelector('.crew-suspended');
+        assert.equal(await p2.locator('#crew-say').count(), 0, 'a suspended member cannot write');
+        await p2.screenshot({ path: `${shots}${lang}-crew-suspended.png` });
+        await board(page);
+        assert.equal(await rowOf(page, 'Dan').locator('.chip-warn').count(), 1, 'the board marks the suspension');
+        await leaderTool('Dan', 0, T('ביטול השעיה', 'Lift the suspension'));
+        await p2.reload(); await p2.waitForSelector('#crew-say');
+        await leaderTool('Dan', 1, /^(−100|-100)$/);
+        await board(page);
+        assert.ok((await rowOf(page, 'Dan').locator('.chip-warn').textContent()).includes('100'), 'the adjustment shows on the board');
+        await leaderTool('Dan', 1, T('איפוס', 'Reset'));
+        const dracBefore = await p2.evaluate(async () => (await import('./src/ui/store.js')).store.game.drachmas);
+        await leaderTool('Dan', 2, /^100$/);
+        await p2.reload(); await p2.waitForSelector('#crew-say');
+        await p2.waitForFunction(async (b) => (await import('./src/ui/store.js')).store.game.drachmas === b + 100, dracBefore);
+        await p2.getByRole('button', { name: new RegExp(T("צ'אט", 'Chat')) }).click();
+        const chatText = await p2.textContent('#crew-feed');
+        assert.ok(/הושעה|suspended/i.test(chatText) && /דרכמות|drachmas/i.test(chatText), 'everything is announced in the chat');
         // hand over to Dan: he gets the tools and Elia loses them
         await rowOf(page, 'Dan').click(); await page.waitForSelector('.crew-leader-tools');
-        await page.locator('.crew-leader-tools .btn-secondary').click();
+        await page.locator('.crew-leader-tools .btn-secondary').nth(3).click();
         await confirmGo(page);
         await board(page);
         assert.equal(await rowOf(page, 'Dan').locator('.chip-leader').count(), 1);
@@ -982,7 +1012,7 @@ for (const lang of ['he', 'en']) {
         // and back to Elia
         await board(p2);
         await rowOf(p2, 'Elia').click(); await p2.waitForSelector('.crew-leader-tools');
-        await p2.locator('.crew-leader-tools .btn-secondary').click();
+        await p2.locator('.crew-leader-tools .btn-secondary').nth(3).click();
         await confirmGo(p2);
         await board(page);
         assert.equal(await rowOf(page, 'Elia').locator('.chip-leader').count(), 1);
@@ -1239,19 +1269,19 @@ for (const lang of ['he', 'en']) {
     // theme: buy Crimson, equip, the accent changes
     await rowOf(T('ארגמן', 'Crimson')).locator('.btn').click();
     await page.waitForFunction(() => document.querySelector('.shop-row .btn[class*="btn-primary"]'));
-    await rowOf(T('ארגמן', 'Crimson')).locator('.btn').click();
+    await rowOf(T('ארגמן', 'Crimson')).locator('.btn').first().click();
     await page.waitForFunction(() => getComputedStyle(document.documentElement).getPropertyValue('--accent-rgb').trim().startsWith('255 77 94'));
     await page.screenshot({ path: `${shots}${lang}-shop-themes.png`, fullPage: true });
     // title: buy and equip, then it shows on the profile
     await rowOf(T('צייד חזרות', 'Rep Hunter')).locator('.btn').click();
     await page.waitForTimeout(250);
-    await rowOf(T('צייד חזרות', 'Rep Hunter')).locator('.btn').click();
+    await rowOf(T('צייד חזרות', 'Rep Hunter')).locator('.btn').first().click();
     await page.waitForTimeout(250);
     // sound: preview works without errors, buy and equip
     await rowOf(T('פעמון', 'Bell')).locator('.icon-btn').click();
     await rowOf(T('פעמון', 'Bell')).locator('.btn').last().click();
     await page.waitForTimeout(250);
-    await rowOf(T('פעמון', 'Bell')).locator('.btn').last().click();
+    await rowOf(T('פעמון', 'Bell')).locator('.btn').first().click();
     await page.waitForTimeout(250);
     // drachma boost: buy and activate
     await rowOf(T('דחיפת דרכמות', 'Drachma Boost')).locator('.btn').last().click();

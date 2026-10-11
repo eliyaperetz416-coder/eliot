@@ -87,3 +87,17 @@ test('restores from the shop: used from the "streak broken" prompt, consumed, ki
   const none = brokenGame(12, 'super'); none.g.inventory.super = 0; assert.equal(useRestore(none.g, 'super', none.today).ok, false);
   const fine = rich(); fine.inventory.revive = 1; assert.equal(useRestore(fine, 'revive', '2026-02-01').ok, false, 'nothing to restore');
 });
+
+test('refund: an owned cosmetic comes back for the full price and is unequipped; not owned or consumables cannot', async () => {
+  const { refundItem } = await import('../src/core/shop.mjs');
+  let g = purchase(rich(1000), shop, 'th_crimson').game;
+  g = toggleEquip(g, shop, 'th_crimson').game;
+  assert.equal(g.inventory.equipped.theme, 'th_crimson'); assert.equal(g.drachmas, 800);
+  const r = refundItem(g, shop, 'th_crimson');
+  assert.equal(r.ok, true); assert.equal(r.refund, 200);
+  assert.equal(r.game.drachmas, 1000); assert.deepEqual(r.game.inventory.owned, []); assert.equal(r.game.inventory.equipped.theme, null);
+  assert.equal(g.drachmas, 800, 'the input is not changed');
+  assert.equal(refundItem(r.game, shop, 'th_crimson').ok, false, 'cannot refund twice');
+  assert.equal(refundItem(rich(), shop, 'super').ok, false, 'consumables are not refundable');
+  assert.equal(refundItem(rich(), shop, 'nope').ok, false);
+});

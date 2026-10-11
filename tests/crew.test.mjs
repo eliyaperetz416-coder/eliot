@@ -87,3 +87,16 @@ test('plan payload: kinds and your own names only; several items per day; this w
   // a plan shared by an older version (one object per day) still shows
   assert.deepEqual(planRows({ days: { 1: { k: 'rest', n: '' } }, trained: [] }, '2026-10-08')[1].items, [{ kind: 'rest', name: '', detailKey: '1-0' }]);
 });
+
+test('leader adjustment: lowers the shown rating and tier on the crew board only, suspended members sort last', async () => {
+  const { applyAdjust, sortBoard, errorKey } = await import('../src/core/crew.mjs');
+  const a = applyAdjust({ id: 'a', nickname: 'A', adjust: -100, stats: { rating: 640, tier: 'diamond', division: 'III', level: 5 } });
+  assert.deepEqual([a.stats.rating, a.stats.tier, a.stats.division, a.rawRating, a.adjust], [540, 'platinum', 'III', 640, -100]);
+  const b = applyAdjust({ id: 'b', nickname: 'B', adjust: 0, stats: { rating: 600, tier: 'diamond', division: 'V' } });
+  assert.deepEqual([b.stats.rating, b.stats.tier], [600, 'diamond']);
+  assert.equal(applyAdjust({ id: 'c', nickname: 'C', adjust: -50, stats: {} }).stats.rating, undefined, 'nothing to adjust without a rating');
+  assert.equal(applyAdjust({ id: 'd', nickname: 'D', adjust: -9999, stats: { rating: 1000 } }).stats.rating, 500, 'the adjustment is limited to -500');
+  const s = applyAdjust({ id: 's', nickname: 'S', suspended_until: '2030-01-01T00:00:00Z', stats: { rating: 900, tier: 'olympian', division: 'V' } });
+  assert.deepEqual(sortBoard([s, a, b]).map((m) => m.id), ['b', 'a', 's']);
+  assert.equal(errorKey(new Error('suspended')), 'suspended');
+});

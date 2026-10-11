@@ -673,3 +673,7 @@ a.btn { text-decoration: none; }
 .crew-day-items { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .crew-workout { min-height: 36px; }
 .crew-peek-row { gap: var(--s-3); }
+
+/* Crew leader powers (OUR DESIGN) */
+.chip-warn { background: rgb(255 138 61 / .16); border-color: rgb(255 138 61 / .55); color: #ffb685; margin-inline-start: 6px; }
+.crew-suspended { margin: var(--s-3) 0 0; color: var(--text-dim); }

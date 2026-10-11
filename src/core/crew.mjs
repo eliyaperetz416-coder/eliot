@@ -41,10 +41,24 @@ export function statsFromState({ workouts, overall, game, streakNow, todayKey })
 
 const VALUE = { rating: (s) => s.rating ?? -1, level: (s) => s.level ?? -1, week: (s) => s.weekVolume ?? -1, streak: (s) => s.streak ?? -1 };
 
+/**
+ * The leader's rating adjustment (0 to -500) applies to the crew leaderboard only; the member's own rank on their phone is untouched.
+ * Returns the member with the shown rating and tier, and `rawRating` / `adjust` so the screen can say what was changed. A suspended member sorts last.
+ */
+export function applyAdjust(m) {
+  const adjust = Math.min(0, Math.max(-500, Number(m.adjust) || 0));
+  const s = m.stats ?? {};
+  if (!adjust || s.rating == null) return { ...m, adjust, rawRating: s.rating ?? null, suspended: !!m.suspended_until };
+  const rating = Math.max(1, s.rating + adjust);
+  const t = tierFor(rating);
+  return { ...m, adjust, rawRating: s.rating, suspended: !!m.suspended_until, stats: { ...s, rating, tier: t.tier, ...(t.division ? { division: t.division } : { division: undefined }) } };
+}
+
 /** Best first. Members who have not shared numbers yet go last. Ties: higher level, then nickname. */
 export function sortBoard(members, by = 'rating') {
   const val = VALUE[by] ?? VALUE.rating;
   return [...members].sort((a, b) => {
+    if (!!a.suspended !== !!b.suspended) return a.suspended ? 1 : -1; // a suspended member goes to the bottom
     const d = val(b.stats ?? {}) - val(a.stats ?? {});
     if (d) return d;
     const l = (b.stats?.level ?? 0) - (a.stats?.level ?? 0);
@@ -55,7 +69,7 @@ export function sortBoard(members, by = 'rating') {
 /** Server error text -> i18n key suffix. */
 export function errorKey(err) {
   const m = String(err?.message ?? err ?? '');
-  for (const k of ['nick_taken', 'no_group', 'group_full', 'already_member', 'not_member', 'too_fast', 'bad_nick', 'bad_name', 'server_full', 'empty', 'not_leader', 'bad_target']) if (m.includes(k)) return k;
+  for (const k of ['nick_taken', 'no_group', 'group_full', 'already_member', 'not_member', 'too_fast', 'bad_nick', 'bad_name', 'server_full', 'empty', 'not_leader', 'bad_target', 'suspended']) if (m.includes(k)) return k;
   if (m === 'offline' || /Failed to fetch|NetworkError|Load failed|aborted/i.test(m)) return 'offline';
   return 'generic';
 }

@@ -1,7 +1,9 @@
 // The crew on this phone: membership (kept in IndexedDB), unread count, and sending your numbers after workouts.
 import { dbGet, dbPut } from './db.js';
 import { rpc, newToken, vapidKey } from './crew-api.js';
-import { store, todayKey } from './store.js';
+import { store, todayKey, saveGame } from './store.js';
+import { showToast } from './components.js';
+import { t } from '../core/i18n.mjs';
 import { statsFromState, planPayload, unreadCount, errorKey, base64UrlToBytes } from '../core/crew.mjs';
 import { view } from '../core/streak.mjs';
 import { getSettings } from './storage.js';
@@ -16,7 +18,7 @@ const persist = () => dbPut('kv', crew.local, 'crew');
 
 export async function initCrew() {
   crew.local = (await dbGet('kv', 'crew').catch(() => null)) ?? null;
-  if (crew.local) { refreshUnread(); syncStats(true); }
+  if (crew.local) { refreshUnread(); syncStats(true); claimGifts(); }
 }
 
 async function enter(fn, args, nickname) {
@@ -46,6 +48,20 @@ export const kickMember = (id) => rpc('kick_member', { p_token: tok(), p_member_
 export const makeLeader = (id) => rpc('make_leader', { p_token: tok(), p_member_id: id });
 export async function renameGroup(name) { const n = await rpc('rename_group', { p_token: tok(), p_name: name }); crew.local = { ...crew.local, name: n }; await persist(); emit(); return n; }
 export async function newInviteCode() { const c = await rpc('new_code', { p_token: tok() }); crew.local = { ...crew.local, code: c }; await persist(); emit(); return c; }
+/** More leader tools: suspend (hours; 0 lifts it), rating adjustment (0 to -500), a drachma gift. Each one is announced in the chat by the server. */
+export const suspendMember = (id, hours) => rpc('suspend_member', { p_token: tok(), p_member_id: id, p_hours: hours });
+export const setAdjust = (id, value) => rpc('set_adjust', { p_token: tok(), p_member_id: id, p_value: value });
+export const giveDrachmas = (id, amount) => rpc('give_drachmas', { p_token: tok(), p_member_id: id, p_amount: amount });
+/** Drachmas the leader gave you since the last time: the server hands each gift over once. */
+export async function claimGifts() {
+  if (!crew.local) return 0;
+  try {
+    const n = Number(await rpc('claim_gifts', { p_token: tok() })) || 0;
+    if (n > 0) { await saveGame({ ...store.game, drachmas: store.game.drachmas + n }); showToast({ message: t('crew.gift.got', { n }), duration: 6000 }); }
+    return n;
+  } catch { return 0; }
+}
+
 /** The leader may have renamed the crew or made a new code: follow the server. */
 export async function syncGroupInfo(group) {
   if (!crew.local || !group || (group.name === crew.local.name && group.code === crew.local.code)) return;
@@ -99,7 +115,7 @@ export async function syncPlan() {
 }
 
 export function startCrewWatcher() {
-  const tick = () => { if (document.visibilityState === 'visible' && crew.local) { refreshUnread(); syncStats(); } };
+  const tick = () => { if (document.visibilityState === 'visible' && crew.local) { refreshUnread(); syncStats(); claimGifts(); } };
   document.addEventListener('visibilitychange', tick);
   setInterval(tick, 60000);
 }

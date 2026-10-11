@@ -2,9 +2,9 @@
 import { h } from './dom.js';
 import { icon } from './icons.js';
 import { t } from '../core/i18n.mjs';
-import { purchase, toggleEquip, activateShake, activateBoost } from '../core/shop.mjs';
+import { purchase, toggleEquip, activateShake, activateBoost, refundItem } from '../core/shop.mjs';
 import { view } from '../core/streak.mjs';
-import { button, showToast, backLink } from './components.js';
+import { button, showToast, backLink, openSheet } from './components.js';
 import { data } from './data.js';
 import { store, saveGame, todayKey } from './store.js';
 import { emblem } from './emblem.js';
@@ -48,9 +48,16 @@ export function shopScreen() {
       sampleEmblem().then((img) => drawPreview(canvas, c, img)).catch(() => drawPreview(canvas, c, null));
       return h('div', { class: `cosmetic${eq ? ' equipped' : ''}` }, canvas,
         h('div', { class: 'cosmetic-name', text: itemName(c) }), h('div', { class: 'row-sub', text: itemDesc(c) }),
-        owned ? button({ label: eq ? t('shop.equipped') : t('shop.equip'), variant: eq ? 'secondary' : 'primary', block: true, onClick: () => act((gm) => toggleEquip(gm, shop, c.id)) })
+        owned ? h('div', { class: 'stack' }, button({ label: eq ? t('shop.equipped') : t('shop.equip'), variant: eq ? 'secondary' : 'primary', block: true, onClick: () => act((gm) => toggleEquip(gm, shop, c.id)) }), returnBtn(c))
           : button({ label: `${c.price}`, icon: 'coin', variant: g.drachmas >= c.price ? 'primary' : 'secondary', block: true, disabled: g.drachmas < c.price, onClick: () => act((gm) => purchase(gm, shop, c.id), () => t('shop.bought', { name: itemName(c) })) }));
     }));
+    /** Return an owned item for its full price (a mistaken purchase, or someone else used your phone). */
+    const returnItem = (c) => {
+      const sh = openSheet({ title: t('shop.return'), content: h('div', { class: 'stack' }, h('p', { text: t('shop.return.body', { name: itemName(c), n: c.price }) }),
+        button({ label: t('shop.return.go', { n: c.price }), variant: 'primary', block: true, onClick: async () => { sh.close(); await act((gm) => refundItem(gm, shop, c.id), (r) => t('shop.returned', { n: r.refund })); } }),
+        button({ label: t('common.cancel'), variant: 'ghost', block: true, onClick: () => sh.close() })) });
+    };
+    const returnBtn = (c) => button({ label: t('shop.return'), variant: 'ghost', onClick: () => returnItem(c) });
     let ac; // one audio context for sound previews (created by the tap)
     const buyOrEquip = (c, owned, eq) => (owned ? button({ label: eq ? t('shop.equipped') : t('shop.equip'), variant: eq ? 'secondary' : 'primary', onClick: () => act((gm) => toggleEquip(gm, shop, c.id)) })
       : button({ label: `${c.price}`, icon: 'coin', variant: g.drachmas >= c.price ? 'primary' : 'secondary', disabled: g.drachmas < c.price, onClick: () => act((gm) => purchase(gm, shop, c.id), () => t('shop.bought', { name: itemName(c) })) }));
@@ -61,7 +68,7 @@ export function shopScreen() {
         : kind === 'sound' ? h('button', { class: 'icon-btn', type: 'button', 'aria-label': `${t('shop.preview')}: ${itemName(c)}`, onclick: () => { try { ac ??= new (window.AudioContext || window.webkitAudioContext)(); ac.resume?.(); playSound(ac, c.sound); } catch { /* no audio */ } } }, icon('bolt')) : null;
       return h('div', { class: `row shop-row${eq ? ' equipped' : ''}` }, lead,
         h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: itemName(c) }), h('span', { class: 'row-sub', text: itemDesc(c) })),
-        h('div', { class: 'shop-actions' }, buyOrEquip(c, owned, eq)));
+        h('div', { class: 'shop-actions' }, buyOrEquip(c, owned, eq), owned ? returnBtn(c) : null));
     }));
     root.replaceChildren(
       backLink('#/profile', t('tab.profile')),
