@@ -86,3 +86,18 @@ export function markDone(schedule, dateKey, id, on, now = Date.now()) {
   for (const k of Object.keys(done)) if (k.slice(0, 10) < limit) delete done[k];
   return cleanSchedule({ days: schedule?.days, done });
 }
+
+const addDays = (key, n) => { const [y, m, d] = key.split('-').map(Number); const t = new Date(Date.UTC(y, m - 1, d + n)); return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, '0')}-${String(t.getUTCDate()).padStart(2, '0')}`; };
+
+/**
+ * The nearest planned strength workout in the next 7 days: { offset, dateKey, entry } or null. Today counts unless skipToday
+ * (you already trained today). `usable(entry)` lets the caller skip items that point to a deleted saved workout.
+ */
+export function nextScheduledWorkout(schedule, todayKey, { skipToday = false, usable = () => true } = {}) {
+  for (let offset = skipToday ? 1 : 0; offset < 7; offset++) {
+    const dateKey = addDays(todayKey, offset);
+    const entry = planFor(schedule, dateKey).find((e) => e.kind === 'workout' && usable(e));
+    if (entry) return { offset, dateKey, entry };
+  }
+  return null;
+}

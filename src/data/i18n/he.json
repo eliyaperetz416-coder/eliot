@@ -337,6 +337,8 @@
   "crew.sys.leader": "מנהל הקבוצה החדש: {name}",
   "crew.err.not_leader": "רק מנהל הקבוצה יכול לעשות את זה.",
   "crew.err.bad_target": "אי אפשר לבצע את זה על החבר הזה.",
+  "home.sched.tomorrow": "מתוכנן למחר",
+  "home.sched.on": "מתוכנן ל{day}",
   "makeup.title": "השלמה",
   "makeup.sub": "{n} תרגילים שלא הספקת ב{name}",
   "makeup.sub.one": "תרגיל אחד שלא הספקת ב{name}",

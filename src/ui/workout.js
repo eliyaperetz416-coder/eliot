@@ -17,7 +17,7 @@ import { openChooseWorkout, startFromRoutine, startFromPlanDay, activePlan, star
 import { nextPlanDay, planProgress } from '../core/generator.mjs';
 import { planDayLabel } from './plan-names.js';
 import { modelCard } from './model.js';
-import { planFor, markDone, isDone, dayDone } from '../core/schedule.mjs';
+import { planFor, markDone, isDone, dayDone, nextScheduledWorkout } from '../core/schedule.mjs';
 import { planText } from './schedule.js';
 import { gameStrip, questsCard, streakCard } from './game-ui.js';
 import { byDay, weekKeys } from '../core/calendar.mjs';
@@ -58,18 +58,22 @@ function backupReminder() {
   return box;
 }
 
-/** What the big card offers: the next day of the plan, else the saved workout you used last, else a free workout. */
+/** What the big card offers: the nearest workout you planned this week, else the next day of the plan, else the saved workout you used last, else a free workout. */
 function nextUp() {
   const byId = data().byId;
-  const planned = planFor(store.schedule, todayKey()).find((x) => x.kind === 'workout');
-  const count0 = (entries) => ({ exercises: entries.length, sets: entries.reduce((n, e) => n + (e.sets ?? 0), 0) });
-  if (planned?.kind === 'workout' && planned.ref !== 'plan' && planned.ref !== 'free') {
-    const sr = store.routines.find((x) => x.id === planned.ref);
-    if (sr?.entries.length) return { kind: 'routine', scheduled: true, title: sr.name || t('routines.untitled'), sub: t('home.saved'), ...count0(sr.entries), image: byId[sr.entries[0]?.exerciseId]?.image, start: () => startFromRoutine(sr) };
-  }
+  const count = (entries) => ({ exercises: entries.length, sets: entries.reduce((n, e) => n + (e.sets ?? 0), 0) });
   const plan = activePlan();
   const day = plan ? nextPlanDay(plan) : null;
-  const count = (entries) => ({ exercises: entries.length, sets: entries.reduce((n, e) => n + (e.sets ?? 0), 0) });
+  const today = todayKey();
+  const doneToday = store.workouts.some((w) => w.dateKey === today);
+  const sched = nextScheduledWorkout(store.schedule, today, { skipToday: doneToday, usable: (e) => (e.ref === 'plan' ? !!(plan && day) : e.ref === 'free' || store.routines.some((r) => r.id === e.ref && r.entries.length)) });
+  if (sched) {
+    const when = { when: sched.offset === 0 ? t('home.sched.today') : sched.offset === 1 ? t('home.sched.tomorrow') : t('home.sched.on', { day: new Intl.DateTimeFormat(getLanguage() === 'he' ? 'he-IL' : 'en-GB', { weekday: 'long', timeZone: 'UTC' }).format(Date.UTC(+sched.dateKey.slice(0, 4), +sched.dateKey.slice(5, 7) - 1, +sched.dateKey.slice(8, 10))) }) };
+    if (sched.entry.ref === 'free') return { kind: 'free', scheduled: true, ...when, title: t('home.free'), sub: t('home.free.sub'), start: openChooseWorkout };
+    if (sched.entry.ref === 'plan') return { kind: 'plan', scheduled: true, ...when, title: planDayLabel(plan, day), sub: t('choose.plan.sub', { week: day.week, day: day.day }), ...count(day.entries), image: byId[day.entries[0]?.exerciseId]?.image, start: () => startFromPlanDay(plan, day) };
+    const sr = store.routines.find((x) => x.id === sched.entry.ref);
+    return { kind: 'routine', scheduled: true, ...when, title: sr.name || t('routines.untitled'), sub: t('home.saved'), ...count(sr.entries), image: byId[sr.entries[0]?.exerciseId]?.image, start: () => startFromRoutine(sr) };
+  }
   if (plan && day) return { kind: 'plan', title: planDayLabel(plan, day), sub: t('choose.plan.sub', { week: day.week, day: day.day }), ...count(day.entries), image: byId[day.entries[0]?.exerciseId]?.image, start: () => startFromPlanDay(plan, day) };
   const lastW = [...store.workouts].reverse().find((w) => w.routineId && store.routines.some((r) => r.id === w.routineId));
   const r = (lastW && store.routines.find((x) => x.id === lastW.routineId)) ?? store.routines[store.routines.length - 1];
@@ -85,7 +89,7 @@ function heroCard() {
   return h('section', { class: `hero${n.kind === 'plan' ? ' plan-next' : ''}` },
     n.image ? h('img', { class: 'hero-img', src: n.image, alt: '', decoding: 'async' }) : null,
     h('div', { class: 'hero-body' },
-      h('div', { class: 'hero-kicker', text: t(n.scheduled ? 'home.sched.today' : n.kind === 'free' ? 'home.new' : 'home.next') }),
+      h('div', { class: 'hero-kicker', text: n.scheduled ? n.when : t(n.kind === 'free' ? 'home.new' : 'home.next') }),
       h('div', { class: 'hero-title', text: n.title }),
       h('div', { class: 'hero-sub' }, n.sub, meta ? ` · ${meta}` : ''),
       startBtn,

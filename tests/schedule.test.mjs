@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { weekdayOf, cleanSchedule, planFor, addEntry, removeEntry, clearDay, markDone, isDone, dayDone, isPlanned, MAX_PER_DAY } from '../src/core/schedule.mjs';
+import { weekdayOf, cleanSchedule, planFor, addEntry, removeEntry, clearDay, markDone, isDone, dayDone, isPlanned, MAX_PER_DAY, nextScheduledWorkout } from '../src/core/schedule.mjs';
 
 test('weekday of a date key (0 = Sunday)', () => {
   assert.equal(weekdayOf('2026-10-11'), 0);
@@ -55,4 +55,21 @@ test('done marks per item, whole-day legacy marks, expiry', () => {
   s = markDone({ days: {}, done: { '2026-07-01|a': true } }, '2026-10-08', 'a', true, now);
   assert.deepEqual(s.done, { '2026-10-08|a': true });
   assert.deepEqual(markDone(s, '2026-10-08', 'a', false, now).done, {});
+});
+
+test('next scheduled workout: the nearest planned one, today counts unless done, deleted ones are skipped', () => {
+  // 2026-10-11 is a Sunday
+  const sched = { days: { 0: [{ id: 'a', kind: 'activity', type: 'running' }], 2: [{ id: 'b', kind: 'workout', ref: 'upper' }], 4: [{ id: 'c', kind: 'workout', ref: 'gone' }], 5: [{ id: 'd', kind: 'workout', ref: 'plan' }] }, done: {} };
+  const usable = (e) => e.ref !== 'gone';
+  let n = nextScheduledWorkout(sched, '2026-10-11', { usable });
+  assert.deepEqual([n.offset, n.dateKey, n.entry.ref], [2, '2026-10-13', 'upper']);
+  n = nextScheduledWorkout(sched, '2026-10-13', { usable });
+  assert.deepEqual([n.offset, n.entry.ref], [0, 'upper'], 'today counts');
+  n = nextScheduledWorkout(sched, '2026-10-13', { usable, skipToday: true });
+  assert.deepEqual([n.offset, n.entry.ref], [3, 'plan'], 'done today: look from tomorrow, skip the deleted one');
+  assert.equal(nextScheduledWorkout({ days: {}, done: {} }, '2026-10-11'), null);
+  n = nextScheduledWorkout(sched, '2026-10-14', { usable });
+  assert.deepEqual([n.offset, n.entry.ref], [2, 'plan']);
+  n = nextScheduledWorkout(sched, '2026-10-17', { usable });
+  assert.deepEqual([n.offset, n.entry.ref], [3, 'upper'], 'wraps into next week');
 });

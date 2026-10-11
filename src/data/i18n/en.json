@@ -333,6 +333,8 @@
   "crew.sys.leader": "{name} is now the leader",
   "crew.err.not_leader": "Only the crew leader can do that.",
   "crew.err.bad_target": "That cannot be done to this member.",
+  "home.sched.tomorrow": "Planned for tomorrow",
+  "home.sched.on": "Planned for {day}",
   "makeup.title": "Make up",
   "makeup.sub": "{n} exercises you did not get to in {name}",
   "makeup.sub.one": "1 exercise you did not get to in {name}",

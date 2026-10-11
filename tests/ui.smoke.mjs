@@ -1243,6 +1243,26 @@ for (const lang of ['he', 'en']) {
     await page.evaluate(async () => { const { store, saveGame } = await import('./src/ui/store.js'); const g = structuredClone(store.game); g.inventory.equipped.theme = null; g.inventory.boostActive = false; await saveGame(g); });
   });
 
+  await check(`${lang}: next workout is the nearest planned one (not the last one you added)`, async () => {
+    const T = (he, en) => L(lang, he, en);
+    await page.evaluate(async () => {
+      const db = await import('./src/ui/db.js');
+      const mk = (id, name, t0) => ({ id, schemaVersion: 1, name, folderId: null, notes: '', createdMs: t0, updatedMs: t0, entries: [{ id: `e-${id}`, exerciseId: 'barbell-bench-press-medium-grip', sets: 3, repsMin: 6, repsMax: 8, restSec: 90, weight: null, notes: '' }] });
+      await db.dbPut('routines', mk('r-upper', 'Upper UU', 1));
+      await db.dbPut('routines', mk('r-full', 'Full body FF', 2)); // added last: the old rule would show this one
+      const tomorrow = (new Date().getDay() + 1) % 7;
+      await db.dbPut('kv', { days: { [tomorrow]: [{ id: 'u1', kind: 'workout', ref: 'r-upper' }] }, done: {} }, 'schedule');
+    });
+    await page.goto(`${base}#/workout`); await page.reload();
+    await page.waitForSelector('.hero');
+    assert.ok((await page.textContent('.hero')).includes('Upper UU'), 'the planned one, not the last added');
+    assert.ok(!(await page.textContent('.hero')).includes('Full body FF'));
+    assert.ok((await page.textContent('.hero-kicker')).match(/למחר|tomorrow/i));
+    await page.screenshot({ path: `${shots}${lang}-next-planned.png` });
+    await page.evaluate(async () => { const db = await import('./src/ui/db.js'); await db.dbDelete('routines', 'r-upper'); await db.dbDelete('routines', 'r-full'); await db.dbPut('kv', { days: {}, done: {} }, 'schedule'); });
+    await page.reload();
+  });
+
   await check(`${lang}: every sub-screen has a back link`, async () => {
     const subs = ['exercises', 'exercise/plank', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'requests', 'calendar', 'crew', 'history', 'history/nope', 'routine/nope', 'plan/nope', 'exercise/nope', 'ranks-preview', 'model', 'schedule'];
     for (const r of subs) {
