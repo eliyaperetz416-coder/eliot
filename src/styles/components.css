@@ -644,3 +644,32 @@ a.btn { text-decoration: none; }
 .chip-leader { background: rgb(var(--accent-rgb) / .18); border-color: rgb(var(--accent-rgb) / .6); color: var(--accent); font-weight: 700; margin-inline-start: 6px; }
 .crew-leader-box { display: grid; gap: var(--s-2); }
 .crew-leader-box h2 { display: flex; align-items: center; gap: 6px; margin: 0; }
+
+/* Rank path (OUR DESIGN) */
+.ladder-strip { display: grid; gap: var(--s-3); margin-block-start: var(--s-3); text-decoration: none; color: inherit; }
+.ladder-strip p { margin: 0; }
+.ladder-track { list-style: none; margin: 0; padding: 0; display: flex; justify-content: space-between; align-items: flex-end; position: relative; isolation: isolate; }
+.ladder-track::before { content: ""; position: absolute; inset-inline: 14px; inset-block-end: 22px; height: 4px; border-radius: 2px; background: var(--surface-3); z-index: -1; }
+.ladder-track::after { content: ""; position: absolute; inset-inline-start: 14px; inset-block-end: 22px; height: 4px; border-radius: 2px; background: var(--accent); width: calc((100% - 28px) * var(--filled) / 100); z-index: -1; }
+.ladder-dot { display: grid; justify-items: center; gap: 4px; }
+.ladder-dot.locked svg { opacity: .35; filter: grayscale(.8); }
+.ladder-dot.current { transform: translateY(-4px); }
+.ladder-floor { font-size: 10px; color: var(--text-mute); }
+.ladder-now { font-size: 26px; }
+.ladder-summary { display: grid; gap: 4px; }
+.ladder-summary p { margin: 0; }
+.ladder-list { list-style: none; margin: var(--s-3) 0; padding: 0; display: grid; gap: var(--s-2); }
+.ladder-row { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-3); background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-md); position: relative; }
+.ladder-row.locked { opacity: .55; }
+.ladder-row.current { border-color: var(--c); background: var(--surface-2); }
+.ladder-info { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.ladder-divs { display: flex; gap: 6px; }
+.ladder-div { min-width: 26px; text-align: center; font-size: 11px; font-weight: 700; padding: 2px 4px; border-radius: 6px; background: var(--surface-3); color: var(--text-mute); }
+.ladder-div.done { background: var(--c); color: #0a0b12; }
+.ladder-div.current { outline: 2px solid var(--c); color: var(--text); }
+.ladder-check { color: var(--ok); display: grid; place-items: center; }
+
+/* Friend's workouts (OUR DESIGN) */
+.crew-day-items { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.crew-workout { min-height: 36px; }
+.crew-peek-row { gap: var(--s-3); }

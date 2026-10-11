@@ -32,7 +32,17 @@ export function createFakeCrew() {
       return { group: { name: g.name, code: g.code }, me: { id: m.id, nickname: m.nickname, leader: !!m.leader }, members: g.members.filter((x) => x.active).map((x) => ({ id: x.id, nickname: x.nickname, stats: x.stats, plan: x.plan ?? null, leader: !!x.leader, stats_updated_at: x.stats && Object.keys(x.stats).length ? new Date().toISOString() : null })) };
     },
     update_stats({ p_token, p_stats }) { me(p_token).member.stats = { ...p_stats }; return null; },
-    update_plan({ p_token, p_plan }) { me(p_token).member.plan = p_plan ?? null; return null; },
+    update_plan({ p_token, p_plan }) {
+      const m = me(p_token).member;
+      if (!p_plan) { m.plan = null; m.planX = null; return null; }
+      const days = {}, x = {};
+      for (const [d, items] of Object.entries(p_plan.days ?? {})) days[d] = (Array.isArray(items) ? items : [items]).map((it, i) => { if (it.x) x[`${d}-${i}`] = it.x; return { k: it.k, n: it.n ?? '' }; });
+      m.plan = { days, trained: p_plan.trained ?? [] }; m.planX = x; return null;
+    },
+    get_plan_detail({ p_token, p_member_id }) {
+      const { group: g } = me(p_token); const t = g.members.find((y) => y.id === p_member_id && y.active);
+      return t?.plan ? (t.planX ?? {}) : {};
+    },
     post_message({ p_token, p_kind, p_body }) {
       const { group: g, member: m } = me(p_token);
       if (!['chat', 'status'].includes(p_kind)) fail('bad_kind');

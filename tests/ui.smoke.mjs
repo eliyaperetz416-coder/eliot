@@ -507,6 +507,8 @@ for (const lang of ['he', 'en']) {
     await page.screenshot({ path: `${shots}${lang}-rewards.png`, fullPage: true });
     // quests and streak on the Workout tab
     await page.goto(`${base}#/workout`);
+    await page.waitForSelector('.home-more');
+    if (!(await page.locator('.home-more[open]').count())) await page.locator('.home-more > summary').click(); // quests are folded unless there is something to claim
     await page.waitForSelector('.quests');
     assert.equal(await page.locator('.quest').count(), 4, '3 daily quests and 1 weekly');
     assert.ok(await page.locator('.game-strip .game-chip').count() === 3);
@@ -871,7 +873,14 @@ for (const lang of ['he', 'en']) {
       await page.getByRole('button', { name: T('רמה', 'Level'), exact: true }).click();
       await page.waitForSelector('.crew-row');
       // friend profile + plan sharing (off until switched on)
-      await page.evaluate(async () => { const { saveSchedule } = await import('./src/ui/store.js'); await saveSchedule({ days: { 0: { kind: 'rest' }, 1: { kind: 'activity', type: 'basketball' }, 2: { kind: 'workout', ref: 'free' } }, done: {} }); });
+      await page.evaluate(async () => {
+        const { saveSchedule, saveRoutine } = await import('./src/ui/store.js');
+        await saveRoutine({ id: 'r-share', schemaVersion: 1, name: 'Upper A', folderId: null, notes: '', createdMs: 1, updatedMs: 1, entries: [
+          { id: 'e1', exerciseId: 'barbell-bench-press-medium-grip', sets: 4, repsMin: 6, repsMax: 8, restSec: 90, weight: 100, notes: '' },
+          { id: 'e2', exerciseId: 'plank', sets: 3, repsMin: 30, repsMax: 30, restSec: 60, weight: null, notes: '' },
+          { id: 'e3', exerciseId: 'my-own-custom-exercise', sets: 3, repsMin: 8, repsMax: 8, restSec: 60, weight: 55, notes: '' }] });
+        await saveSchedule({ days: { 0: [{ id: 'd0', kind: 'rest' }], 1: [{ id: 'd1', kind: 'activity', type: 'basketball' }, { id: 'd1b', kind: 'workout', ref: 'r-share' }], 2: [{ id: 'd2', kind: 'workout', ref: 'free' }] }, done: {} });
+      });
       await p2.goto(`${base}#/crew`);
       await p2.waitForSelector('#crew-say');
       await p2.getByRole('button', { name: T('לידרבורד', 'Leaderboard') }).click();
@@ -896,11 +905,26 @@ for (const lang of ['he', 'en']) {
       assert.equal(await p2.locator('.crew-plan-row').count(), 7);
       assert.ok((await p2.textContent('.crew-friend')).match(/כדורסל|Basketball/));
       await p2.screenshot({ path: `${shots}${lang}-crew-friend.png` });
+      // open their strength workout, see exercises and reps (no weights), add a copy to my workouts
+      const sentDetail = JSON.stringify(fake.calls.filter((c) => c.name === 'update_plan').map((c) => c.args.p_plan));
+      assert.ok(!/"w"|weight|my-own-custom|100|55/.test(sentDetail), 'no weights and no custom exercises are sent');
+      await p2.locator('.crew-workout', { hasText: 'Upper A' }).click();
+      await p2.waitForSelector('.crew-peek-row');
+      assert.equal(await p2.locator('.crew-peek-row').count(), 2, 'the custom exercise is not shared');
+      assert.ok((await p2.textContent('.crew-peek')).includes('4×6-8'));
+      await p2.screenshot({ path: `${shots}${lang}-crew-peek.png` });
+      await p2.locator('.crew-peek .btn-primary').click();
+      await p2.waitForSelector('.crew-peek a.btn-primary');
+      const copied = await p2.evaluate(async () => (await (await import('./src/ui/db.js')).dbAll('routines')).filter((r) => /Upper A/.test(r.name)).map((r) => ({ name: r.name, entries: r.entries.map((e) => [e.exerciseId, e.sets, e.repsMin, e.repsMax, e.weight]) })));
+      assert.equal(copied.length, 1);
+      assert.match(copied[0].name, /Upper A · Elia/);
+      assert.deepEqual(copied[0].entries, [['barbell-bench-press-medium-grip', 4, 6, 8, null], ['plank', 3, 30, 30, null]]);
+      await p2.evaluate(async () => { const db = await import('./src/ui/db.js'); for (const r of await db.dbAll('routines')) if (/Upper A/.test(r.name)) await db.dbDelete('routines', r.id); });
       await p2.keyboard.press('Escape');
       await page.locator('.sheet .crew-share .seg button', { hasText: T('כבוי', 'Off') }).click();
       await page.keyboard.press('Escape');
       await page.waitForTimeout(300);
-      await page.evaluate(async () => { const { saveSchedule } = await import('./src/ui/store.js'); await saveSchedule({ days: {}, done: {} }); });
+      await page.evaluate(async () => { const { saveSchedule, deleteRoutine } = await import('./src/ui/store.js'); await saveSchedule({ days: {}, done: {} }); await deleteRoutine('r-share'); });
       // leader: chip, tools only for the leader, rename, new code, remove a member, hand over and back
       const ctx3 = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: lang === 'he' ? 'he-IL' : 'en-US', serviceWorkers: 'block' });
       try {
@@ -1263,8 +1287,26 @@ for (const lang of ['he', 'en']) {
     await page.reload();
   });
 
+  await check(`${lang}: rank path: strip on Progress, full ladder with you marked`, async () => {
+    const T = (he, en) => L(lang, he, en);
+    if (ONLY) await postThree(page);
+    await page.goto(`${base}#/ranks`);
+    await page.waitForSelector('.ladder-strip');
+    assert.equal(await page.locator('.ladder-dot').count(), 10);
+    assert.equal(await page.locator('.ladder-dot.current').count(), 1);
+    await page.screenshot({ path: `${shots}${lang}-ladder-strip.png` });
+    await page.locator('.ladder-strip').click();
+    await page.waitForSelector('.ladder-row');
+    assert.equal(await page.locator('.ladder-row').count(), 10);
+    assert.equal(await page.locator('.ladder-row.current').count(), 1);
+    assert.ok(await page.locator('.ladder-row.done').count() >= 1, 'tiers below you are done');
+    assert.ok(await page.locator('.ladder-row.locked').count() >= 1, 'tiers above you are locked');
+    assert.ok((await page.textContent('.ladder-summary')).match(/\d/), 'points left are shown');
+    await page.screenshot({ path: `${shots}${lang}-ladder.png`, fullPage: true });
+  });
+
   await check(`${lang}: every sub-screen has a back link`, async () => {
-    const subs = ['exercises', 'exercise/plank', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'requests', 'calendar', 'crew', 'history', 'history/nope', 'routine/nope', 'plan/nope', 'exercise/nope', 'ranks-preview', 'model', 'schedule'];
+    const subs = ['ladder', 'exercises', 'exercise/plank', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'requests', 'calendar', 'crew', 'history', 'history/nope', 'routine/nope', 'plan/nope', 'exercise/nope', 'ranks-preview', 'model', 'schedule', 'ladder'];
     for (const r of subs) {
       await page.goto(`${base}#/${r}`);
       await page.waitForSelector('main');
@@ -1341,7 +1383,7 @@ for (const lang of ['he', 'en']) {
   await ctx.close();
 }
 
-await check('no console errors', async () => assert.deepEqual(errors, []));
+await check('no console errors', async () => assert.deepEqual(errors, [], errors.slice(0, 5).join(' || ')));
 await browser.close();
 server.close();
 if (failed) { console.error(`${failed} check(s) failed`); process.exit(1); }

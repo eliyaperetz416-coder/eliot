@@ -23,7 +23,7 @@ import { gameStrip, questsCard, streakCard } from './game-ui.js';
 import { byDay, weekKeys } from '../core/calendar.mjs';
 import { view } from '../core/streak.mjs';
 
-const nameOf = (ex) => (getLanguage() === 'he' ? ex.nameHe : ex.nameEn);
+const nameOf = (ex) => (ex ? (getLanguage() === 'he' ? ex.nameHe : ex.nameEn) : t('exercise.unknown')); // a deleted custom exercise must not break a list
 
 export function startWorkout({ repeat } = {}) {
   unlockAudio();
@@ -65,8 +65,9 @@ function nextUp() {
   const plan = activePlan();
   const day = plan ? nextPlanDay(plan) : null;
   const today = todayKey();
-  const doneToday = store.workouts.some((w) => w.dateKey === today);
-  const sched = nextScheduledWorkout(store.schedule, today, { skipToday: doneToday, usable: (e) => (e.ref === 'plan' ? !!(plan && day) : e.ref === 'free' || store.routines.some((r) => r.id === e.ref && r.entries.length)) });
+  const todays = store.workouts.filter((w) => w.dateKey === today);
+  const doneToday = (e) => (e.ref === 'free' ? todays.length > 0 : e.ref === 'plan' ? todays.some((w) => w.planDayId) : todays.some((w) => w.routineId === e.ref));
+  const sched = nextScheduledWorkout(store.schedule, today, { doneToday, usable: (e) => (e.ref === 'plan' ? !!(plan && day) : e.ref === 'free' || store.routines.some((r) => r.id === e.ref && r.entries.length)) });
   if (sched) {
     const when = { when: sched.offset === 0 ? t('home.sched.today') : sched.offset === 1 ? t('home.sched.tomorrow') : t('home.sched.on', { day: new Intl.DateTimeFormat(getLanguage() === 'he' ? 'he-IL' : 'en-GB', { weekday: 'long', timeZone: 'UTC' }).format(Date.UTC(+sched.dateKey.slice(0, 4), +sched.dateKey.slice(5, 7) - 1, +sched.dateKey.slice(8, 10))) }) };
     if (sched.entry.ref === 'free') return { kind: 'free', scheduled: true, ...when, title: t('home.free'), sub: t('home.free.sub'), start: openChooseWorkout };

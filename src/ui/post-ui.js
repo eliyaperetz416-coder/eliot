@@ -24,7 +24,7 @@ import { compareVolume } from '../core/compare.mjs';
 import { formatDuration, formatNum, formatKg } from './format.js';
 
 let lastResult = null;
-const nameOf = (ex) => (getLanguage() === 'he' ? ex.nameHe : ex.nameEn);
+const nameOf = (ex) => (ex ? (getLanguage() === 'he' ? ex.nameHe : ex.nameEn) : t('exercise.unknown')); // a deleted custom exercise must not break a list
 const reducedMotion = () => document.documentElement.dataset.motion === 'reduce' || matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function statTile(label, value) { return h('div', { class: 'stat' }, h('span', { class: 'stat-v display num', text: value }), h('span', { class: 'stat-l', text: label })); }

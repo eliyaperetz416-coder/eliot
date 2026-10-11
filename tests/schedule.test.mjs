@@ -65,8 +65,10 @@ test('next scheduled workout: the nearest planned one, today counts unless done,
   assert.deepEqual([n.offset, n.dateKey, n.entry.ref], [2, '2026-10-13', 'upper']);
   n = nextScheduledWorkout(sched, '2026-10-13', { usable });
   assert.deepEqual([n.offset, n.entry.ref], [0, 'upper'], 'today counts');
-  n = nextScheduledWorkout(sched, '2026-10-13', { usable, skipToday: true });
-  assert.deepEqual([n.offset, n.entry.ref], [3, 'plan'], 'done today: look from tomorrow, skip the deleted one');
+  n = nextScheduledWorkout(sched, '2026-10-13', { usable, doneToday: (e) => e.ref === 'upper' });
+  assert.deepEqual([n.offset, n.entry.ref], [3, 'plan'], 'that workout is done today: next planned one, skipping the deleted one');
+  n = nextScheduledWorkout(sched, '2026-10-13', { usable, doneToday: (e) => e.ref === 'something-else' });
+  assert.deepEqual([n.offset, n.entry.ref], [0, 'upper'], 'a different workout done today does not cancel the planned one');
   assert.equal(nextScheduledWorkout({ days: {}, done: {} }, '2026-10-11'), null);
   n = nextScheduledWorkout(sched, '2026-10-14', { usable });
   assert.deepEqual([n.offset, n.entry.ref], [2, 'plan']);

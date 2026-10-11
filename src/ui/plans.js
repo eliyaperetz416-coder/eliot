@@ -9,7 +9,7 @@ import { store, savePlan, deletePlan } from './store.js';
 import { startFromPlanDay } from './routines.js';
 import { planDayLabel } from './plan-names.js';
 
-const nameOf = (ex) => (getLanguage() === 'he' ? ex.nameHe : ex.nameEn);
+const nameOf = (ex) => (ex ? (getLanguage() === 'he' ? ex.nameHe : ex.nameEn) : t('exercise.unknown')); // a deleted custom exercise must not break a list
 const go = (hash) => { location.hash = hash; };
 const form = { goal: 'hypertrophy', days: 4, equipment: [...GYM_EQUIPMENT], experience: 'beginner', weeks: 6, sessionMin: null };
 

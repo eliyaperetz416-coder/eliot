@@ -9,7 +9,7 @@ import { data } from './data.js';
 import { store, commitHistory } from './store.js';
 import { formatDate, formatDateTime, formatDuration, formatKg, formatNum } from './format.js';
 
-const nameOf = (ex) => (getLanguage() === 'he' ? ex.nameHe : ex.nameEn);
+const nameOf = (ex) => (ex ? (getLanguage() === 'he' ? ex.nameHe : ex.nameEn) : t('exercise.unknown')); // a deleted custom exercise must not break a list
 
 export function historyScreen() {
   const list = [...store.workouts].reverse();

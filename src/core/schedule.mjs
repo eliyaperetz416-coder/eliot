@@ -91,12 +91,12 @@ const addDays = (key, n) => { const [y, m, d] = key.split('-').map(Number); cons
 
 /**
  * The nearest planned strength workout in the next 7 days: { offset, dateKey, entry } or null. Today counts unless skipToday
- * (you already trained today). `usable(entry)` lets the caller skip items that point to a deleted saved workout.
+  * (that very workout was already done: `doneToday(entry)`). `usable(entry)` lets the caller skip items that point to a deleted saved workout.
  */
-export function nextScheduledWorkout(schedule, todayKey, { skipToday = false, usable = () => true } = {}) {
-  for (let offset = skipToday ? 1 : 0; offset < 7; offset++) {
+export function nextScheduledWorkout(schedule, todayKey, { doneToday = () => false, usable = () => true } = {}) {
+  for (let offset = 0; offset < 7; offset++) {
     const dateKey = addDays(todayKey, offset);
-    const entry = planFor(schedule, dateKey).find((e) => e.kind === 'workout' && usable(e));
+    const entry = planFor(schedule, dateKey).find((e) => e.kind === 'workout' && usable(e) && !(offset === 0 && doneToday(e)));
     if (entry) return { offset, dateKey, entry };
   }
   return null;

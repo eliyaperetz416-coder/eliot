@@ -11,6 +11,7 @@ import { list, listRow, segmented } from './components.js';
 import { data } from './data.js';
 import { store } from './store.js';
 import { rankCard } from './rank-card.js';
+import { ladderStrip } from './ladder.js';
 import { weeklyCount, weeklyVolume, prsSince } from '../core/charts.mjs';
 import { barChart, chartCard } from './charts.js';
 import { consistencyBonus, BONUS } from '../core/consistency.mjs';
@@ -108,6 +109,7 @@ export function ranksScreen() {
       ...summary(),
       h('div', { class: 'section-label', text: t('ranks.title') }),
       rankCard(store.overall),
+      ladderStrip(),
       bonusCard(),
       h('div', { class: 'section-label', text: t('ranks.map') }),
       segmented({ label: t('ranks.map'), value: view.mode, onChange: (m) => { view.mode = m; draw(); }, options: [{ value: 'rank', label: t('ranks.mode.rank') }, { value: 'recovery', label: t('ranks.mode.recovery') }] }),

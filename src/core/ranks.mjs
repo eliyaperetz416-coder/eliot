@@ -131,3 +131,28 @@ export const TIER_COLORS = Object.freeze({
   greekgod: '#fff1b8', // static fallback; animated gradient #fff1b8 -> #7df9ff elsewhere
 });
 export const GREEK_GOD_GRADIENT = Object.freeze(['#fff1b8', '#7df9ff']);
+
+/**
+ * The whole ladder for a rating, for the rank path screen (OUR DESIGN). One entry per tier from Wood to Greek God:
+ * { id, floor, end (null for Greek God), status: 'done' | 'current' | 'locked', divisions: [{ label, from, status }], pct }.
+ * `pct` is how far through the tier you are (current tier only). `toNextDivision` / `toNextTier` are points left, null when there is no next.
+ */
+export function rankLadder(rating) {
+  const cur = tierFor(rating);
+  const curIdx = cur.unranked ? -1 : TIERS.findIndex((x) => x.id === cur.tier);
+  const tiers = TIERS.map((tier, i) => {
+    const end = TIERS[i + 1]?.floor ?? null;
+    const status = i < curIdx ? 'done' : i === curIdx ? 'current' : 'locked';
+    const size = end ? (end - tier.floor) / 5 : 0;
+    const divisions = end ? DIVISIONS.map((label, d) => ({
+      label, from: Math.ceil(tier.floor + d * size - 1e-9),
+      status: status === 'done' ? 'done' : status === 'locked' ? 'locked' : d < cur.divisionIndex ? 'done' : d === cur.divisionIndex ? 'current' : 'locked',
+    })) : [];
+    const pct = status === 'current' && end ? Math.min(100, Math.round(((rating - tier.floor) / (end - tier.floor)) * 100)) : status === 'done' ? 100 : 0;
+    return { id: tier.id, floor: tier.floor, end, status, divisions, pct };
+  });
+  const nd = cur.unranked ? 1 : nextDivisionFloor(rating);
+  const toNextDivision = nd == null ? null : Math.max(0, Math.ceil(nd - rating));
+  const nt = cur.unranked ? 1 : cur.next;
+  return { rating, current: cur, tiers, toNextDivision, toNextTier: nt == null ? null : Math.max(0, Math.ceil(nt - rating)) };
+}

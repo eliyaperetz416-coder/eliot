@@ -91,12 +91,18 @@ export const sundayWeek = (todayKey) => { const [y, m, d] = todayKey.split('-').
  * Names are only what you typed yourself (a saved workout's name, an activity name) or a code like 'basketball'.
  * Never exercises, sets, weights or bodyweight.
  */
-export function planPayload({ schedule, routines, workouts, todayKey }) {
+export function planPayload({ schedule, routines, workouts, todayKey, planNext = null, isShareable = () => true }) {
+  // exercises of a workout, as { e: library id, s: sets, a: min reps, b: max reps }; never weights; your own custom exercises are left out
+  const list = (entries) => (entries ?? []).filter((x) => isShareable(x.exerciseId)).slice(0, 20).map((x) => ({ e: x.exerciseId, s: x.sets, a: x.repsMin, b: x.repsMax }));
   const days = {};
-  for (const [d, list] of Object.entries(schedule?.days ?? {})) {
-    days[d] = list.map((e) => (e.kind === 'rest' ? { k: 'rest' }
-      : e.kind === 'activity' ? { k: 'activity', n: e.label || e.type }
-        : { k: 'workout', n: routines.find((r) => r.id === e.ref)?.name ?? '' }));
+  for (const [d, items] of Object.entries(schedule?.days ?? {})) {
+    days[d] = items.map((e) => {
+      if (e.kind === 'rest') return { k: 'rest' };
+      if (e.kind === 'activity') return { k: 'activity', n: e.label || e.type };
+      const r = routines.find((x) => x.id === e.ref);
+      const x = e.ref === 'plan' ? list(planNext) : list(r?.entries);
+      return { k: 'workout', n: r?.name ?? '', ...(x.length ? { x } : {}) };
+    });
   }
   const week = sundayWeek(todayKey);
   const trained = week.filter((k) => workouts.some((w) => w.dateKey === k) || Object.keys(schedule?.done ?? {}).some((x) => x === k || x.startsWith(`${k}|`)));
@@ -111,6 +117,7 @@ export function planRows(plan, todayKey) {
   return week.map((key, weekday) => {
     const raw = plan.days[weekday];
     const list = (Array.isArray(raw) ? raw : raw ? [raw] : []).slice(0, 4);
-    return { weekday, key, items: list.filter((e) => e && ['workout', 'rest', 'activity'].includes(e.k)).map((e) => ({ kind: e.k, name: String(e.n ?? '') })), trained: trained.has(key) };
+    const items = list.filter((e) => e && ['workout', 'rest', 'activity'].includes(e.k)).map((e, i) => ({ kind: e.k, name: String(e.n ?? ''), detailKey: `${weekday}-${i}` }));
+    return { weekday, key, items, trained: trained.has(key) };
   });
 }

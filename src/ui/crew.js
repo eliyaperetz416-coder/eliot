@@ -2,13 +2,15 @@
 import { h } from './dom.js';
 import { icon } from './icons.js';
 import { t, getLanguage } from '../core/i18n.mjs';
-import { button, list, listRow, openSheet, segmented, showToast } from './components.js';
-import { crew, createCrew, joinCrew, leaveCrew, fetchView, fetchMessages, sendMessage, markSeen, syncStats, syncPlan, onCrew, pushStatus, enablePush, disablePush, kickMember, makeLeader, renameGroup, newInviteCode, syncGroupInfo } from './crew-state.js';
+import { button, exThumb, list, listRow, openSheet, segmented, showToast } from './components.js';
+import { crew, createCrew, joinCrew, leaveCrew, fetchView, fetchMessages, sendMessage, markSeen, syncStats, syncPlan, onCrew, pushStatus, enablePush, disablePush, kickMember, makeLeader, renameGroup, newInviteCode, syncGroupInfo, fetchPlanDetail } from './crew-state.js';
+import { data } from './data.js';
+import { newRoutine, routineEntry } from '../core/routines.mjs';
 import { publicUrl } from './crew-api.js';
 import { sortBoard, SORTS, errorKey, normalizeCode, validNick, inviteText, planRows, MAX_MESSAGE } from '../core/crew.mjs';
 import { ACTIVITIES } from '../core/schedule.mjs';
 import { getSettings, updateSettings } from './storage.js';
-import { todayKey } from './store.js';
+import { saveRoutine, todayKey } from './store.js';
 import { TIER_COLORS } from '../core/ranks.mjs';
 import { shareViaWhatsApp } from './share.js';
 import { formatDateTime, formatNum } from './format.js';
@@ -89,14 +91,42 @@ export function crewScreen() {
   const itemName = (it) => (it.kind === 'rest' ? t('sched.rest') : it.kind === 'activity' ? (ACTIVITIES.includes(it.name) ? t(`sched.act.${it.name}`) : it.name || t('sched.act.other')) : it.name || t('crew.p.workout'));
   const dayText = (r) => (r.items.length ? r.items.map(itemName).join(' + ') : t('sched.none'));
 
+  /** A friend's strength workout: the exercises with sets and reps (no weights), and a button that saves a copy to your own workouts. */
+  function workoutPeek({ name, nick, list: items }) {
+    const title = name || t('crew.p.workout');
+    const body = h('div', { class: 'stack crew-peek' });
+    const sh = openSheet({ title: `${title} · ${nick}`, tall: true, content: body });
+    const byId = data().byId;
+    const exName = (ex) => (getLanguage() === 'he' ? ex.nameHe : ex.nameEn);
+    let saved = null;
+    const draw2 = () => body.replaceChildren(
+      h('div', { class: 'list' }, items.map((x) => { const ex = byId[x.e]; return h('div', { class: 'row crew-peek-row' }, exThumb(ex, 48), h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: exName(ex) }), h('span', { class: 'row-sub num', dir: 'ltr', text: `${x.s}×${x.a === x.b ? x.a : `${x.a}-${x.b}`}` }))); })),
+      h('p', { class: 'row-sub', text: t('crew.peek.note', { name: nick }) }),
+      saved
+        ? h('a', { class: 'btn btn-primary btn-block', href: `#/routine/${saved.id}`, onclick: () => sh.close() }, t('crew.peek.open'))
+        : button({ label: t('crew.peek.add'), icon: 'plus', block: true, onClick: async () => {
+          const r = newRoutine({ name: `${title} · ${nick}`.slice(0, 60) });
+          r.entries = items.map((x) => routineEntry(byId[x.e], { sets: x.s, repsMin: x.a, repsMax: x.b }));
+          await saveRoutine(r); saved = r; showToast({ message: t('crew.peek.added') }); draw2();
+        } }));
+    draw2();
+  }
+
   /** A friend's profile: rank, numbers and (if they share it) the week plan. Opens from the leaderboard. */
   function friendSheet(m, mine) {
     const s = m.stats ?? {};
+    let detailP = null; // fetched when you first tap one of their workouts
+    const detail = () => (detailP ??= fetchPlanDetail(m.id).catch(() => ({})));
+    const peek = async (it) => {
+      const list = ((await detail())[it.detailKey] ?? []).filter((x) => data().byId[x.e]);
+      if (!list.length) { showToast({ message: t('crew.p.noDetail') }); return; }
+      workoutPeek({ name: it.name, nick: m.nickname, list });
+    };
     const rows = planRows(m.plan, todayKey());
     const stat = (label, value) => h('div', { class: 'stat' }, h('span', { class: 'stat-v display num' }, h('bdi', { text: value })), h('span', { class: 'stat-l', text: label }));
     const plan = rows
       ? h('div', { class: 'list crew-plan' }, rows.map((r) => h('div', { class: `row crew-plan-row${r.trained ? ' trained' : ''}` },
-        h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: weekday(r.weekday) }), h('span', { class: `row-sub sched-${r.items.some((i) => i.kind === 'activity') ? 'activity' : (r.items[0]?.kind ?? 'none')}`, text: dayText(r) })),
+        h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: weekday(r.weekday) }), h('span', { class: 'row-sub crew-day-items' }, r.items.length ? r.items.map((it) => (it.kind === 'workout' ? h('button', { class: 'chip chip-select crew-workout', type: 'button', onclick: () => peek(it) }, itemName(it), ' ›') : h('span', { class: `sched-${it.kind}`, text: itemName(it) }))) : t('sched.none'))),
         r.trained ? h('span', { class: 'plan-done', 'aria-label': t('crew.p.trained') }, icon('check')) : null)))
       : h('p', { class: 'row-sub', text: mine ? t('crew.p.mineOff') : t('crew.p.notShared', { name: m.nickname }) });
     const afterLeaderAction = async () => { view = null; await refreshFeed(true); };

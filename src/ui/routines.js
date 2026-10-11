@@ -15,7 +15,7 @@ import { unlockAudio } from './rest-timer.js';
 import { formatClock } from '../core/timer.mjs';
 import { planDayLabel } from './plan-names.js';
 
-const nameOf = (ex) => (getLanguage() === 'he' ? ex.nameHe : ex.nameEn);
+const nameOf = (ex) => (ex ? (getLanguage() === 'he' ? ex.nameHe : ex.nameEn) : t('exercise.unknown')); // a deleted custom exercise must not break a list
 /** Optional planned weight for an exercise in a saved workout; empty = use the weight from the last time. */
 function weightField(e, onChange) {
   const f = numberField({ id: `rw-${e.id}`, label: t('routines.weight'), unit: t('unit.kg'), value: e.weight == null ? '' : String(e.weight) });

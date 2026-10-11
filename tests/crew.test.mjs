@@ -75,15 +75,15 @@ test('plan payload: kinds and your own names only; several items per day; this w
     3: [{ id: 'd', kind: 'activity', type: 'other', label: 'Pool' }],
     4: [{ id: 'e', kind: 'workout', ref: 'plan' }],
   }, done: { '2026-10-06|c': true } };
-  const p = planPayload({ schedule, routines: [{ id: 'r1', name: 'Push A', entries: [{ exerciseId: 'secret', weight: 100 }] }], workouts: [{ dateKey: '2026-10-04', entries: [] }, { dateKey: '2026-09-01' }], todayKey: '2026-10-08' });
-  assert.deepEqual(p.days, { 0: [{ k: 'workout', n: 'Push A' }, { k: 'activity', n: 'basketball' }], 1: [{ k: 'rest' }], 3: [{ k: 'activity', n: 'Pool' }], 4: [{ k: 'workout', n: '' }] });
+  const p = planPayload({ schedule, routines: [{ id: 'r1', name: 'Push A', entries: [{ exerciseId: 'bench', sets: 3, repsMin: 6, repsMax: 8, weight: 100 }, { exerciseId: 'my-custom', sets: 3, repsMin: 8, repsMax: 8, weight: 55 }] }], workouts: [{ dateKey: '2026-10-04', entries: [] }, { dateKey: '2026-09-01' }], todayKey: '2026-10-08', planNext: [{ exerciseId: 'row', sets: 4, repsMin: 8, repsMax: 10 }], isShareable: (id) => id !== 'my-custom' });
+  assert.deepEqual(p.days, { 0: [{ k: 'workout', n: 'Push A', x: [{ e: 'bench', s: 3, a: 6, b: 8 }] }, { k: 'activity', n: 'basketball' }], 1: [{ k: 'rest' }], 3: [{ k: 'activity', n: 'Pool' }], 4: [{ k: 'workout', n: '', x: [{ e: 'row', s: 4, a: 8, b: 10 }] }] });
   assert.deepEqual(p.trained, ['2026-10-04', '2026-10-06']);
-  assert.ok(!JSON.stringify(p).includes('secret') && !JSON.stringify(p).includes('100'));
+  assert.ok(!/weight|my-custom|\b100\b|\b55\b/.test(JSON.stringify(p)), 'no weights and no custom exercises');
   const rows = planRows(p, '2026-10-08');
   assert.equal(rows.length, 7);
-  assert.deepEqual(rows[0], { weekday: 0, key: '2026-10-04', items: [{ kind: 'workout', name: 'Push A' }, { kind: 'activity', name: 'basketball' }], trained: true });
+  assert.deepEqual(rows[0], { weekday: 0, key: '2026-10-04', items: [{ kind: 'workout', name: 'Push A', detailKey: '0-0' }, { kind: 'activity', name: 'basketball', detailKey: '0-1' }], trained: true });
   assert.deepEqual(rows[5].items, []);
   assert.equal(planRows(null, '2026-10-08'), null);
   // a plan shared by an older version (one object per day) still shows
-  assert.deepEqual(planRows({ days: { 1: { k: 'rest', n: '' } }, trained: [] }, '2026-10-08')[1].items, [{ kind: 'rest', name: '' }]);
+  assert.deepEqual(planRows({ days: { 1: { k: 'rest', n: '' } }, trained: [] }, '2026-10-08')[1].items, [{ kind: 'rest', name: '', detailKey: '1-0' }]);
 });

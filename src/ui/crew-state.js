@@ -5,6 +5,8 @@ import { store, todayKey } from './store.js';
 import { statsFromState, planPayload, unreadCount, errorKey, base64UrlToBytes } from '../core/crew.mjs';
 import { view } from '../core/streak.mjs';
 import { getSettings } from './storage.js';
+import { data } from './data.js';
+import { nextPlanDay } from '../core/generator.mjs';
 
 export const crew = { local: null, unread: 0 };
 const listeners = new Set();
@@ -81,11 +83,17 @@ export async function syncStats(force = false) {
   } catch { /* next time */ }
 }
 
+/** The exercise lists of a member's strength workouts (only if they share their plan): { '0-0': [{ e, s, a, b }] }. */
+export const fetchPlanDetail = (memberId) => rpc('get_plan_detail', { p_token: tok(), p_member_id: memberId });
+
 /** Shares your weekly plan with the crew when you switched that on; clears it on the server when it is off. Silent on failure. */
 export async function syncPlan() {
   if (!crew.local) return;
   try {
-    const plan = getSettings().sharePlan ? planPayload({ schedule: store.schedule, routines: store.routines, workouts: store.workouts, todayKey: todayKey() }) : null;
+    const mine = store.plans[store.plans.length - 1] ?? null;
+    const planNext = mine ? nextPlanDay(mine)?.entries ?? null : null;
+    const isShareable = (id) => { const ex = data().byId[id]; return !!ex && !ex.custom; };
+    const plan = getSettings().sharePlan ? planPayload({ schedule: store.schedule, routines: store.routines, workouts: store.workouts, todayKey: todayKey(), planNext, isShareable }) : null;
     await rpc('update_plan', { p_token: tok(), p_plan: plan });
   } catch { /* next time */ }
 }

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   epley, effectiveLoad, ratingForSet, tierFor, aggregate, loadForRating, oneRMForRating, isUnreliable,
-  muscleRating, overallRating, nextDivisionFloor, nextTierFloor, DIVISIONS,
+  muscleRating, overallRating, nextDivisionFloor, nextTierFloor, DIVISIONS, rankLadder,
 } from '../src/core/ranks.mjs';
 
 const EX = {
@@ -144,4 +144,24 @@ test('muscleRating and overallRating', () => {
   const p = overallRating({ a: 500, c: 400 }, ex);
   assert.equal(p.pending, true); assert.equal(p.remaining, 1);
   assert.equal(overallRating({ e: 900, a: 400, c: 400 }, ex).pending, true, 'unranked exercises do not count');
+});
+
+test('rank ladder: every tier with done / current / locked, divisions, and points left', () => {
+  const L = rankLadder(640); // Diamond III
+  assert.equal(L.tiers.length, 10);
+  assert.deepEqual(L.tiers.map((x) => x.status), ['done', 'done', 'done', 'done', 'done', 'current', 'locked', 'locked', 'locked', 'locked']);
+  const dia = L.tiers[5];
+  assert.equal(dia.id, 'diamond');
+  assert.deepEqual(dia.divisions.map((d) => d.status), ['done', 'done', 'current', 'locked', 'locked']);
+  assert.deepEqual(dia.divisions.map((d) => d.from), [600, 620, 640, 660, 680]);
+  assert.equal(dia.pct, 40);
+  assert.deepEqual([L.toNextDivision, L.toNextTier], [20, 60]);
+  assert.equal(L.tiers[9].end, null);
+  assert.deepEqual(L.tiers[9].divisions, []);
+  const gg = rankLadder(1200);
+  assert.deepEqual([gg.tiers.every((x) => x.status !== 'locked'), gg.tiers[9].status, gg.toNextDivision, gg.toNextTier], [true, 'current', null, null]);
+  const none = rankLadder(0);
+  assert.ok(none.tiers.every((x) => x.status === 'locked'));
+  assert.deepEqual([none.toNextDivision, none.toNextTier], [1, 1]);
+  assert.equal(rankLadder(1).tiers[0].status, 'current');
 });
