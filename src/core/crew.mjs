@@ -19,7 +19,7 @@ export function weekStart(dateKey) {
  * What a member shares with the crew. Only rank, level, streak and volume numbers. Never bodyweight, never workouts or sets.
  * overall: { pending, rating }, game: the game state, streakNow: current streak (days).
  */
-export function statsFromState({ workouts, overall, game, streakNow, todayKey }) {
+export function statsFromState({ workouts, overall, game, streakNow, todayKey, nameOf = null }) {
   const wk = weekStart(todayKey);
   const month = todayKey.slice(0, 7);
   const dayOf = (w) => w.dateKey ?? '';
@@ -30,6 +30,8 @@ export function statsFromState({ workouts, overall, game, streakNow, todayKey })
     weekVolume: workouts.filter((w) => dayOf(w) >= wk && dayOf(w) <= todayKey).reduce((n, w) => n + (w.stats?.volume ?? 0), 0),
     monthWorkouts: workouts.filter((w) => dayOf(w).startsWith(month)).length,
   };
+  const recent = recentSets(workouts, nameOf);
+  if (recent.length) stats.recent = recent;
   if (!overall.pending && overall.rating > 0) {
     const t = tierFor(overall.rating);
     stats.rating = overall.rating;
@@ -39,14 +41,41 @@ export function statsFromState({ workouts, overall, game, streakNow, todayKey })
   return stats;
 }
 
+/**
+ * OUR DESIGN. The heaviest working set of each exercise in your last few workouts (up to 8). Only the crew leader can read it
+ * (not in the leaderboard data), so he can judge a gift or a punishment. nameOf(exerciseId) is used for the name (custom exercises have none on his phone).
+ */
+export function recentSets(workouts, nameOf = null, max = 8) {
+  const out = [];
+  const sorted = [...workouts].sort((a, b) => (b.endedMs ?? b.startedMs ?? 0) - (a.endedMs ?? a.startedMs ?? 0)).slice(0, 5);
+  for (const w of sorted) {
+    for (const e of w.entries ?? []) {
+      let best = null;
+      for (const s of e.sets ?? []) if (s.done && s.type !== 'warmup' && Number(s.weight) > 0 && Number(s.reps) > 0 && (!best || s.weight > best.weight)) best = s;
+      if (best && out.length < max) out.push({ e: String(e.exerciseId), n: nameOf ? String(nameOf(e.exerciseId) ?? '') : '', w: Number(best.weight), r: Number(best.reps), d: w.dateKey ?? '' });
+    }
+  }
+  return out;
+}
+
+/** A short summary of a member's history rows (oldest first) for the leader: workouts and rating change over the last `days` days. */
+export function reviewSummary(history, days = 14) {
+  const rows = (history ?? []).filter((r) => r && r.day);
+  if (!rows.length) return null;
+  const last = rows[rows.length - 1];
+  const cutoff = dayNumber(last.day) - days;
+  const base = [...rows].reverse().find((r) => dayNumber(r.day) <= cutoff) ?? rows[0];
+  return { days: Math.max(1, dayNumber(last.day) - dayNumber(base.day)), workouts: Math.max(0, (last.workouts ?? 0) - (base.workouts ?? 0)), rating: (last.rating ?? 0) - (base.rating ?? base.rating ?? 0), week: last.week ?? 0, streak: last.streak ?? 0, points: rows.length };
+}
+
 const VALUE = { rating: (s) => s.rating ?? -1, level: (s) => s.level ?? -1, week: (s) => s.weekVolume ?? -1, streak: (s) => s.streak ?? -1 };
 
 /**
- * The leader's rating adjustment (0 to -500) applies to the crew leaderboard only; the member's own rank on their phone is untouched.
+ * The leader's rating adjustment (0 or lower, no limit) applies to the crew leaderboard only; the member's own rank on their phone is untouched.
  * Returns the member with the shown rating and tier, and `rawRating` / `adjust` so the screen can say what was changed. A suspended member sorts last.
  */
 export function applyAdjust(m) {
-  const adjust = Math.min(0, Math.max(-500, Number(m.adjust) || 0));
+  const adjust = Math.min(0, Math.max(-100000, Number(m.adjust) || 0));
   const s = m.stats ?? {};
   if (!adjust || s.rating == null) return { ...m, adjust, rawRating: s.rating ?? null, suspended: !!m.suspended_until };
   const rating = Math.max(1, s.rating + adjust);
@@ -69,7 +98,7 @@ export function sortBoard(members, by = 'rating') {
 /** Server error text -> i18n key suffix. */
 export function errorKey(err) {
   const m = String(err?.message ?? err ?? '');
-  for (const k of ['nick_taken', 'no_group', 'group_full', 'already_member', 'not_member', 'too_fast', 'bad_nick', 'bad_name', 'server_full', 'empty', 'not_leader', 'bad_target', 'suspended']) if (m.includes(k)) return k;
+  for (const k of ['nick_taken', 'no_group', 'group_full', 'already_member', 'not_member', 'too_fast', 'bad_nick', 'bad_name', 'server_full', 'empty', 'not_leader', 'bad_target', 'suspended', 'not_owner', 'return_limit']) if (m.includes(k)) return k;
   if (m === 'offline' || /Failed to fetch|NetworkError|Load failed|aborted/i.test(m)) return 'offline';
   return 'generic';
 }

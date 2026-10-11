@@ -25,6 +25,14 @@ export function purchase(game, shop, id) {
   return { ok: true, game: g };
 }
 
+export const MAX_RETURNS_PER_MONTH = 2;
+/** How many returns are left this calendar month. `log` is a list of timestamps (ms) of earlier returns; `used` is the server's count for crew members. */
+export function returnsLeft(log, nowMs = Date.now(), used = 0) {
+  const d = new Date(nowMs), month = `${d.getFullYear()}-${d.getMonth()}`;
+  const mine = (log ?? []).filter((ms) => { const x = new Date(ms); return `${x.getFullYear()}-${x.getMonth()}` === month; }).length;
+  return Math.max(0, MAX_RETURNS_PER_MONTH - Math.max(mine, used));
+}
+
 /** Takes back an owned cosmetic for its full price (a mistaken or unwanted purchase). It is unequipped first. Returns { ok, game, refund }. */
 export function refundItem(game, shop, id) {
   const item = shop.cosmetics.find((c) => c.id === id);

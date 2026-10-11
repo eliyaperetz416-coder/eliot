@@ -802,6 +802,13 @@ for (const lang of ['he', 'en']) {
       await page.goto(`${base}#/crew`);
       await page.waitForSelector('#crew-nick');
       await page.screenshot({ path: `${shots}${lang}-crew-start.png`, fullPage: true });
+      // only the owner can open a crew: without the owner key there is no "create" tab, and the server refuses too
+      assert.equal(await page.getByRole('button', { name: T('יצירת קבוצה', 'Create a crew') }).count(), 0, 'no create tab for everyone else');
+      const refused = await page.evaluate(async () => { try { await (await import('./src/ui/crew-api.js')).rpc('create_group', { p_name: 'x', p_nick: 'y', p_token: 'a'.repeat(40), p_owner_key: 'nope' }); return 'allowed'; } catch (e) { return e.message; } });
+      assert.equal(refused, 'not_owner');
+      for (let i = errors.length - 1; i >= 0; i--) if (errors[i].includes('status of 400')) errors.splice(i, 1); // that refusal is expected
+      await page.evaluate(async (k) => (await import('./src/ui/db.js')).dbPut('kv', k, 'ownerKey'), fake.OWNER_KEY);
+      await page.reload(); await page.waitForSelector('#crew-nick');
       await page.getByRole('button', { name: T('יצירת קבוצה', 'Create a crew') }).click();
       await page.fill('#crew-name', 'Gym bros'); await page.fill('#crew-nick', 'Elia');
       await page.getByRole('button', { name: T('צור את הקבוצה', 'Create the crew') }).click();
@@ -863,7 +870,7 @@ for (const lang of ['he', 'en']) {
       await page.waitForSelector('.crew-board');
       const sent = fake.calls.filter((c) => c.name === 'update_stats').map((c) => Object.keys(c.args.p_stats));
       assert.ok(sent.length >= 1);
-      for (const keys of sent) for (const k of keys) assert.ok(['level', 'streak', 'workouts', 'weekVolume', 'monthWorkouts', 'rating', 'tier', 'division'].includes(k), `unexpected shared field ${k}`);
+      for (const keys of sent) for (const k of keys) assert.ok(['level', 'streak', 'workouts', 'weekVolume', 'monthWorkouts', 'rating', 'tier', 'division', 'recent'].includes(k), `unexpected shared field ${k}`);
       await page.locator('.crew-gear').click();
       await page.waitForSelector('.sheet .crew-push h2');
       await page.keyboard.press('Escape');
@@ -994,9 +1001,27 @@ for (const lang of ['he', 'en']) {
         assert.ok((await rowOf(page, 'Dan').locator('.chip-warn').textContent()).includes('100'), 'the adjustment shows on the board');
         await leaderTool('Dan', 1, T('איפוס', 'Reset'));
         const dracBefore = await p2.evaluate(async () => (await import('./src/ui/store.js')).store.game.drachmas);
-        await leaderTool('Dan', 2, /^100$/);
+        // a quiet punishment is not announced in the chat
+        const sysBodies = () => [...fake.groups.values()].flatMap((g) => g.messages).filter((m) => m.kind === 'system').map((m) => m.body);
+        await board(page); await rowOf(page, 'Dan').click(); await page.waitForSelector('.crew-leader-tools');
+        await page.locator('.crew-leader-tools .btn-secondary').nth(1).click(); await page.waitForSelector('.sheet .announce-toggle');
+        await page.locator('.sheet .announce-toggle').click();
+        await page.locator('.sheet .chip-select', { hasText: /^(−50|-50)$/ }).last().click();
+        await page.waitForFunction(() => !document.querySelector('.crew-leader-tools'));
+        assert.ok(!sysBodies().includes('adjust:-50'), 'a quiet action is not announced');
+        await leaderTool('Dan', 1, T('איפוס', 'Reset'));
+        // the gift: first the progress review, then the amount (no limit, any number)
+        await board(page); await rowOf(page, 'Dan').click(); await page.waitForSelector('.crew-leader-tools');
+        await page.locator('.crew-leader-tools .btn-secondary').nth(2).click();
+        await page.waitForSelector('.sheet .crew-review #crew-gift-amount');
+        assert.ok(await page.locator('.crew-review .chart-card').count() >= 1, 'the review shows the progress charts');
+        await page.screenshot({ path: `${shots}${lang}-crew-review.png` });
+        await page.fill('#crew-gift-amount', '12345');
+        await page.getByRole('button', { name: T('תן את המתנה', 'Give the gift') }).click();
+        await page.waitForFunction(() => !document.querySelector('.crew-leader-tools'));
+        assert.ok(sysBodies().includes('gift:12345'));
         await p2.reload(); await p2.waitForSelector('#crew-say');
-        await p2.waitForFunction(async (b) => (await import('./src/ui/store.js')).store.game.drachmas === b + 100, dracBefore);
+        await p2.waitForFunction(async (b) => (await import('./src/ui/store.js')).store.game.drachmas === b + 12345, dracBefore);
         await p2.getByRole('button', { name: new RegExp(T("צ'אט", 'Chat')) }).click();
         const chatText = await p2.textContent('#crew-feed');
         assert.ok(/הושעה|suspended/i.test(chatText) && /דרכמות|drachmas/i.test(chatText), 'everything is announced in the chat');
@@ -1293,6 +1318,19 @@ for (const lang of ['he', 'en']) {
     await page.goto(`${base}#/profile`);
     await page.waitForSelector('.profile-title');
     assert.ok((await page.textContent('.profile-title')).includes(T('צייד חזרות', 'Rep Hunter')));
+    await page.goto(`${base}#/shop`); await page.waitForSelector('.shop-row');
+    // returns: two a month, the third is refused (counted on this phone when you are not in a crew)
+    const giveBack = async (name) => { await rowOf(name).getByRole('button', { name: T('החזרה', 'Return') }).click(); await page.waitForSelector('.sheet'); };
+    for (const name of [T('צייד חזרות', 'Rep Hunter'), T('פעמון', 'Bell')]) {
+      await giveBack(name);
+      await page.locator('.sheet .btn-primary').click();
+      await page.waitForFunction(() => !document.querySelector('.sheet'));
+      await page.waitForTimeout(200);
+    }
+    await giveBack(T('ארגמן', 'Crimson'));
+    assert.equal(await page.locator('.sheet .btn-primary').count(), 0, 'no third return this month');
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !document.querySelector('.sheet'));
     // back to the default colour for the other checks
     await page.evaluate(async () => { const { store, saveGame } = await import('./src/ui/store.js'); const g = structuredClone(store.game); g.inventory.equipped.theme = null; g.inventory.boostActive = false; await saveGame(g); });
   });

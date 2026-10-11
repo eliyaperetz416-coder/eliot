@@ -95,8 +95,25 @@ test('leader adjustment: lowers the shown rating and tier on the crew board only
   const b = applyAdjust({ id: 'b', nickname: 'B', adjust: 0, stats: { rating: 600, tier: 'diamond', division: 'V' } });
   assert.deepEqual([b.stats.rating, b.stats.tier], [600, 'diamond']);
   assert.equal(applyAdjust({ id: 'c', nickname: 'C', adjust: -50, stats: {} }).stats.rating, undefined, 'nothing to adjust without a rating');
-  assert.equal(applyAdjust({ id: 'd', nickname: 'D', adjust: -9999, stats: { rating: 1000 } }).stats.rating, 500, 'the adjustment is limited to -500');
+  assert.equal(applyAdjust({ id: 'd', nickname: 'D', adjust: -400, stats: { rating: 1000 } }).stats.rating, 600, 'a big drop works');
+  assert.equal(applyAdjust({ id: 'd2', nickname: 'D', adjust: -9999, stats: { rating: 1000 } }).stats.rating, 1, 'there is no cap on the drop, the rating stays at least 1');
   const s = applyAdjust({ id: 's', nickname: 'S', suspended_until: '2030-01-01T00:00:00Z', stats: { rating: 900, tier: 'olympian', division: 'V' } });
   assert.deepEqual(sortBoard([s, a, b]).map((m) => m.id), ['b', 'a', 's']);
   assert.equal(errorKey(new Error('suspended')), 'suspended');
+});
+
+test('recent heavy sets and the leader review summary', async () => {
+  const { recentSets, reviewSummary, statsFromState } = await import('../src/core/crew.mjs');
+  const w = (ms, key, entries) => ({ startedMs: ms, endedMs: ms + 1000, dateKey: key, entries, stats: { volume: 100 } });
+  const set = (weight, reps, extra = {}) => ({ done: true, type: 'normal', weight, reps, ...extra });
+  const workouts = [w(1, '2026-10-01', [{ exerciseId: 'a', sets: [set(50, 5)] }]), w(9, '2026-10-09', [{ exerciseId: 'b', sets: [set(60, 8), set(70, 5), set(100, 1, { type: 'warmup' }), set(200, 3, { done: false })] }])];
+  const r = recentSets(workouts, (id) => `name-${id}`);
+  assert.deepEqual(r.map((x) => [x.e, x.w, x.r, x.d, x.n]), [['b', 70, 5, '2026-10-09', 'name-b'], ['a', 50, 5, '2026-10-01', 'name-a']], 'newest first, heaviest working set, no warm-ups or undone sets');
+  assert.equal(recentSets(Array.from({ length: 5 }, (_, i) => w(i, '2026-10-0' + (i + 1), Array.from({ length: 4 }, (_, j) => ({ exerciseId: 'x' + j, sets: [set(10, 1)] }))))).length, 8, 'at most 8');
+  const st = statsFromState({ workouts, overall: { pending: true, rating: 0 }, game: { xp: 0 }, streakNow: 1, todayKey: '2026-10-10' });
+  assert.equal(st.recent.length, 2);
+  const hist = [{ day: '2026-09-01', rating: 100, workouts: 1, week: 0 }, { day: '2026-09-28', rating: 120, workouts: 4, week: 500, streak: 2 }, { day: '2026-10-10', rating: 180, workouts: 9, week: 900, streak: 3 }];
+  const sum = reviewSummary(hist, 14);
+  assert.deepEqual([sum.workouts, sum.rating, sum.week, sum.streak], [8, 80, 900, 3], 'compares with the last entry that is at least 14 days older');
+  assert.equal(reviewSummary([]), null);
 });

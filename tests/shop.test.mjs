@@ -101,3 +101,13 @@ test('refund: an owned cosmetic comes back for the full price and is unequipped;
   assert.equal(refundItem(rich(), shop, 'super').ok, false, 'consumables are not refundable');
   assert.equal(refundItem(rich(), shop, 'nope').ok, false);
 });
+
+test('returns are limited to two per calendar month', async () => {
+  const { returnsLeft } = await import('../src/core/shop.mjs');
+  const now = new Date(2026, 9, 15).getTime();
+  assert.equal(returnsLeft([], now), 2);
+  assert.equal(returnsLeft([new Date(2026, 9, 2).getTime()], now), 1);
+  assert.equal(returnsLeft([new Date(2026, 9, 2).getTime(), new Date(2026, 9, 3).getTime()], now), 0);
+  assert.equal(returnsLeft([new Date(2026, 8, 2).getTime(), new Date(2026, 8, 3).getTime()], now), 2, 'last month does not count');
+  assert.equal(returnsLeft([], now, 2), 0, 'the server count wins when it is higher');
+});

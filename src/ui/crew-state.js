@@ -10,7 +10,7 @@ import { getSettings } from './storage.js';
 import { data } from './data.js';
 import { nextPlanDay } from '../core/generator.mjs';
 
-export const crew = { local: null, unread: 0 };
+export const crew = { local: null, unread: 0, ownerKey: null, returnsUsed: 0 };
 const listeners = new Set();
 export const onCrew = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
 const emit = () => listeners.forEach((fn) => fn());
@@ -18,7 +18,8 @@ const persist = () => dbPut('kv', crew.local, 'crew');
 
 export async function initCrew() {
   crew.local = (await dbGet('kv', 'crew').catch(() => null)) ?? null;
-  if (crew.local) { refreshUnread(); syncStats(true); claimGifts(); }
+  crew.ownerKey = (await dbGet('kv', 'ownerKey').catch(() => null)) ?? null;
+  if (crew.local) { fetchView().catch(() => {}); refreshUnread(); syncStats(true); claimGifts(); }
 }
 
 async function enter(fn, args, nickname) {
@@ -30,7 +31,8 @@ async function enter(fn, args, nickname) {
   await syncStats(true);
   emit();
 }
-export const createCrew = (name, nickname) => enter('create_group', { p_name: name, p_nick: nickname }, nickname);
+/** Only the owner can open a crew: the server hands his phone a key (see supabase/migrations/007) and refuses create_group without it. */
+export const createCrew = (name, nickname) => enter('create_group', { p_name: name, p_nick: nickname, p_owner_key: crew.ownerKey }, nickname);
 export const joinCrew = (code, nickname) => enter('join_group', { p_code: code, p_nick: nickname }, nickname);
 
 export async function leaveCrew() {
@@ -42,16 +44,21 @@ export async function leaveCrew() {
 }
 
 const tok = () => crew.local.token;
+const nameOf = (id) => { const ex = data().byId[id]; return ex ? ex.nameEn : ''; };
 
 /** The leader's tools (OUR DESIGN). The server checks the role; the app only shows the buttons to the leader. */
-export const kickMember = (id) => rpc('kick_member', { p_token: tok(), p_member_id: id });
-export const makeLeader = (id) => rpc('make_leader', { p_token: tok(), p_member_id: id });
+export const kickMember = (id, announce = true) => rpc('kick_member', { p_token: tok(), p_member_id: id, p_announce: announce });
+export const makeLeader = (id, announce = true) => rpc('make_leader', { p_token: tok(), p_member_id: id, p_announce: announce });
 export async function renameGroup(name) { const n = await rpc('rename_group', { p_token: tok(), p_name: name }); crew.local = { ...crew.local, name: n }; await persist(); emit(); return n; }
 export async function newInviteCode() { const c = await rpc('new_code', { p_token: tok() }); crew.local = { ...crew.local, code: c }; await persist(); emit(); return c; }
-/** More leader tools: suspend (hours; 0 lifts it), rating adjustment (0 to -500), a drachma gift. Each one is announced in the chat by the server. */
-export const suspendMember = (id, hours) => rpc('suspend_member', { p_token: tok(), p_member_id: id, p_hours: hours });
-export const setAdjust = (id, value) => rpc('set_adjust', { p_token: tok(), p_member_id: id, p_value: value });
-export const giveDrachmas = (id, amount) => rpc('give_drachmas', { p_token: tok(), p_member_id: id, p_amount: amount });
+/** More leader tools: suspend (hours; 0 lifts it), rating adjustment (0 or lower), a drachma gift. No limits; the leader decides for each one whether the chat is told (announce). */
+export const suspendMember = (id, hours, announce = true) => rpc('suspend_member', { p_token: tok(), p_member_id: id, p_hours: hours, p_announce: announce });
+export const setAdjust = (id, value, announce = true) => rpc('set_adjust', { p_token: tok(), p_member_id: id, p_value: value, p_announce: announce });
+export const giveDrachmas = (id, amount, announce = true) => rpc('give_drachmas', { p_token: tok(), p_member_id: id, p_amount: amount, p_announce: announce });
+/** The member's daily history and latest heavy sets, for the leader to look at before a gift or a punishment. */
+export const fetchReview = (id) => rpc('get_member_review', { p_token: tok(), p_member_id: id });
+/** Counts one shop return on the server (2 per month). Throws 'return_limit' or 'offline'. */
+export async function recordReturn() { const n = Number(await rpc('record_return', { p_token: tok() })) || 0; crew.returnsUsed = n; return n; }
 /** Drachmas the leader gave you since the last time: the server hands each gift over once. */
 export async function claimGifts() {
   if (!crew.local) return 0;
@@ -68,7 +75,13 @@ export async function syncGroupInfo(group) {
   crew.local = { ...crew.local, name: group.name, code: group.code };
   await persist();
 }
-export const fetchView = () => rpc('my_group', { p_token: tok() });
+export async function fetchView() {
+  const v = await rpc('my_group', { p_token: tok() });
+  crew.returnsUsed = Number(v?.me?.returns_used) || 0;
+  const key = v?.me?.owner_key;
+  if (key && key !== crew.ownerKey) { crew.ownerKey = key; await dbPut('kv', key, 'ownerKey').catch(() => {}); emit(); }
+  return v;
+}
 export const fetchMessages = (after = 0, limit = 60) => rpc('get_messages', { p_token: tok(), p_after: after, p_limit: limit });
 export const sendMessage = (kind, body) => rpc('post_message', { p_token: tok(), p_kind: kind, p_body: body });
 
@@ -95,7 +108,7 @@ export async function syncStats(force = false) {
   try {
     const today = todayKey();
     syncPlan();
-    await rpc('update_stats', { p_token: tok(), p_stats: statsFromState({ workouts: store.workouts, overall: store.overall, game: store.game, streakNow: view(store.game.streak, today).current, todayKey: today }) });
+    await rpc('update_stats', { p_token: tok(), p_stats: statsFromState({ workouts: store.workouts, overall: store.overall, game: store.game, streakNow: view(store.game.streak, today).current, todayKey: today, nameOf }) });
   } catch { /* next time */ }
 }
 

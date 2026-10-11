@@ -3,11 +3,12 @@ import { h } from './dom.js';
 import { icon } from './icons.js';
 import { t, getLanguage } from '../core/i18n.mjs';
 import { button, exThumb, list, listRow, openSheet, segmented, showToast } from './components.js';
-import { crew, createCrew, joinCrew, leaveCrew, fetchView, fetchMessages, sendMessage, markSeen, syncStats, syncPlan, onCrew, pushStatus, enablePush, disablePush, kickMember, makeLeader, renameGroup, newInviteCode, syncGroupInfo, fetchPlanDetail, suspendMember, setAdjust, giveDrachmas } from './crew-state.js';
+import { crew, createCrew, joinCrew, leaveCrew, fetchView, fetchMessages, sendMessage, markSeen, syncStats, syncPlan, onCrew, pushStatus, enablePush, disablePush, kickMember, makeLeader, renameGroup, newInviteCode, syncGroupInfo, fetchPlanDetail, suspendMember, setAdjust, giveDrachmas, fetchReview } from './crew-state.js';
+import { lineChart, chartCard } from './charts.js';
 import { data } from './data.js';
 import { newRoutine, routineEntry } from '../core/routines.mjs';
 import { publicUrl } from './crew-api.js';
-import { sortBoard, applyAdjust, SORTS, errorKey, normalizeCode, validNick, inviteText, planRows, MAX_MESSAGE } from '../core/crew.mjs';
+import { sortBoard, applyAdjust, SORTS, errorKey, normalizeCode, validNick, inviteText, planRows, reviewSummary, MAX_MESSAGE } from '../core/crew.mjs';
 import { ACTIVITIES } from '../core/schedule.mjs';
 import { getSettings, updateSettings } from './storage.js';
 import { saveRoutine, todayKey } from './store.js';
@@ -15,28 +16,82 @@ import { TIER_COLORS } from '../core/ranks.mjs';
 import { shareViaWhatsApp } from './share.js';
 import { formatDateTime, formatNum } from './format.js';
 
+const PERMANENT_HOURS = 876000;
 const errText = (e) => t(`crew.err.${errorKey(e)}`);
 
-/** A sheet with a few number choices (hours, points, drachmas). onPick runs the action; the sheet closes when it worked. */
-function choiceSheet({ title, body, options, onPick }) {
-  const content = h('div', { class: 'stack' }, h('p', { text: body }),
-    h('div', { class: 'chips-wrap' }, options.map(([value, label]) => h('button', { class: 'chip chip-select', type: 'button', onclick: async () => { try { await onPick(value); sh.close(); } catch (e) { showToast({ message: errText(e) }); } } }, label))),
+/** "Tell the chat?" switch for a leader action (OUR DESIGN: the leader decides per action). */
+function announceBox() {
+  let on = true;
+  const b = h('button', { class: 'chip chip-select announce-toggle', type: 'button', 'aria-pressed': 'true', onclick: () => { on = !on; b.setAttribute('aria-pressed', String(on)); b.textContent = t(on ? 'crew.announce.on' : 'crew.announce.off'); } }, t('crew.announce.on'));
+  return { el: h('div', { class: 'stack' }, h('div', { class: 'row-sub', text: t('crew.announce.label') }), b), get: () => on };
+}
+
+/** A sheet with a few number choices (hours, points). `custom` adds a box for any number you like. onPick(value, announce) runs the action; the sheet closes when it worked. */
+function choiceSheet({ title, body, options, custom = null, onPick }) {
+  const ann = announceBox();
+  const run = async (value) => { try { await onPick(value, ann.get()); sh.close(); } catch (e) { showToast({ message: errText(e) }); } };
+  const box = custom ? h('input', { class: 'text-input', type: 'number', inputmode: 'numeric', dir: 'ltr', min: 1, placeholder: custom.placeholder, 'aria-label': custom.label, id: 'crew-custom' }) : null;
+  const content = h('div', { class: 'stack' }, h('p', { text: body }), ann.el,
+    h('div', { class: 'chips-wrap' }, options.map(([value, label]) => h('button', { class: 'chip chip-select', type: 'button', onclick: () => run(value) }, label))),
+    custom ? h('div', { class: 'field' }, h('label', { for: 'crew-custom', text: custom.label }), h('div', { class: 'field-box' }, box)) : null,
+    custom ? button({ label: custom.go, variant: 'secondary', block: true, onClick: () => { const n = Math.floor(Number(box.value)); if (n >= 1) run(custom.map(n)); else showToast({ message: t('crew.err.bad_target') }); } }) : null,
     button({ label: t('common.cancel'), variant: 'ghost', block: true, onClick: () => sh.close() }));
   const sh = openSheet({ title, content });
 }
 
-/** A small "are you sure" sheet. */
-function confirmSheet({ title, body, label, danger = false, onGo }) {
-  const content = h('div', { class: 'stack' }, h('p', { text: body }),
-    button({ label, variant: danger ? 'danger' : 'primary', block: true, onClick: async () => { try { await onGo(); sh.close(); } catch (e) { showToast({ message: errText(e) }); } } }),
+/** A small "are you sure" sheet with the announce switch. onGo(announce) */
+function confirmSheet({ title, body, label, danger = false, announce = true, onGo }) {
+  const ann = announceBox();
+  const content = h('div', { class: 'stack' }, h('p', { text: body }), announce ? ann.el : null,
+    button({ label, variant: danger ? 'danger' : 'primary', block: true, onClick: async () => { try { await onGo(ann.get()); sh.close(); } catch (e) { showToast({ message: errText(e) }); } } }),
     button({ label: t('common.cancel'), variant: 'ghost', block: true, onClick: () => sh.close() }));
   const sh = openSheet({ title, content });
+}
+
+/**
+ * Before a gift (OUR DESIGN): the leader sees how the member has been doing - rating, weekly volume and workouts over time, a short summary,
+ * and the heaviest sets from their latest workouts - and then decides the amount. The sets and history are readable by the leader only.
+ */
+function giftSheet(m, done) {
+  const body = h('div', { class: 'stack crew-review' }, h('p', { class: 'row-sub', text: t('crew.review.loading') }));
+  const sh = openSheet({ title: t('crew.gift.title'), tall: true, content: body });
+  const nameOf = (r) => { const ex = data().byId[r.e]; return ex ? (getLanguage() === 'he' ? ex.nameHe : ex.nameEn) : r.n || t('exercise.unknown'); };
+  const ms = (day) => Date.parse(`${day}T12:00:00Z`);
+  const show = (rv) => {
+    const rows = rv.history ?? [];
+    const sum = reviewSummary(rows);
+    const series = (key) => rows.filter((r) => r[key] != null).map((r) => ({ t: ms(r.day), v: r[key] }));
+    const charts = rows.length
+      ? [chartCard({ title: t('crew.review.rating'), chart: lineChart({ series: series('rating'), title: t('crew.review.rating') }), empty: series('rating').length ? null : t('progress.nodata') }),
+        chartCard({ title: t('crew.review.week'), chart: lineChart({ series: series('week'), unit: t('unit.kg'), title: t('crew.review.week') }) }),
+        chartCard({ title: t('crew.review.workouts'), chart: lineChart({ series: series('workouts'), title: t('crew.review.workouts') }) })]
+      : [h('p', { class: 'row-sub', text: t('crew.review.empty') })];
+    const recent = (rv.recent ?? []).length
+      ? h('div', { class: 'list' }, rv.recent.map((r) => h('div', { class: 'row' }, h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: nameOf(r) }), h('span', { class: 'row-sub num', dir: 'ltr', text: `${formatNum(r.w, 1)} ${t('unit.kg')} × ${r.r} · ${r.d}` })))))
+      : h('p', { class: 'row-sub', text: t('crew.review.noSets') });
+    let amount = 0;
+    const ann = announceBox();
+    const box = h('input', { class: 'text-input', type: 'number', inputmode: 'numeric', dir: 'ltr', min: 1, id: 'crew-gift-amount', 'aria-label': t('crew.gift.custom'), placeholder: t('crew.gift.custom') });
+    const chips = [50, 100, 250, 500, 1000].map((n) => h('button', { class: 'chip chip-select', type: 'button', 'aria-pressed': 'false', onclick: (e) => { amount = n; box.value = ''; chips.forEach((c) => c.setAttribute('aria-pressed', String(c === e.currentTarget))); } }, String(n)));
+    box.addEventListener('input', () => { amount = Math.floor(Number(box.value)) || 0; chips.forEach((c) => c.setAttribute('aria-pressed', 'false')); });
+    body.replaceChildren(
+      h('p', { text: t('crew.gift.body', { name: m.nickname }) }),
+      ...charts,
+      sum ? h('p', { class: 'card crew-review-sum', text: t('crew.review.sum', { name: m.nickname, days: sum.days, w: sum.workouts, r: sum.rating >= 0 ? `+${sum.rating}` : String(sum.rating), v: formatNum(sum.week, 0), s: sum.streak }) }) : null,
+      h('div', { class: 'section-label', text: t('crew.review.sets') }), recent,
+      h('div', { class: 'section-label', text: t('crew.gift.amount') }),
+      h('div', { class: 'chips-wrap' }, chips), h('div', { class: 'field' }, h('div', { class: 'field-box' }, box)), ann.el,
+      button({ label: t('crew.gift.go'), variant: 'primary', block: true, onClick: async () => { if (amount < 1) { showToast({ message: t('crew.err.bad_target') }); return; } try { await giveDrachmas(m.id, amount, ann.get()); sh.close(); done(); } catch (e) { showToast({ message: errText(e) }); } } }),
+      button({ label: t('common.cancel'), variant: 'ghost', block: true, onClick: () => sh.close() }));
+  };
+  fetchReview(m.id).then(show).catch((e) => body.replaceChildren(h('p', { class: 'field-error', text: errText(e) }), button({ label: t('common.cancel'), variant: 'ghost', block: true, onClick: () => sh.close() })));
 }
 
 export function crewScreen() {
   const root = h('main', { class: 'screen crew' });
   let tab = 'feed', sort = 'rating';
   let view = null, messages = [], timer = null, busy = false, formMode = 'join';
+  if (!crew.ownerKey) formMode = 'join';
   const off = onCrew(() => { if (!crew.local) draw(); });
 
   /* ---------- not in a crew ---------- */
@@ -65,7 +120,7 @@ export function crewScreen() {
       h('section', { class: 'card card-accent', style: 'margin-block:12px' },
         h('h2', { text: t('crew.share.title') }),
         h('p', { text: t('crew.share.body') })),
-      segmented({ label: t('crew.title'), value: formMode, onChange: (v) => { formMode = v; draw(); }, options: [{ value: 'join', label: t('crew.join') }, { value: 'create', label: t('crew.create') }] }),
+      crew.ownerKey ? segmented({ label: t('crew.title'), value: formMode, onChange: (v) => { formMode = v; draw(); }, options: [{ value: 'join', label: t('crew.join') }, { value: 'create', label: t('crew.create') }] }) : h('p', { class: 'row-sub', text: t('crew.owner.only') }),
       h('div', { class: 'stack', style: 'padding-block-start:12px' },
         formMode === 'join' ? h('div', { class: 'field' }, h('label', { for: 'crew-code', text: t('crew.code') }), h('div', { class: 'field-box' }, code)) : h('div', { class: 'field' }, h('label', { for: 'crew-name', text: t('crew.name') }), h('div', { class: 'field-box' }, name)),
         h('div', { class: 'field' }, h('label', { for: 'crew-nick', text: t('crew.nick') }), h('div', { class: 'field-box' }, nick)),
@@ -149,11 +204,11 @@ export function crewScreen() {
       h('div', { class: 'section-label', text: t('crew.p.plan') }), plan,
       isLeader() && !mine ? h('div', { class: 'stack crew-leader-tools' },
         h('div', { class: 'section-label', text: t('crew.leader.tools') }),
-        button({ label: t('crew.suspend'), variant: 'secondary', block: true, onClick: () => choiceSheet({ title: t('crew.suspend'), body: t('crew.suspend.body', { name: m.nickname }), options: [[1, t('crew.hours', { n: 1 })], [24, t('crew.days', { n: 1 })], [72, t('crew.days', { n: 3 })], [168, t('crew.days', { n: 7 })], [720, t('crew.days', { n: 30 })], ...(m.suspended ? [[0, t('crew.suspend.lift')]] : [])], onPick: async (v) => { await suspendMember(m.id, v); sh.close(); await afterLeaderAction(); } }) }),
-        button({ label: t('crew.adjust.title'), variant: 'secondary', block: true, onClick: () => choiceSheet({ title: t('crew.adjust.title'), body: t('crew.adjust.body', { name: m.nickname }), options: [[-50, '−50'], [-100, '−100'], [-200, '−200'], [-500, '−500'], [0, t('crew.adjust.reset')]], onPick: async (v) => { await setAdjust(m.id, v); sh.close(); await afterLeaderAction(); } }) }),
-        button({ label: t('crew.gift.title'), variant: 'secondary', block: true, onClick: () => choiceSheet({ title: t('crew.gift.title'), body: t('crew.gift.body', { name: m.nickname }), options: [[50, '50'], [100, '100'], [250, '250'], [500, '500'], [1000, '1000']], onPick: async (v) => { await giveDrachmas(m.id, v); sh.close(); await afterLeaderAction(); } }) }),
-        button({ label: t('crew.leader.make'), variant: 'secondary', block: true, onClick: () => confirmSheet({ title: t('crew.leader.make'), body: t('crew.leader.make.body', { name: m.nickname }), label: t('crew.leader.make.go'), onGo: async () => { await makeLeader(m.id); sh.close(); await afterLeaderAction(); } }) }),
-        button({ label: t('crew.kick'), variant: 'danger', block: true, onClick: () => confirmSheet({ title: t('crew.kick'), body: t('crew.kick.body', { name: m.nickname }), label: t('crew.kick.go'), danger: true, onGo: async () => { await kickMember(m.id); sh.close(); await afterLeaderAction(); } }) })) : null) });
+        button({ label: t('crew.suspend'), variant: 'secondary', block: true, onClick: () => choiceSheet({ title: t('crew.suspend'), body: t('crew.suspend.body', { name: m.nickname }), options: [[1, t('crew.hours', { n: 1 })], [24, t('crew.days', { n: 1 })], [72, t('crew.days', { n: 3 })], [168, t('crew.days', { n: 7 })], [720, t('crew.days', { n: 30 })], [PERMANENT_HOURS, t('crew.permanent')], ...(m.suspended ? [[0, t('crew.suspend.lift')]] : [])], custom: { label: t('crew.suspend.custom'), placeholder: t('crew.suspend.custom.ph'), go: t('crew.suspend.custom.go'), map: (n) => n * 24 }, onPick: async (v, announce) => { await suspendMember(m.id, v, announce); sh.close(); await afterLeaderAction(); } }) }),
+        button({ label: t('crew.adjust.title'), variant: 'secondary', block: true, onClick: () => choiceSheet({ title: t('crew.adjust.title'), body: t('crew.adjust.body', { name: m.nickname }), options: [[-50, '−50'], [-100, '−100'], [-200, '−200'], [-500, '−500'], [-1000, '−1000'], [0, t('crew.adjust.reset')]], custom: { label: t('crew.adjust.custom'), placeholder: t('crew.adjust.custom.ph'), go: t('crew.adjust.custom.go'), map: (n) => -n }, onPick: async (v, announce) => { await setAdjust(m.id, v, announce); sh.close(); await afterLeaderAction(); } }) }),
+        button({ label: t('crew.gift.title'), variant: 'secondary', block: true, onClick: () => giftSheet(m, async () => { sh.close(); await afterLeaderAction(); }) }),
+        button({ label: t('crew.leader.make'), variant: 'secondary', block: true, onClick: () => confirmSheet({ title: t('crew.leader.make'), body: t('crew.leader.make.body', { name: m.nickname }), label: t('crew.leader.make.go'), onGo: async (announce) => { await makeLeader(m.id, announce); sh.close(); await afterLeaderAction(); } }) }),
+        button({ label: t('crew.kick'), variant: 'danger', block: true, onClick: () => confirmSheet({ title: t('crew.kick'), body: t('crew.kick.body', { name: m.nickname }), label: t('crew.kick.go'), danger: true, onGo: async (announce) => { await kickMember(m.id, announce); sh.close(); await afterLeaderAction(); } }) })) : null) });
   }
 
   function shareBox(again = draw) {
@@ -161,10 +216,11 @@ export function crewScreen() {
     return h('section', { class: 'card crew-share', style: 'margin-block-start:12px' },
       h('h2', { text: t('crew.share.plan.title') }),
       h('p', { text: t('crew.share.plan.body') }),
-      segmented({ label: t('crew.share.plan.title'), value: on ? 'on' : 'off', onChange: async (v) => { await updateSettings({ sharePlan: v === 'on' }); await syncPlan(); again(); }, options: [{ value: 'off', label: t('crew.share.plan.off') }, { value: 'on', label: t('crew.share.plan.on') }] }));
+      segmented({ label: t('crew.share.plan.title'), value: on ? 'on' : 'off', onChange: async (v) => { await updateSettings({ sharePlan: v === 'on' }); await syncPlan(); again(); }, options: [{ value: 'off', label: t('crew.share.plan.off') }, { value: 'on', label: t('crew.share.plan.on') }] }),
+      h('p', { class: 'row-sub', text: t('crew.privacy.note') }));
   }
 
-  const hoursText = (h24) => (h24 % 24 === 0 ? t('crew.days', { n: h24 / 24 }) : t('crew.hours', { n: h24 }));
+  const hoursText = (h24) => (h24 >= PERMANENT_HOURS / 2 ? t('crew.permanent') : h24 % 24 === 0 ? t('crew.days', { n: h24 / 24 }) : t('crew.hours', { n: h24 }));
   const sysText = (m) => {
     const [kind, arg] = String(m.body).split(':');
     if (kind === 'suspended') return t('crew.sys.suspended', { name: m.nickname, time: hoursText(Number(arg)) });
@@ -233,7 +289,7 @@ export function crewScreen() {
       h('h2', {}, leaderChip(), ' ', t('crew.leader.tools')),
       h('div', { class: 'field' }, h('label', { for: 'crew-rename', text: t('crew.rename') }), h('div', { class: 'field-box' }, name)),
       button({ label: t('common.save'), variant: 'secondary', block: true, onClick: async () => { try { await renameGroup(name.value); showToast({ message: t('crew.renamed') }); draw(); again(); } catch (e) { showToast({ message: errText(e) }); } } }),
-      button({ label: t('crew.newcode'), variant: 'ghost', block: true, onClick: () => confirmSheet({ title: t('crew.newcode'), body: t('crew.newcode.body'), label: t('crew.newcode.go'), onGo: async () => { await newInviteCode(); draw(); again(); } }) }));
+      button({ label: t('crew.newcode'), variant: 'ghost', block: true, onClick: () => confirmSheet({ title: t('crew.newcode'), announce: false, body: t('crew.newcode.body'), label: t('crew.newcode.go'), onGo: async () => { await newInviteCode(); draw(); again(); } }) }));
   }
 
   /** Code, notifications, plan sharing and leaving live in a small sheet behind the gear, so the chat has the whole screen. */

@@ -2,7 +2,10 @@
 import { h } from './dom.js';
 import { icon } from './icons.js';
 import { t } from '../core/i18n.mjs';
-import { purchase, toggleEquip, activateShake, activateBoost, refundItem } from '../core/shop.mjs';
+import { purchase, toggleEquip, activateShake, activateBoost, refundItem, returnsLeft } from '../core/shop.mjs';
+import { dbGet, dbPut } from './db.js';
+import { crew, recordReturn } from './crew-state.js';
+import { errorKey } from '../core/crew.mjs';
 import { view } from '../core/streak.mjs';
 import { button, showToast, backLink, openSheet } from './components.js';
 import { data } from './data.js';
@@ -51,10 +54,18 @@ export function shopScreen() {
         owned ? h('div', { class: 'stack' }, button({ label: eq ? t('shop.equipped') : t('shop.equip'), variant: eq ? 'secondary' : 'primary', block: true, onClick: () => act((gm) => toggleEquip(gm, shop, c.id)) }), returnBtn(c))
           : button({ label: `${c.price}`, icon: 'coin', variant: g.drachmas >= c.price ? 'primary' : 'secondary', block: true, disabled: g.drachmas < c.price, onClick: () => act((gm) => purchase(gm, shop, c.id), () => t('shop.bought', { name: itemName(c) })) }));
     }));
-    /** Return an owned item for its full price (a mistaken purchase, or someone else used your phone). */
-    const returnItem = (c) => {
+    /** Return an owned item for its full price (a mistaken purchase, or someone else used your phone). Two returns a month (OUR DESIGN);
+     *  crew members are counted on the server, so clearing the phone does not reset it. */
+    const returnItem = async (c) => {
+      const log = (await dbGet('kv', 'returns').catch(() => null)) ?? [];
+      const left = returnsLeft(log, Date.now(), crew.local ? crew.returnsUsed : 0);
       const sh = openSheet({ title: t('shop.return'), content: h('div', { class: 'stack' }, h('p', { text: t('shop.return.body', { name: itemName(c), n: c.price }) }),
-        button({ label: t('shop.return.go', { n: c.price }), variant: 'primary', block: true, onClick: async () => { sh.close(); await act((gm) => refundItem(gm, shop, c.id), (r) => t('shop.returned', { n: r.refund })); } }),
+        h('p', { class: 'row-sub', text: left > 0 ? t('shop.return.left', { n: left }) : t('shop.return.none') }),
+        left > 0 ? button({ label: t('shop.return.go', { n: c.price }), variant: 'primary', block: true, onClick: async () => {
+          try { if (crew.local) await recordReturn(); } catch (e) { sh.close(); showToast({ message: t(errorKey(e) === 'return_limit' ? 'shop.return.none' : `crew.err.${errorKey(e)}`) }); return; }
+          await dbPut('kv', [...log, Date.now()].slice(-20), 'returns').catch(() => {});
+          sh.close(); await act((gm) => refundItem(gm, shop, c.id), (r) => t('shop.returned', { n: r.refund }));
+        } }) : null,
         button({ label: t('common.cancel'), variant: 'ghost', block: true, onClick: () => sh.close() })) });
     };
     const returnBtn = (c) => button({ label: t('shop.return'), variant: 'ghost', onClick: () => returnItem(c) });
