@@ -3,7 +3,8 @@ import { dbAll, dbGet, dbPut, dbBatch, dbDelete } from './db.js';
 import { migrateWorkout, newestDraft } from '../core/draft.mjs';
 import { bestsFrom, ratingsOf, afterEdit } from '../core/post.mjs';
 import { overallRating } from '../core/ranks.mjs';
-import { consistencyBonus } from '../core/consistency.mjs';
+import { rankBonus, setWeeklyGoal } from '../core/bonus.mjs';
+import { getSettings } from './storage.js';
 import { cleanSchedule } from '../core/schedule.mjs';
 import { latestBodyweight, bodyweightEntry } from '../core/profile.mjs';
 import { data, registerCustom, unregisterCustom, setRenames, renameExercise } from './data.js';
@@ -24,7 +25,8 @@ const lsDraft = () => { try { return JSON.parse(localStorage.getItem(LS_DRAFT));
 
 export function recompute() {
   store.bests = bestsFrom(store.workouts);
-  store.overall = overallRating(ratingsOf(store.bests), data().byId, consistencyBonus(store.workouts, Date.now()).total);
+  setWeeklyGoal(getSettings().weeklyGoal);
+  store.overall = overallRating(ratingsOf(store.bests), data().byId, rankBonus({ workouts: store.workouts, byId: data().byId, ratings: ratingsOf(store.bests) }).total);
 }
 
 const urls = new Map();

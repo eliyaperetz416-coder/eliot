@@ -684,3 +684,4 @@ a.btn { text-decoration: none; }
 .lock-card .btn { justify-self: stretch; }
 .lock-icon { width: 56px; height: 56px; color: var(--accent); }
 .lock-body { margin: 0; }
+.bonus-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-3); padding-block: 2px; }

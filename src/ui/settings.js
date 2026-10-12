@@ -6,6 +6,7 @@ import { getSettings, updateSettings, requestPersistence, storageInfo } from './
 import { exportBackup, readBackupFile, applyImport, resetAll } from './backup.js';
 import { summarize } from '../core/backup.mjs';
 import { formatDate, formatNum } from './format.js';
+import { recompute } from './store.js';
 import { APP_VERSION } from '../version.js';
 
 const mb = (n) => `${formatNum(n / 1048576, n < 10485760 ? 1 : 0)} MB`;
@@ -84,6 +85,9 @@ export function settingsScreen({ onLanguage }) {
       h('div', { class: 'section-label', text: t('set.autoweight') }),
       segmented({ label: t('set.autoweight'), value: s.autoRoutineWeight === false ? 'off' : 'on', onChange: async (v) => { await updateSettings({ autoRoutineWeight: v === 'on' }); draw(); }, options: [{ value: 'on', label: t('set.autoweight.on') }, { value: 'off', label: t('set.autoweight.off') }] }),
       h('p', { class: 'row-sub', style: 'padding-block-start:8px', text: t('set.autoweight.hint') }),
+      h('div', { class: 'section-label', text: t('set.goal') }),
+      segmented({ label: t('set.goal'), value: String(s.weeklyGoal ?? 3), onChange: async (v) => { await updateSettings({ weeklyGoal: Number(v) }); recompute(); draw(); }, options: [2, 3, 4, 5, 6].map((n) => ({ value: String(n), label: String(n) })) }),
+      h('p', { class: 'row-sub', style: 'padding-block-start:8px', text: t('set.goal.hint') }),
       h('div', { class: 'section-label', text: t('set.backup') }),
       h('p', { class: 'row-sub', style: 'padding-block-end:8px', text: t('set.backup.note') }),
       list([

@@ -49,8 +49,8 @@ test('"Rank pending" until 3 ranked exercises exist; the third creates the first
   assert.equal(r2.summary.rankChange.kind, 'first');
   const muscles = aggregate([563, 652, 597]); // chest, back, quads each one exercise
   assert.equal(r2.summary.overallAfter.strength, muscles);
-  assert.equal(r2.summary.overallAfter.bonus, 2); // two training days in the last 4 weeks
-  assert.equal(r2.summary.overallAfter.rating, muscles + 2);
+  assert.equal(r2.summary.overallAfter.bonus, 5); // two training days (+2) and three muscle groups trained this week (+3)
+  assert.equal(r2.summary.overallAfter.rating, muscles + 5);
   assert.equal(tierFor(muscles).tier, 'diamond');
 });
 

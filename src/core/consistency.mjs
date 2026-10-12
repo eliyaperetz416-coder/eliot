@@ -1,13 +1,13 @@
 // Consistency bonus on the overall rank. OUR DESIGN: strength stays the main thing, showing up adds a little on top.
-// At most one division (20 points). It is worked out from your workouts, so it fades by itself if you stop.
+// At most 40 points (v1.34; it was 20). It is worked out from your workouts, so it fades by itself if you stop.
 
 export const BONUS = Object.freeze({
   WINDOW_DAYS: 28,       // training days counted in the last 4 weeks
-  DAY_POINTS_CAP: 12,    // 1 point per training day, up to 12
+  DAY_POINTS_CAP: 20,    // 1 point per training day, up to 20
   GAP_DAYS: 3,           // the streak breaks after a gap longer than 3 days (same rule as the game streak)
   STREAK_POINTS_PER_WEEK: 2,
-  STREAK_POINTS_CAP: 8,  // 2 points per full week of streak, up to 8
-  MAX: 20,               // = one division
+  STREAK_POINTS_CAP: 20, // 2 points per full week of streak, up to 20 (v1.34: consistency counts for more)
+  MAX: 40,
 });
 
 const DAY = 86400000;

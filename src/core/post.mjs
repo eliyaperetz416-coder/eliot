@@ -1,6 +1,6 @@
 // Posting a workout, recalculating history, and rank changes. Pure.
 import { estimateOneRM, ratingForSet, isDuration, tierFor, TIERS, muscleRatings, overallRating } from './ranks.mjs';
-import { consistencyBonus } from './consistency.mjs';
+import { rankBonus } from './bonus.mjs';
 import { metricOf, evaluatePR } from './prs.mjs';
 import { compactForPost, isWorking, stats, SCHEMA_VERSION } from './workout.mjs';
 
@@ -80,7 +80,7 @@ export function postWorkout({ draft, workouts, now, byId, sex = 'm' }) {
   const posted = all.find((x) => x.id === w.id);
   const afterBests = bestsFrom(all);
   const rb = ratingsOf(beforeBests), ra = ratingsOf(afterBests);
-  const overallBefore = overallRating(rb, byId, consistencyBonus(workouts, now).total), overallAfter = overallRating(ra, byId, consistencyBonus(all, now).total);
+  const overallBefore = overallRating(rb, byId, rankBonus({ workouts, byId, ratings: rb, now }).total), overallAfter = overallRating(ra, byId, rankBonus({ workouts: all, byId, ratings: ra, now }).total);
   const mb = muscleRatings(rb, byId), ma = muscleRatings(ra, byId);
   const ratingChanges = Object.keys(ra).filter((id) => ra[id] > (rb[id] ?? 0)).map((id) => ({ exerciseId: id, before: rb[id] ?? 0, after: ra[id] }));
   const prs = [];
@@ -102,7 +102,7 @@ export function postWorkout({ draft, workouts, now, byId, sex = 'm' }) {
 export function afterEdit(workouts, byId, now = Date.now()) {
   const all = recalcAll(workouts, byId);
   const bests = bestsFrom(all);
-  return { workouts: all, bests, overall: overallRating(ratingsOf(bests), byId, consistencyBonus(all, now).total) };
+  return { workouts: all, bests, overall: overallRating(ratingsOf(bests), byId, rankBonus({ workouts: all, byId, ratings: ratingsOf(bests), now }).total) };
 }
 
 /** Map exerciseId -> [{metric, at}] from posted workouts (done, non-warm-up sets). */

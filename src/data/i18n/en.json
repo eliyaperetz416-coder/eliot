@@ -179,10 +179,10 @@
     "other": "{n} sets"
   },
   "rank.split": "Strength {s} + consistency {b}",
-  "bonus.title": "Consistency bonus",
-  "bonus.days": "{n} training days in the last 4 weeks: +{pts} (up to {cap})",
-  "bonus.streak": "Streak of {n} full weeks: +{pts} (up to {cap})",
-  "bonus.note": "Strength is the main thing. Showing up adds up to one division, and it fades by itself if you stop training.",
+  "bonus.title": "Bonus points",
+  "bonus.days": "Training days in the last 4 weeks: {n}",
+  "bonus.streak": "Streak of {n} full weeks",
+  "bonus.note": "Strength is still the main thing. These add up when you can't add weight: showing up, doing more work, training everything, hitting your weekly goal. All of them fade if you stop, except the workout milestones.",
   "prog.week.workouts": "Workouts this week",
   "prog.week.volume": "Volume this week",
   "prog.prs30": "PRs in 30 days",
@@ -1042,5 +1042,13 @@
   "lock.note": "This screen goes away on its own when the time is over or the leader lifts the suspension.",
   "lock.check": "Check again",
   "lock.still": "Still suspended.",
-  "lock.minutes": "{n} min"
+  "lock.minutes": "{n} min",
+  "bonus.volume": "This week's volume vs your usual week: {pct}%",
+  "bonus.cover": "Muscle groups trained this week: {n} of 10",
+  "bonus.balance": "Balance: your weakest group vs your strongest (needs all 10 ranked)",
+  "bonus.goal": "Weeks you reached your goal ({goal} days): {weeks} of the last 5",
+  "bonus.milestone": "Workouts done: {n} (the top milestone is reached)",
+  "bonus.milestone.next": "Workouts done: {n} (+{pts} at {next}, kept for good)",
+  "set.goal": "Weekly goal (training days)",
+  "set.goal.hint": "Each week you reach it adds rank points. Shown under Progress."
 }

@@ -7,6 +7,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   reducedMotion: false,
   dumbbellTotal: false,    // OUR DESIGN: type the total of both dumbbells (stored per hand); off = type one dumbbell
   sharePlan: false,        // OUR DESIGN: show your weekly plan to your crew (off until you switch it on)
+  weeklyGoal: 3,           // OUR DESIGN: training days per week you aim for; each week you reach it adds rank points
   autoRoutineWeight: true, // raise the planned weight of a saved workout when you lift more
   lastExportAt: null,
   reminderSnoozedUntil: null, // export reminder hidden until this time

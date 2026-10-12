@@ -188,3 +188,12 @@ seasons and leaderboards exist (server features, not built here), about 600 exer
 - They belong to the group `other` ("Cardio & other"), which is now a rank group, so they count toward the overall rank like the other groups.
 - **The ban covers the whole app.** While the leader has suspended you, a lock screen covers everything until the time ends or the leader lifts it. The end time is saved on your phone so it holds offline; the app asks the server again when opened and every 20 seconds while locked. A suspended member cannot leave the crew to escape it. Clearing the app's data on the phone or using another phone would get around it; a kicked member is simply out of the crew.
 - **Prizes stay** (rating prize and drachmas) until the leader lowers them.
+
+## More ways to rise besides lifting heavier (OUR DESIGN, v1.34)
+Strength (your best sets) is still the base of the overall rank. On top of it come bonus points, each part with its own maximum (`src/core/bonus.mjs`, constants in `PARTS` and `src/core/consistency.mjs`):
+- **Consistency, now up to 40** (was 20): 1 point per training day in the last 4 weeks (up to 20) and 2 points per full week of streak (up to 20).
+- **Weekly volume, up to 15:** this week's total volume against your average week over the 4 weeks before; 1 point per 2% more (up to +30%). Needs at least 2 workouts in the earlier weeks.
+- **Muscle balance, up to 15:** 1 point per main group trained in the last 7 days (up to 10), and up to 5 for how close your weakest group is to your strongest (only once all 10 main groups have a rating).
+- **Weekly goal, up to 10:** you choose 2 to 6 training days in Settings (default 3). Each of the last 5 Monday-to-Sunday weeks in which you reached it gives 2 points.
+- **Milestones, up to 15, permanent:** 25 workouts +3, 50 +6, 100 +10, 200 +15. The only part that does not fade.
+Maximum bonus in total: 95 points (a bit under one tier). Everything is worked out from your workouts each time, so the parts that depend on recent weeks fade by themselves when you stop. The crew leaderboard still shows the total rating.

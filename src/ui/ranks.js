@@ -14,7 +14,8 @@ import { rankCard } from './rank-card.js';
 import { ladderStrip } from './ladder.js';
 import { weeklyCount, weeklyVolume, prsSince } from '../core/charts.mjs';
 import { barChart, chartCard } from './charts.js';
-import { consistencyBonus, BONUS } from '../core/consistency.mjs';
+import { BONUS } from '../core/consistency.mjs';
+import { rankBonus, PARTS } from '../core/bonus.mjs';
 import { muscleMap } from './muscle-map.js';
 import { emblem } from './emblem.js';
 import { openNeedSheet } from './need.js';
@@ -50,11 +51,18 @@ function summary() {
 
 /** How the consistency bonus is made up (OUR DESIGN). */
 function bonusCard() {
-  const b = consistencyBonus(store.workouts, Date.now());
+  const b = rankBonus({ workouts: store.workouts, byId: data().byId, ratings: ratingsOf(store.bests) });
+  const p = b.parts;
+  const row = (key, args, pts, max) => h('div', { class: 'bonus-row' }, h('span', { class: 'row-sub', text: t(key, args) }), h('b', { class: 'num', dir: 'ltr', text: `+${pts}/${max}` }));
   return h('section', { class: 'card bonus-card' },
-    h('div', { class: 'bonus-head' }, h('span', { class: 'row-title', text: t('bonus.title') }), h('b', { class: 'num bonus-total', dir: 'ltr', text: `+${b.total} / ${BONUS.MAX}` })),
-    h('div', { class: 'row-sub', text: t('bonus.days', { n: b.days, pts: b.dayPoints, cap: BONUS.DAY_POINTS_CAP }) }),
-    h('div', { class: 'row-sub', text: t('bonus.streak', { n: b.streakWeeks, pts: b.streakPoints, cap: BONUS.STREAK_POINTS_CAP }) }),
+    h('div', { class: 'bonus-head' }, h('span', { class: 'row-title', text: t('bonus.title') }), h('b', { class: 'num bonus-total', dir: 'ltr', text: `+${b.total} / ${b.max}` })),
+    row('bonus.days', { n: p.consistency.days }, p.consistency.dayPoints, BONUS.DAY_POINTS_CAP),
+    row('bonus.streak', { n: p.consistency.streakWeeks }, p.consistency.streakPoints, BONUS.STREAK_POINTS_CAP),
+    row('bonus.volume', { pct: p.volume.pct > 0 ? `+${p.volume.pct}` : String(p.volume.pct) }, p.volume.points, PARTS.VOLUME_MAX),
+    row('bonus.cover', { n: p.balance.cover }, p.balance.coverPoints, PARTS.COVER_MAX),
+    row('bonus.balance', {}, p.balance.balancePoints, PARTS.BALANCE_MAX),
+    row('bonus.goal', { weeks: p.goal.weeks, goal: p.goal.goal }, p.goal.points, PARTS.GOAL_MAX),
+    row(p.milestones.next ? 'bonus.milestone.next' : 'bonus.milestone', { n: p.milestones.workouts, next: p.milestones.next?.count, pts: p.milestones.next?.pts }, p.milestones.points, PARTS.MILESTONES[PARTS.MILESTONES.length - 1][1]),
     h('p', { class: 'row-sub bonus-note', text: t('bonus.note') }));
 }
 

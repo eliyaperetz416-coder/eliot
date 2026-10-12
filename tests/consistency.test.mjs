@@ -26,7 +26,7 @@ test('streak weeks add points; a gap over 3 days breaks it', () => {
   assert.equal(consistencyBonus(steady.map((w) => ({ endedMs: w.endedMs - 5 * DAY })), now).streakWeeks, 0); // last workout 5+ days ago
 });
 
-test('the total never passes one division', () => {
+test('the consistency part never passes its maximum', () => {
   const daily = Array.from({ length: 120 }, (_, i) => at(i));
   assert.equal(consistencyBonus(daily, now).total, BONUS.MAX);
 });
