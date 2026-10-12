@@ -677,3 +677,10 @@ a.btn { text-decoration: none; }
 /* Crew leader powers (OUR DESIGN) */
 .chip-warn { background: rgb(255 138 61 / .16); border-color: rgb(255 138 61 / .55); color: #ffb685; margin-inline-start: 6px; }
 .crew-suspended { margin: var(--s-3) 0 0; color: var(--text-dim); }
+
+/* The ban: a lock screen over the whole app (OUR DESIGN) */
+.app-lock { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: var(--gutter); background: var(--bg); }
+.lock-card { display: grid; gap: var(--s-3); max-width: 420px; text-align: center; justify-items: center; }
+.lock-card .btn { justify-self: stretch; }
+.lock-icon { width: 56px; height: 56px; color: var(--accent); }
+.lock-body { margin: 0; }

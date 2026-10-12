@@ -18,7 +18,8 @@ export const TIERS = Object.freeze([
   { id: 'greekgod', floor: 1000 },
 ]);
 export const DIVISIONS = Object.freeze(['V', 'IV', 'III', 'II', 'I']); // V lowest, I highest
-export const RANK_GROUPS = Object.freeze(['chest', 'back', 'shoulders', 'biceps', 'triceps', 'quads', 'hamstrings', 'glutes', 'calves', 'abs']);
+// 'other' = cardio, forearms and hip-machine exercises (v1.33: they are ranked now). Time holds and cardio rate by duration (see isDuration).
+export const RANK_GROUPS = Object.freeze(['chest', 'back', 'shoulders', 'biceps', 'triceps', 'quads', 'hamstrings', 'glutes', 'calves', 'abs', 'other']);
 
 /** Epley 1RM. Reps above 30 are capped (see isUnreliable). */
 export function epley(weight, reps) {
@@ -37,9 +38,16 @@ export function estimateOneRM(ex, addedKg, reps, bodyweightKg) {
 
 const bwScale = (bw) => Math.pow(CALIBRATION.REF_BODYWEIGHT / bw, CALIBRATION.BW_EXPONENT);
 
+/** OUR DESIGN (v1.33): holds and cardio are rated by how long you last. For them `reps` is seconds and `R` is the seconds that give rating 900. No bodyweight or sex scaling. */
+export const isDuration = (ex) => !!ex && (ex.type === 'time' || ex.type === 'cardio');
+
+/** Seconds needed for `rating` on a duration exercise. */
+export const secondsForRating = (ex, rating) => ex.R * Math.pow(rating / CALIBRATION.RATING_AT_R, CALIBRATION.CURVE_EXPONENT);
+
 /** Rating (>=1, no maximum) of one set. Returns 0 (unranked) for unusable sets or unranked exercises. */
 export function ratingForSet(ex, { weight, reps }, bodyweightKg, sex = 'm') {
   if (!ex || ex.ranked === false || !ex.R) return 0;
+  if (isDuration(ex)) return reps > 0 ? Math.max(1, Math.round(CALIBRATION.RATING_AT_R * Math.pow(reps / ex.R, 1 / CALIBRATION.CURVE_EXPONENT))) : 0;
   if (!(reps > 0) || !(bodyweightKg > 0)) return 0;
   const oneRM = estimateOneRM(ex, weight, reps, bodyweightKg);
   if (!(oneRM > 0)) return 0;
@@ -109,7 +117,7 @@ export function muscleRatings(bests, exercisesById) {
 }
 
 export function rankedCount(bests, exercisesById) {
-  return Object.entries(bests).filter(([id, r]) => r > 0 && exercisesById[id]?.ranked !== false && exercisesById[id]?.muscleGroup !== 'other').length;
+  return Object.entries(bests).filter(([id, r]) => r > 0 && exercisesById[id]?.ranked !== false).length;
 }
 
 /** { pending, remaining, rating, strength, bonus } - overall appears only after MIN_RANKED_EXERCISES ranked exercises.

@@ -26,10 +26,11 @@ export function progressScreen(exId) {
   if (ex) {
     const series = e1rmSeries(store.workouts, ex.id, d.byId);
     const unit = ex.type === 'time' || ex.type === 'cardio' ? (ex.type === 'time' ? t('col.sec.short') : t('col.sec.short')) : (ex.ranked || ex.type === 'weight' ? t('unit.kg') : '');
+    const durationEx = ex.type === 'time' || ex.type === 'cardio';
     kids.push(
       h('div', { class: 'ent-card card' }, h('div', { class: 'row-sub', text: t('progress.exercise') }), h('div', { class: 'row-title', text: nameOf(ex) }),
         button({ label: t('progress.change'), variant: 'secondary', block: true, onClick: () => openExercisePicker({ title: t('progress.change'), multi: false, ids, onPick: ([e]) => { location.hash = `#/progress/${e.id}`; } }) })),
-      chartCard({ title: ex.ranked ? t('progress.e1rm') : t('progress.best'), subtitle: ex.ranked ? t('progress.e1rm.sub') : null,
+      chartCard({ title: ex.ranked && !durationEx ? t('progress.e1rm') : t('progress.best'), subtitle: ex.ranked && !durationEx ? t('progress.e1rm.sub') : null,
         chart: lineChart({ series, unit, title: `${t('progress.e1rm')}: ${nameOf(ex)}` }), empty: series.length ? null : t('progress.nodata') }));
   }
   const vol = weeklyVolume(store.workouts, Date.now(), 12);

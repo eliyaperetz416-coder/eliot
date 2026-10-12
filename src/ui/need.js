@@ -3,7 +3,7 @@ import { h } from './dom.js';
 import { icon } from './icons.js';
 import { t, getLanguage } from '../core/i18n.mjs';
 import { nextTargets } from '../core/views.mjs';
-import { tierFor } from '../core/ranks.mjs';
+import { tierFor, isDuration } from '../core/ranks.mjs';
 import { openSheet } from './components.js';
 import { store, bodyweightKg } from './store.js';
 import { emblem } from './emblem.js';
@@ -15,7 +15,9 @@ const tierLabel = (x) => (x.division ? `${t(`tier.${x.tier}`)} ${x.division}` : 
 export function openNeedSheet(ex) {
   const best = store.bests[ex.id];
   const rating = best?.rating ?? 0;
-  let reps = Math.min(30, Math.max(1, best?.reps ?? 5));
+  const dur = isDuration(ex);
+  let reps = dur ? 1 : Math.min(30, Math.max(1, best?.reps ?? 5));
+  const mmss = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
   const body = h('div', { class: 'stack' });
   const sh = openSheet({ title: nameOf(ex), content: body });
   function draw() {
@@ -31,16 +33,16 @@ export function openNeedSheet(ex) {
       h('div', { class: 'need-main' },
         h('div', { class: 'row-sub', text: label }),
         h('div', { class: 'row-title', text: `${tierLabel(x)} · ${formatNum(x.rating, 0)}` }),
-        h('div', { class: 'need-load display num', text: x.bodyweightEnough ? t('need.bwEnough') : `${formatKg(x.load)} ${t('unit.kg')} × ${reps}` }),
+        h('div', { class: 'need-load display num', text: dur ? `${mmss(x.seconds)} ${t('need.minutes')}` : x.bodyweightEnough ? t('need.bwEnough') : `${formatKg(x.load)} ${t('unit.kg')} × ${reps}` }),
         ex.perHand && !x.bodyweightEnough ? h('div', { class: 'row-sub', text: t('exercise.curve.perhand') }) : null,
         ex.bwFactor && !x.bodyweightEnough ? h('div', { class: 'row-sub', text: t('need.added') }) : null));
     const kids = [
       h('div', { class: 'row-sub', text: cur.unranked ? t('need.noBest') : `${t('need.current')}: ${tierLabel(cur)} · ${formatNum(rating, 0)}` }),
-      stepper, quick];
+      ...(dur ? [] : [stepper, quick])];
     if (cur.tier === 'greekgod') kids.push(h('p', { class: 'need-top', text: t('need.top', { n: formatNum(rating, 0) }) }));
     if (nt.division) kids.push(target(t('need.nextDivision'), nt.division));
     if (nt.tier) kids.push(target(t('need.nextTier'), nt.tier));
-    kids.push(h('p', { class: 'row-sub', text: t('need.note', { kg: formatKg(bodyweightKg()) }) }),
+    kids.push(h('p', { class: 'row-sub', text: dur ? t('need.note.duration') : t('need.note', { kg: formatKg(bodyweightKg()) }) }),
       h('div', { class: 'list' },
         h('a', { class: 'row', href: `#/exercise/${ex.id}`, onclick: () => sh.close() }, h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: t('need.open') })), icon('chevron', 'chev')),
         best ? h('a', { class: 'row', href: `#/progress/${ex.id}`, onclick: () => sh.close() }, h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: t('progress.title') })), icon('chevron', 'chev')) : null));

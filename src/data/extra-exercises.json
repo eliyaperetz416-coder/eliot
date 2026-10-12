@@ -7,10 +7,12 @@
       "nameEn": "Hollow Body Crunch",
       "nameHe": "כפיפות הולו בודי",
       "equipment": "bodyweight",
-      "primaryMuscles": ["abs"],
+      "primaryMuscles": [
+        "abs"
+      ],
       "secondaryMuscles": [],
       "muscleGroup": "abs",
-      "ranked": false,
+      "ranked": true,
       "type": "bodyweight",
       "instructionsEn": [
         "Lie on your back with your legs straight and together and your arms extended overhead.",
@@ -27,12 +29,37 @@
         "טיפ: אם הגב התחתון נתלש מהרצפה, מכופפים מעט את הברכיים או משאירים את הידיים לצד הגוף."
       ],
       "image": "",
-      "image2": ""
+      "image2": "",
+      "family": "abs-floor",
+      "R": 117.0,
+      "bwFactor": 0.3
     }
   ],
   "aliases": {
-    "thigh-adductor": ["מקרבים", "מכונת מקרבים", "אדוקטור", "adductor", "adductors", "hip adduction", "inner thigh"],
-    "thigh-abductor": ["מרחיקים", "מכונת מרחיקים", "אבדוקטור", "abductor", "abductors", "hip abduction", "outer thigh"],
-    "hollow-body-crunch": ["הולובאדי", "הולו בודי", "hollow body", "hollow hold", "כפיפות הולובאדי"]
+    "thigh-adductor": [
+      "מקרבים",
+      "מכונת מקרבים",
+      "אדוקטור",
+      "adductor",
+      "adductors",
+      "hip adduction",
+      "inner thigh"
+    ],
+    "thigh-abductor": [
+      "מרחיקים",
+      "מכונת מרחיקים",
+      "אבדוקטור",
+      "abductor",
+      "abductors",
+      "hip abduction",
+      "outer thigh"
+    ],
+    "hollow-body-crunch": [
+      "הולובאדי",
+      "הולו בודי",
+      "hollow body",
+      "hollow hold",
+      "כפיפות הולובאדי"
+    ]
   }
 }

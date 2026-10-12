@@ -10,7 +10,7 @@ import { getSettings } from './storage.js';
 import { data } from './data.js';
 import { nextPlanDay } from '../core/generator.mjs';
 
-export const crew = { local: null, unread: 0, ownerKey: null, returnsUsed: 0 };
+export const crew = { local: null, unread: 0, ownerKey: null, returnsUsed: 0, lockUntil: null };
 const listeners = new Set();
 export const onCrew = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
 const emit = () => listeners.forEach((fn) => fn());
@@ -19,6 +19,7 @@ const persist = () => dbPut('kv', crew.local, 'crew');
 export async function initCrew() {
   crew.local = (await dbGet('kv', 'crew').catch(() => null)) ?? null;
   crew.ownerKey = (await dbGet('kv', 'ownerKey').catch(() => null)) ?? null;
+  crew.lockUntil = (await dbGet('kv', 'lock').catch(() => null)) ?? null;
   if (crew.local) { fetchView().catch(() => {}); refreshUnread(); syncStats(true); claimGifts(); }
 }
 
@@ -75,8 +76,17 @@ export async function syncGroupInfo(group) {
   crew.local = { ...crew.local, name: group.name, code: group.code };
   await persist();
 }
+/** The ban end time (ms) is kept on the phone so the lock screen also holds offline. null = not banned. */
+async function setLock(ms) {
+  if ((ms ?? null) === (crew.lockUntil ?? null)) return;
+  crew.lockUntil = ms ?? null;
+  await dbPut('kv', crew.lockUntil, 'lock').catch(() => {});
+  emit();
+}
 export async function fetchView() {
-  const v = await rpc('my_group', { p_token: tok() });
+  let v;
+  try { v = await rpc('my_group', { p_token: tok() }); } catch (e) { if (String(e?.message).includes('not_member')) await setLock(null); throw e; }
+  await setLock(v?.me?.suspended_until ? Date.parse(v.me.suspended_until) : null);
   crew.returnsUsed = Number(v?.me?.returns_used) || 0;
   const key = v?.me?.owner_key;
   if (key && key !== crew.ownerKey) { crew.ownerKey = key; await dbPut('kv', key, 'ownerKey').catch(() => {}); emit(); }
@@ -128,7 +138,7 @@ export async function syncPlan() {
 }
 
 export function startCrewWatcher() {
-  const tick = () => { if (document.visibilityState === 'visible' && crew.local) { refreshUnread(); syncStats(); claimGifts(); } };
+  const tick = () => { if (document.visibilityState === 'visible' && crew.local) { fetchView().catch(() => {}); refreshUnread(); syncStats(); claimGifts(); } };
   document.addEventListener('visibilitychange', tick);
   setInterval(tick, 60000);
 }

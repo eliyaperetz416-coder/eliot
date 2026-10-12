@@ -7,7 +7,7 @@ const COMPOUND = new Set(['bench-flat', 'bench-incline', 'db-bench', 'db-incline
 
 /** OUR DESIGN: compound 120 s, isolation 75 s, unranked 60 s. */
 export function defaultRestSec(ex) {
-  if (!ex || !ex.ranked) return 60;
+  if (!ex || !ex.ranked || ex.type === 'time' || ex.type === 'cardio') return 60;
   return COMPOUND.has(ex.family) ? 120 : 75;
 }
 export const clampRest = (s) => Math.min(REST_MAX, Math.max(REST_MIN, Math.round(s)));

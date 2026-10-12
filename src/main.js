@@ -9,6 +9,7 @@ import { onboarding } from './ui/onboarding.js';
 import { initRestTimer, refreshRestTimer } from './ui/rest-timer.js';
 import { keepAwake } from './ui/wakelock.js';
 import { initCrew, onCrew, crew, startCrewWatcher } from './ui/crew-state.js';
+import { installLock } from './ui/lock.js';
 
 const TABS = [
   { id: 'workout', icon: 'workout' }, { id: 'workouts', icon: 'bolt' }, { id: 'ranks', icon: 'ranks' }, { id: 'profile', icon: 'profile' },
@@ -118,6 +119,7 @@ async function boot() {
   });
   onCrew(drawNav);
   startCrewWatcher();
+  installLock();
   window.addEventListener('hashchange', render);
   document.documentElement.dataset.ready = '1';
   requestPersistence();

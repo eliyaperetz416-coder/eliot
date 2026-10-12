@@ -125,6 +125,7 @@ export function exerciseDetailScreen(id) {
     curve.push(h('p', { text: t('exercise.curve.ranked', { family: getLanguage() === 'he' ? fam.nameHe : fam.nameEn }) }));
     if (ex.perHand) curve.push(h('p', { class: 'row-sub', text: t('exercise.curve.perhand') }));
     if (ex.bwFactor) curve.push(h('p', { class: 'row-sub', text: t('exercise.curve.bodyweight') }));
+    if (ex.type === 'time' || ex.type === 'cardio') curve.push(h('p', { class: 'row-sub', text: t('exercise.curve.duration') }));
     curve.push(h('p', { class: 'row-sub', text: t('exercise.curve.approx') }));
   } else curve.push(h('p', { text: t('exercise.curve.unranked') }));
 
@@ -167,9 +168,9 @@ function bestCard(ex) {
   if (!series.length) return h('section', { class: 'card' }, h('p', { text: t('exercise.best.empty') }));
   const best = Math.max(...series.map((p) => p.v));
   const b = store.bests[ex.id];
-  const unit = ex.type === 'weight' || ex.ranked ? ` ${t('unit.kg')}` : ex.type === 'time' || ex.type === 'cardio' ? ` ${t('col.sec.short')}` : '';
+  const unit = ex.type === 'time' || ex.type === 'cardio' ? ` ${t('col.sec.short')}` : ex.type === 'weight' || ex.ranked ? ` ${t('unit.kg')}` : ex.type === 'time' || ex.type === 'cardio' ? ` ${t('col.sec.short')}` : '';
   const kids = [h('div', { class: 'bw-now display num', text: `${formatNum(best, 1)}${unit}` }),
-    h('p', { class: 'row-sub', text: ex.ranked ? t('exercise.best.e1rm') : t('exercise.best.metric') })];
+    h('p', { class: 'row-sub', text: ex.ranked && ex.type !== 'time' && ex.type !== 'cardio' ? t('exercise.best.e1rm') : t('exercise.best.metric') })];
   if (b) { const tr = tierFor(b.rating); kids.push(h('p', { text: `${t(`tier.${tr.tier}`)}${tr.division ? ' ' + tr.division : ''} · ${formatNum(b.rating, 0)} · ${formatKg(b.weight ?? 0)}×${b.reps}` })); }
   const last = lastSession(ex);
   if (last) kids.push(h('div', { class: 'ex-last' }, h('span', { class: 'row-sub', text: t('exercise.last', { date: formatDate(last.when) }) }), h('bdi', { class: 'num', dir: 'ltr', text: last.text })));

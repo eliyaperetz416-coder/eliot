@@ -70,7 +70,7 @@ export function createFakeCrew() {
       return g.messages.filter((x) => x.id > p_after).slice(-Math.min(p_limit, 100));
     },
     leave_group({ p_token }) {
-      const x = me(p_token); x.member.active = false; byToken.delete(p_token);
+      const x = me(p_token); if (x.member.suspendedUntil && x.member.suspendedUntil > Date.now()) fail('suspended'); x.member.active = false; byToken.delete(p_token);
       if (x.member.leader) { x.member.leader = false; const nxt = x.group.members.find((y) => y.active); if (nxt) { nxt.leader = true; add(x.group, nxt, 'system', 'leader'); } }
       return null;
     },

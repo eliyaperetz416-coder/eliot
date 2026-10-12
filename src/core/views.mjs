@@ -1,5 +1,5 @@
 // Pure builders for the Ranks tab: exercise table, "what do I need?", muscle best lists.
-import { loadForRating, nextDivisionFloor, nextTierFloor, tierFor } from './ranks.mjs';
+import { loadForRating, secondsForRating, isDuration, nextDivisionFloor, nextTierFloor, tierFor } from './ranks.mjs';
 
 /** rows for ranked exercises with a best; sortBy 'rating' | 'name' | 'oneRM' | 'recent'. */
 export function exerciseRankTable(bests, byId, sortBy = 'rating', nameOf = (e) => e.nameEn) {
@@ -31,6 +31,7 @@ export function nextTargets(ex, rating, bodyweightKg, sex, reps) {
   if (current.tier === 'greekgod') return { current, division: null, tier: null };
   const make = (target) => {
     const t = tierFor(target);
+    if (isDuration(ex)) return { rating: target, tier: t.tier, division: t.division, seconds: Math.ceil(secondsForRating(ex, target)), load: 0, bodyweightEnough: false, assisted: 0 };
     const raw = loadForRating(ex, target, bodyweightKg, sex, reps);
     return { rating: target, tier: t.tier, division: t.division, load: Math.max(0, ceilHalf(raw)), bodyweightEnough: raw <= 0, assisted: raw < 0 ? ceilHalf(-raw) : 0 };
   };

@@ -253,7 +253,7 @@ for (const lang of ['he', 'en']) {
     await page.click('.mm[data-muscle="chest"] polygon');
     assert.match(await page.textContent('.mmap-info'), /Platinum|Diamond|Gold|Silver/);
     await page.waitForSelector('.mmap-panel .row');
-    assert.equal(await page.locator('.group-row').count(), 10);
+    assert.equal(await page.locator('.group-row').count(), 11);
     assert.ok(await page.locator('.ex-rank-row').count() >= 3);
     await page.waitForTimeout(400);
     await page.screenshot({ path: `${shots}${lang}-ranks-data.png`, fullPage: true });
@@ -987,14 +987,18 @@ for (const lang of ['he', 'en']) {
           await page.waitForFunction(() => !document.querySelector('.crew-leader-tools'));
         };
         await leaderTool('Dan', 0, /^1 (שעות|hours)$/);
-        await board(p2);
-        await p2.getByRole('button', { name: T("צ'אט", 'Chat') }).click();
-        await p2.waitForSelector('.crew-suspended');
-        assert.equal(await p2.locator('#crew-say').count(), 0, 'a suspended member cannot write');
+        // the ban covers the whole app, not only the chat
+        await p2.reload(); await p2.waitForSelector('.app-lock');
+        assert.ok((await p2.textContent('.app-lock')).length > 20);
+        assert.equal(await p2.locator('.app-lock').evaluate((el) => document.getElementById('app').inert), true, 'the app behind the lock is inert');
         await p2.screenshot({ path: `${shots}${lang}-crew-suspended.png` });
+        await p2.reload(); await p2.waitForSelector('.app-lock'); // still locked after a reload (kept on the phone)
+        assert.equal(await p2.locator('.app-lock').count(), 1);
         await board(page);
         assert.equal(await rowOf(page, 'Dan').locator('.chip-warn').count(), 1, 'the board marks the suspension');
         await leaderTool('Dan', 0, T('ביטול השעיה', 'Lift the suspension'));
+        await p2.getByRole('button', { name: T('בדוק שוב', 'Check again') }).click();
+        await p2.waitForSelector('.app-lock', { state: 'detached' });
         await p2.reload(); await p2.waitForSelector('#crew-say');
         await leaderTool('Dan', 1, /^(−100|-100)$/);
         await board(page);

@@ -1032,5 +1032,15 @@
   "shop.return.none": "You used both returns this month. Next month you get two more.",
   "crew.gift.bonus": "Rating prize",
   "crew.gift.bonus.note": "Adds points to their rating on this crew's leaderboard (their own rank in their app does not change). You can combine it with drachmas.",
-  "crew.gift.bonus.custom": "Or any number of rating points"
+  "crew.gift.bonus.custom": "Or any number of rating points",
+  "need.minutes": "min",
+  "need.note.duration": "Holds and cardio are rated by how long you last, whatever your bodyweight.",
+  "exercise.curve.duration": "This one is rated by duration: the longer you last, the higher the rating.",
+  "lock.title": "You are suspended",
+  "lock.body": "The crew leader suspended you until {time} ({left} left). You cannot use the app until then.",
+  "lock.forever": "The crew leader suspended you for good. Talk to the leader if you think this is a mistake.",
+  "lock.note": "This screen goes away on its own when the time is over or the leader lifts the suspension.",
+  "lock.check": "Check again",
+  "lock.still": "Still suspended.",
+  "lock.minutes": "{n} min"
 }

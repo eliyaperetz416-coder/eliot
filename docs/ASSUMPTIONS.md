@@ -179,3 +179,12 @@ seasons and leaderboards exist (server features, not built here), about 600 exer
 - **Announce switch:** every leader action (suspend, rating, gift, make leader, remove) has its own "announce in the chat" switch, on by default.
 - **Rating prizes (v1.32):** the leader's rating adjustment can also be positive, and the gift screen has a "rating prize" part next to the drachmas. Crew leaderboard only; the member's own rank is unchanged.
 - Server file: `supabase/migrations/007_owner_returns_review.sql`.
+
+## All exercises ranked, ban lock screen (OUR DESIGN, v1.33)
+- **Every exercise in the library now has a rating** (the 41 that were only tracked before). Three kinds:
+  - *Bodyweight abs, glute bridges, hamstring slides:* rated like other lifts from reps and added weight, with a share of your bodyweight as the base load (crunches 30%, leg raises 45%, ab wheel 50%, bridges and slides 50%). Families `abs-floor`, `abs-leg`, `abs-roll`, `glute-bw`, `ham-slide` in `calibration.json`.
+  - *Wrist curls and the hip abductor / adductor machines:* ordinary weight curves (`wrist-*`, `hip-machine`).
+  - *Holds (plank, side bridge) and cardio:* rated by **duration** only, no bodyweight or sex scaling. `reps` holds seconds and `R` is the seconds that give rating 900 (plank 6 min, running 75 min; walking counts about half as much per minute as running, jump rope and battle ropes more per minute). Cardio cannot know your pace or distance, so this is a duration score, not a fitness test.
+- They belong to the group `other` ("Cardio & other"), which is now a rank group, so they count toward the overall rank like the other groups.
+- **The ban covers the whole app.** While the leader has suspended you, a lock screen covers everything until the time ends or the leader lifts it. The end time is saved on your phone so it holds offline; the app asks the server again when opened and every 20 seconds while locked. A suspended member cannot leave the crew to escape it. Clearing the app's data on the phone or using another phone would get around it; a kicked member is simply out of the crew.
+- **Prizes stay** (rating prize and drachmas) until the leader lowers them.

@@ -28,7 +28,7 @@ export function buildCustomExercise(form, byId, { id = null, now = Date.now() } 
   const secondary = [...new Set((form.secondary ?? []).filter((m) => PICKABLE_MUSCLES.includes(m) && !primary.includes(m)))];
   if (!primary.length) errors.primary = 'primary';
   const like = form.countsLike ? byId[form.countsLike] : null;
-  if (form.countsLike && (!like || !like.ranked)) errors.countsLike = 'countsLike';
+  if (form.countsLike && (!like || !like.ranked || !['weight', 'bodyweight'].includes(like.type))) errors.countsLike = 'countsLike';
   if (like && !['weight', 'bodyweight'].includes(form.type)) errors.countsLike = 'countsLike';
   if (Object.keys(errors).length) return { ok: false, errors, exercise: null };
 
@@ -46,4 +46,4 @@ export function buildCustomExercise(form, byId, { id = null, now = Date.now() } 
 }
 
 /** Counts-like candidates: ranked library exercises, optionally filtered by text. */
-export const countsLikeOptions = (exercises) => exercises.filter((e) => e.ranked && !e.custom);
+export const countsLikeOptions = (exercises) => exercises.filter((e) => e.ranked && !e.custom && ['weight', 'bodyweight'].includes(e.type));

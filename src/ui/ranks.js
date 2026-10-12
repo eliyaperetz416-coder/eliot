@@ -25,6 +25,7 @@ const tierText = (tr) => (tr.division ? `${t(`tier.${tr.tier}`)} ${tr.division}`
 const view = { mode: 'rank', sort: 'rating' };
 
 function setText(ex, b) {
+  if (ex.type === 'time' || ex.type === 'cardio') return `${Math.floor(b.reps / 60)}:${String(Math.round(b.reps % 60)).padStart(2, '0')} ${t('need.minutes')}`;
   const w = Number(b.weight) > 0 ? `${formatKg(b.weight)}` : '';
   const sets = ex.type === 'bodyweight' ? `${w ? '+' + w : ''}${w ? '×' : ''}${b.reps}` : `${w}×${b.reps}`;
   return `${sets} · ${t('ranks.oneRM')} ${formatKg(b.oneRM)}`;

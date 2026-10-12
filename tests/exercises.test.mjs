@@ -16,6 +16,7 @@ const TYPES = ['weight', 'bodyweight', 'time', 'cardio'];
 test('library size and group balance', () => {
   assert.ok(exercises.length >= 290 && exercises.length <= 310, `size ${exercises.length}`);
   const target = { chest: 35, back: 45, shoulders: 38, biceps: 26, triceps: 26, quads: 32, hamstrings: 22, glutes: 24, calves: 12, abs: 26, other: 14 };
+  // (v1.33: cardio, wrist and hip-machine exercises are ranked now but still live in the 'other' group)
   const count = {};
   for (const e of exercises) count[e.muscleGroup] = (count[e.muscleGroup] ?? 0) + 1;
   for (const [g, n] of Object.entries(target)) {
@@ -46,7 +47,7 @@ test('every exercise matches the schema', () => {
       assert.ok(e.R > 0 && e.family && cal.families[e.family], `ranked needs R/family: ${e.id}`);
       assert.ok(RANK_GROUPS.includes(e.muscleGroup), `ranked exercise needs a ranking group: ${e.id}`);
       assert.equal(e.R, Math.round(cal.families[e.family].R * cal.ratios[e.id] * 10) / 10, `R matches calibration ${e.id}`);
-      assert.equal(e.type === 'weight' || e.type === 'bodyweight', true);
+      assert.ok(['weight', 'bodyweight', 'time', 'cardio'].includes(e.type));
     } else assert.equal(e.R, undefined);
   }
 });
@@ -93,4 +94,18 @@ test('sanity: 15 main lifts land in sensible tiers for an 80 kg male', () => {
     assert.ok(ri >= 400 && ri < 600, `${id} intermediate ${ri} should be Gold-Platinum`);
     assert.ok(ra >= 600 && ra < 800, `${id} advanced ${ra} should be Diamond-Champion`);
   }
+});
+
+test('v1.33: every library exercise is ranked, and the new curves give sensible tiers for an 80 kg male', async () => {
+  const { isDuration } = await import('../src/core/ranks.mjs');
+  assert.deepEqual(exercises.filter((e) => !e.ranked).map((e) => e.id), []);
+  const by = Object.fromEntries(exercises.map((e) => [e.id, e]));
+  const rate = (id, w, reps) => ratingForSet(by[id], { weight: w, reps }, 80, 'm');
+  assert.ok(rate('crunches', 0, 15) < 400 && rate('crunches', 0, 30) < 500, 'bodyweight crunches: not instantly high');
+  assert.ok(rate('hanging-leg-raise', 0, 10) < 450 && rate('hanging-leg-raise', 10, 12) > rate('hanging-leg-raise', 0, 10));
+  assert.ok(rate('plank', 0, 60) < 300 && rate('plank', 0, 300) > 600, 'a 5 minute plank is a strong result');
+  assert.ok(rate('running-treadmill', 0, 1800) > rate('running-treadmill', 0, 600));
+  assert.ok(rate('walking-treadmill', 0, 1800) < rate('running-treadmill', 0, 1800), 'walking counts less per minute than running');
+  assert.ok(isDuration(by.plank) && isDuration(by['running-treadmill']) && !isDuration(by.crunches));
+  assert.ok(rate('seated-palm-up-barbell-wrist-curl', 30, 12) < 600 && rate('thigh-abductor', 60, 12) < 500);
 });

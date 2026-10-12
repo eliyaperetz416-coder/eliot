@@ -74,7 +74,7 @@ function candidates(pattern, ctx, equipSet) {
     if (ex.muscleGroup !== P.g || !equipSet.has(ex.equipment) || ex.type === 'cardio' || ex.type === 'time') return false;
     if (EXCLUDE.test(ex.id)) return false;
     if (P.f.includes(ex.family)) return true;
-    return !!P.bodyweight && ex.muscleGroup === 'abs' && !ex.ranked && ex.type === 'bodyweight' && !/hanging|ab-roller|rollout|knee-hip|jackknife|pike/.test(ex.id);
+    return !!P.bodyweight && ex.muscleGroup === 'abs' && ex.type === 'bodyweight' && !/hanging|ab-roller|rollout|knee-hip|jackknife|pike/.test(ex.id);
   });
   const rank = (ex) => { const i = P.f.indexOf(ex.family); return i < 0 ? 99 : i; };
   const std = (ex) => (ratio(ex) >= 0.75 && ratio(ex) <= 1.3 ? 0 : 1);

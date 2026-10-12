@@ -1,5 +1,5 @@
 // Posting a workout, recalculating history, and rank changes. Pure.
-import { estimateOneRM, ratingForSet, tierFor, TIERS, muscleRatings, overallRating } from './ranks.mjs';
+import { estimateOneRM, ratingForSet, isDuration, tierFor, TIERS, muscleRatings, overallRating } from './ranks.mjs';
 import { consistencyBonus } from './consistency.mjs';
 import { metricOf, evaluatePR } from './prs.mjs';
 import { compactForPost, isWorking, stats, SCHEMA_VERSION } from './workout.mjs';
@@ -21,7 +21,9 @@ export function computeWorkout(w, events, byId) {
     const b = bw(s, 0);
     const metric = metricOf(ex, s, b);
     s.metric = Math.round(metric * 100) / 100;
-    if (ex.ranked && b > 0) {
+    if (ex.ranked && isDuration(ex)) {
+      s.rating = ratingForSet(ex, { weight: 0, reps: Number(s.reps) || 0 }, b, w.sex ?? 'm');
+    } else if (ex.ranked && b > 0) {
       s.oneRM = Math.round(estimateOneRM(ex, Number(s.weight) || 0, Number(s.reps) || 0, b) * 10) / 10;
       s.rating = ratingForSet(ex, { weight: Number(s.weight) || 0, reps: Number(s.reps) || 0 }, b, w.sex ?? 'm');
     }

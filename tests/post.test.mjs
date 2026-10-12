@@ -117,9 +117,23 @@ test('female curve is stored on the workout and used when recalculating', () => 
   assert.equal(again[0].entries[0].sets[0].rating, 520);
 });
 
-test('unranked exercises are tracked with PRs but never create a rating or count for rank', () => {
-  const r = post(draftWith([['plank', null, 60], ['bench', 100, 5]], [], T0), [], T0 + 1e6);
-  assert.equal(r.bests[ID.plank], undefined);
-  assert.equal(r.workout.entries[0].sets[0].prFirst, true);
-  assert.equal(overallRating(ratingsOf(r.bests), byId).remaining, 2);
+test('an exercise that is not ranked is tracked with PRs but never creates a rating or counts for rank', () => {
+  const orig = byId[ID.plank];
+  byId[ID.plank] = { ...orig, ranked: false }; delete byId[ID.plank].R;
+  try {
+    const r = post(draftWith([['plank', null, 60], ['bench', 100, 5]], [], T0), [], T0 + 1e6);
+    assert.equal(r.bests[ID.plank], undefined);
+    assert.equal(r.workout.entries[0].sets[0].prFirst, true);
+    assert.equal(overallRating(ratingsOf(r.bests), byId).remaining, 2);
+  } finally { byId[ID.plank] = orig; }
 });
+
+test('holds and cardio are rated by duration (v1.33): longer is higher, no bodyweight or sex scaling', () => {
+  const r = post(draftWith([['plank', null, 60]], [], T0), [], T0 + 1e6);
+  const long = post(draftWith([['plank', null, 180]], [], T0), [], T0 + 1e6);
+  const a = r.bests[ID.plank].rating, b = long.bests[ID.plank].rating;
+  assert.equal(a, Math.round(900 * Math.pow(60 / 360, 1 / 1.4)));
+  assert.ok(b > a && b < 900);
+  assert.equal(r.bests[ID.plank].oneRM, undefined, 'no 1RM for a hold');
+});
+
