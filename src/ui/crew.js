@@ -12,7 +12,8 @@ import { sortBoard, applyAdjust, SORTS, errorKey, normalizeCode, validNick, invi
 import { ACTIVITIES } from '../core/schedule.mjs';
 import { getSettings, updateSettings } from './storage.js';
 import { saveRoutine, todayKey } from './store.js';
-import { TIER_COLORS } from '../core/ranks.mjs';
+import { TIER_COLORS, tierFor } from '../core/ranks.mjs';
+import { emblem } from './emblem.js';
 import { shareViaWhatsApp } from './share.js';
 import { formatDateTime, formatNum } from './format.js';
 
@@ -49,6 +50,46 @@ function confirmSheet({ title, body, label, danger = false, announce = true, onG
   const sh = openSheet({ title, content });
 }
 
+const tierName = (tr) => `${t(`tier.${tr.tier}`)}${tr.division ? ` ${tr.division}` : ''}`;
+/** Before and after of a member's rank for a rating change (OUR DESIGN): emblem, tier, division and rating, so the leader sees what he is about to do. */
+function rankPreview(rawRating, fromAdjust, toAdjust) {
+  const at = (adj) => (rawRating == null ? null : Math.max(1, rawRating + adj));
+  const side = (r, label) => {
+    const tr = r == null ? null : tierFor(r);
+    return h('div', { class: 'rp-side' }, emblem({ tier: tr?.tier ?? 'unranked', divisionIndex: tr?.divisionIndex ?? 0, size: 56, label: tr ? tierName(tr) : t('crew.unranked') }),
+      h('div', { class: 'row-sub', text: label }), h('b', { class: 'num', dir: 'ltr', text: tr ? `${tierName(tr)} · ${formatNum(r, 0)}` : '–' }));
+  };
+  return h('div', { class: 'rank-preview' }, side(at(fromAdjust), t('crew.preview.now')), h('span', { class: 'rp-arrow', 'aria-hidden': 'true', text: '→' }), side(at(toAdjust), t('crew.preview.after')));
+}
+
+/** The rating penalty / prize screen: the member's level, the effect of each choice before you apply it. */
+function adjustSheet(m, done) {
+  const cur = Number(m.adjust) || 0;
+  let target = cur;
+  const s = m.stats ?? {};
+  const ann = announceBox();
+  const preview = h('div'), note = h('p', { class: 'row-sub num', dir: 'auto' });
+  const box = h('input', { class: 'text-input', type: 'number', inputmode: 'numeric', dir: 'ltr', id: 'crew-adjust-delta', placeholder: t('crew.adjust.custom.ph'), 'aria-label': t('crew.adjust.custom') });
+  const apply = button({ label: t('crew.adjust.apply'), variant: 'primary', block: true, onClick: async () => { try { await setAdjust(m.id, target, ann.get()); sh.close(); done(); } catch (e) { showToast({ message: errText(e) }); } } });
+  const chips = [-500, -200, -100, -50, 50, 100, 200, 500].map((n) => h('button', { class: 'chip chip-select', type: 'button', 'aria-pressed': 'false', onclick: (e) => { target = cur + n; box.value = ''; refresh(e.currentTarget); } }, signed(n)));
+  const refresh = (pressed = null) => {
+    chips.forEach((c) => c.setAttribute('aria-pressed', String(c === pressed)));
+    preview.replaceChildren(rankPreview(m.rawRating, cur, target));
+    note.textContent = t('crew.adjust.state', { now: signed(cur), after: signed(target) });
+    apply.disabled = target === cur;
+  };
+  box.addEventListener('input', () => { target = cur + (Math.trunc(Number(box.value)) || 0); refresh(); });
+  const sh = openSheet({ title: t('crew.adjust.title'), tall: true, content: h('div', { class: 'stack crew-adjust' },
+    h('p', { text: t('crew.adjust.body', { name: m.nickname }) }),
+    h('div', { class: 'row-sub' }, s.rating != null ? t('crew.adjust.level', { tier: s.tier ? tierName(s) : '–', raw: formatNum(m.rawRating ?? s.rating, 0), level: s.level ?? 1 }) : t('crew.adjust.unranked')),
+    preview, note,
+    h('div', { class: 'chips-wrap' }, chips),
+    h('div', { class: 'field' }, h('label', { for: 'crew-adjust-delta', text: t('crew.adjust.custom') }), h('div', { class: 'field-box' }, box)),
+    button({ label: t('crew.adjust.reset'), variant: 'ghost', block: true, onClick: () => { target = 0; box.value = ''; refresh(); } }),
+    ann.el, apply, button({ label: t('common.cancel'), variant: 'ghost', block: true, onClick: () => sh.close() })) });
+  refresh();
+}
+
 /**
  * Before a gift (OUR DESIGN): the leader sees how the member has been doing - rating, weekly volume and workouts over time, a short summary,
  * and the heaviest sets from their latest workouts - and then decides the amount. The sets and history are readable by the leader only.
@@ -71,10 +112,12 @@ function giftSheet(m, done) {
       ? h('div', { class: 'list' }, rv.recent.map((r) => h('div', { class: 'row' }, h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: nameOf(r) }), h('span', { class: 'row-sub num', dir: 'ltr', text: `${formatNum(r.w, 1)} ${t('unit.kg')} × ${r.r} · ${r.d}` })))))
       : h('p', { class: 'row-sub', text: t('crew.review.noSets') });
     let amount = 0, bonus = 0;
+    const bprev = h('div');
+    const showPrev = () => bprev.replaceChildren(bonus > 0 ? rankPreview(m.rawRating, Number(m.adjust) || 0, (Number(m.adjust) || 0) + bonus) : h('span'));
     const ann = announceBox();
     const bbox = h('input', { class: 'text-input', type: 'number', inputmode: 'numeric', dir: 'ltr', min: 1, id: 'crew-gift-bonus', 'aria-label': t('crew.gift.bonus.custom'), placeholder: t('crew.gift.bonus.custom') });
-    const bchips = [25, 50, 100, 250].map((n) => h('button', { class: 'chip chip-select', type: 'button', 'aria-pressed': 'false', onclick: (e) => { bonus = n; bbox.value = ''; bchips.forEach((c) => c.setAttribute('aria-pressed', String(c === e.currentTarget))); } }, `+${n}`));
-    bbox.addEventListener('input', () => { bonus = Math.floor(Number(bbox.value)) || 0; bchips.forEach((c) => c.setAttribute('aria-pressed', 'false')); });
+    const bchips = [25, 50, 100, 250].map((n) => h('button', { class: 'chip chip-select', type: 'button', 'aria-pressed': 'false', onclick: (e) => { bonus = n; bbox.value = ''; bchips.forEach((c) => c.setAttribute('aria-pressed', String(c === e.currentTarget))); showPrev(); } }, `+${n}`));
+    bbox.addEventListener('input', () => { bonus = Math.floor(Number(bbox.value)) || 0; bchips.forEach((c) => c.setAttribute('aria-pressed', 'false')); showPrev(); });
     const box = h('input', { class: 'text-input', type: 'number', inputmode: 'numeric', dir: 'ltr', min: 1, id: 'crew-gift-amount', 'aria-label': t('crew.gift.custom'), placeholder: t('crew.gift.custom') });
     const chips = [50, 100, 250, 500, 1000].map((n) => h('button', { class: 'chip chip-select', type: 'button', 'aria-pressed': 'false', onclick: (e) => { amount = n; box.value = ''; chips.forEach((c) => c.setAttribute('aria-pressed', String(c === e.currentTarget))); } }, String(n)));
     box.addEventListener('input', () => { amount = Math.floor(Number(box.value)) || 0; chips.forEach((c) => c.setAttribute('aria-pressed', 'false')); });
@@ -86,7 +129,7 @@ function giftSheet(m, done) {
       h('div', { class: 'section-label', text: t('crew.gift.amount') }),
       h('div', { class: 'chips-wrap' }, chips), h('div', { class: 'field' }, h('div', { class: 'field-box' }, box)),
       h('div', { class: 'section-label', text: t('crew.gift.bonus') }), h('p', { class: 'row-sub', text: t('crew.gift.bonus.note') }),
-      h('div', { class: 'chips-wrap' }, bchips), h('div', { class: 'field' }, h('div', { class: 'field-box' }, bbox)), ann.el,
+      h('div', { class: 'chips-wrap' }, bchips), h('div', { class: 'field' }, h('div', { class: 'field-box' }, bbox)), bprev, ann.el,
       button({ label: t('crew.gift.go'), variant: 'primary', block: true, onClick: async () => { if (amount < 1 && bonus < 1) { showToast({ message: t('crew.err.bad_target') }); return; } try { if (amount >= 1) await giveDrachmas(m.id, amount, ann.get()); if (bonus >= 1) await setAdjust(m.id, (Number(m.adjust) || 0) + bonus, ann.get()); sh.close(); done(); } catch (e) { showToast({ message: errText(e) }); } } }),
       button({ label: t('common.cancel'), variant: 'ghost', block: true, onClick: () => sh.close() }));
   };
@@ -211,7 +254,7 @@ export function crewScreen() {
       isLeader() && !mine ? h('div', { class: 'stack crew-leader-tools' },
         h('div', { class: 'section-label', text: t('crew.leader.tools') }),
         button({ label: t('crew.suspend'), variant: 'secondary', block: true, onClick: () => choiceSheet({ title: t('crew.suspend'), body: t('crew.suspend.body', { name: m.nickname }), options: [[1, t('crew.hours', { n: 1 })], [24, t('crew.days', { n: 1 })], [72, t('crew.days', { n: 3 })], [168, t('crew.days', { n: 7 })], [720, t('crew.days', { n: 30 })], [PERMANENT_HOURS, t('crew.permanent')], ...(m.suspended ? [[0, t('crew.suspend.lift')]] : [])], custom: { label: t('crew.suspend.custom'), placeholder: t('crew.suspend.custom.ph'), go: t('crew.suspend.custom.go'), map: (n) => n * 24 }, onPick: async (v, announce) => { await suspendMember(m.id, v, announce); sh.close(); await afterLeaderAction(); } }) }),
-        button({ label: t('crew.adjust.title'), variant: 'secondary', block: true, onClick: () => choiceSheet({ title: t('crew.adjust.title'), body: t('crew.adjust.body', { name: m.nickname }), options: [[-50, '−50'], [-100, '−100'], [-200, '−200'], [-500, '−500'], [-1000, '−1000'], [50, '+50'], [100, '+100'], [250, '+250'], [0, t('crew.adjust.reset')]], custom: { label: t('crew.adjust.custom'), placeholder: t('crew.adjust.custom.ph'), go: t('crew.adjust.custom.go'), map: (n) => -n }, onPick: async (v, announce) => { await setAdjust(m.id, v, announce); sh.close(); await afterLeaderAction(); } }) }),
+        button({ label: t('crew.adjust.title'), variant: 'secondary', block: true, onClick: () => adjustSheet(m, async () => { sh.close(); await afterLeaderAction(); }) }),
         button({ label: t('crew.gift.title'), variant: 'secondary', block: true, onClick: () => giftSheet(m, async () => { sh.close(); await afterLeaderAction(); }) }),
         button({ label: t('crew.leader.make'), variant: 'secondary', block: true, onClick: () => confirmSheet({ title: t('crew.leader.make'), body: t('crew.leader.make.body', { name: m.nickname }), label: t('crew.leader.make.go'), onGo: async (announce) => { await makeLeader(m.id, announce); sh.close(); await afterLeaderAction(); } }) }),
         button({ label: t('crew.kick'), variant: 'danger', block: true, onClick: () => confirmSheet({ title: t('crew.kick'), body: t('crew.kick.body', { name: m.nickname }), label: t('crew.kick.go'), danger: true, onGo: async (announce) => { await kickMember(m.id, announce); sh.close(); await afterLeaderAction(); } }) })) : null) });

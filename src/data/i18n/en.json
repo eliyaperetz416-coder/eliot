@@ -178,7 +178,7 @@
     "one": "{n} set",
     "other": "{n} sets"
   },
-  "rank.split": "Strength {s} + consistency {b}",
+  "rank.split": "Strength {s} + bonuses {b}",
   "bonus.title": "Bonus points",
   "bonus.days": "Training days in the last 4 weeks: {n}",
   "bonus.streak": "Streak of {n} full weeks",
@@ -360,7 +360,7 @@
   "crew.hours": "{n} hours",
   "crew.days": "{n} days",
   "crew.adjust.title": "Crew rating: penalty or prize",
-  "crew.adjust.body": "Changes {name}'s rating on this crew's leaderboard only (minus is a penalty, plus is a prize). Their own rank in their app does not change. No limit, takes effect right away.",
+  "crew.adjust.body": "Changes {name}'s rating (minus is a penalty, plus is a prize). It shows on this crew's leaderboard and in their own Progress tab, with a note that it came from the leader. Their real rating is kept underneath. No limit, takes effect right away.",
   "crew.adjust.reset": "Reset",
   "crew.adjust.note": "Rating {raw}, leader adjustment {n}",
   "crew.gift.title": "Prize: drachmas and rating",
@@ -1031,7 +1031,7 @@
   "shop.return.left": "Returns left this month: {n} of 2",
   "shop.return.none": "You used both returns this month. Next month you get two more.",
   "crew.gift.bonus": "Rating prize",
-  "crew.gift.bonus.note": "Adds points to their rating on this crew's leaderboard (their own rank in their app does not change). You can combine it with drachmas.",
+  "crew.gift.bonus.note": "Adds points to their rating: shown on the leaderboard and in their own Progress tab. You see the result before you give it. You can combine it with drachmas.",
   "crew.gift.bonus.custom": "Or any number of rating points",
   "need.minutes": "min",
   "need.note.duration": "Holds and cardio are rated by how long you last, whatever your bodyweight.",
@@ -1050,5 +1050,13 @@
   "bonus.milestone": "Workouts done: {n} (the top milestone is reached)",
   "bonus.milestone.next": "Workouts done: {n} (+{pts} at {next}, kept for good)",
   "set.goal": "Weekly goal (training days)",
-  "set.goal.hint": "Each week you reach it adds rank points. Shown under Progress."
+  "set.goal.hint": "Each week you reach it adds rank points. Shown under Progress.",
+  "crew.preview.now": "Now",
+  "crew.preview.after": "After",
+  "crew.adjust.apply": "Apply",
+  "crew.adjust.level": "{tier} · rating {raw} · level {level}",
+  "crew.adjust.unranked": "No rating yet, so a change has no effect until they get one.",
+  "crew.adjust.state": "Adjustment now {now}, after {after}",
+  "rank.adjust.minus": "Crew leader: -{n} (your rating is {raw})",
+  "rank.adjust.plus": "Crew leader prize: +{n} (your rating is {raw})"
 }

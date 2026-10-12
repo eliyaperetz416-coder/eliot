@@ -3,11 +3,12 @@
 
 export const BONUS = Object.freeze({
   WINDOW_DAYS: 28,       // training days counted in the last 4 weeks
-  DAY_POINTS_CAP: 20,    // 1 point per training day, up to 20
+  DAY_POINTS_EACH: 2.5,  // points per training day (rounded), up to the cap (x2.5 in v1.35)
+  DAY_POINTS_CAP: 50,
   GAP_DAYS: 3,           // the streak breaks after a gap longer than 3 days (same rule as the game streak)
-  STREAK_POINTS_PER_WEEK: 2,
-  STREAK_POINTS_CAP: 20, // 2 points per full week of streak, up to 20 (v1.34: consistency counts for more)
-  MAX: 40,
+  STREAK_POINTS_PER_WEEK: 5,
+  STREAK_POINTS_CAP: 50, // 5 points per full week of streak, up to 50
+  MAX: 100,
 });
 
 const DAY = 86400000;
@@ -24,7 +25,7 @@ export function consistencyBonus(workouts, now) {
     for (let i = 1; i < days.length && Math.round((days[i - 1] - days[i]) / DAY) <= BONUS.GAP_DAYS; i++) first = days[i];
     streakWeeks = Math.floor((Math.round((days[0] - first) / DAY) + 1) / 7);
   }
-  const dayPoints = Math.min(BONUS.DAY_POINTS_CAP, recent);
+  const dayPoints = Math.min(BONUS.DAY_POINTS_CAP, Math.round(recent * BONUS.DAY_POINTS_EACH));
   const streakPoints = Math.min(BONUS.STREAK_POINTS_CAP, streakWeeks * BONUS.STREAK_POINTS_PER_WEEK);
   return { total: Math.min(BONUS.MAX, dayPoints + streakPoints), days: recent, streakWeeks, dayPoints, streakPoints };
 }

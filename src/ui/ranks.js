@@ -9,7 +9,7 @@ import { freshnessByMuscle, freshColor } from '../core/recovery.mjs';
 import { exerciseRankTable, muscleBestExercises } from '../core/views.mjs';
 import { list, listRow, segmented } from './components.js';
 import { data } from './data.js';
-import { store } from './store.js';
+import { store, shownOverall } from './store.js';
 import { rankCard } from './rank-card.js';
 import { ladderStrip } from './ladder.js';
 import { weeklyCount, weeklyVolume, prsSince } from '../core/charts.mjs';
@@ -117,7 +117,7 @@ export function ranksScreen() {
       h('header', { class: 'screen-head' }, icon('bolt', 'mark'), h('h1', { text: t('tab.ranks') })),
       ...summary(),
       h('div', { class: 'section-label', text: t('ranks.title') }),
-      rankCard(store.overall),
+      rankCard(shownOverall()),
       ladderStrip(),
       bonusCard(),
       h('div', { class: 'section-label', text: t('ranks.map') }),

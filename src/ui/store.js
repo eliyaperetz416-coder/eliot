@@ -12,7 +12,13 @@ import { markPlanDone } from '../core/generator.mjs';
 import { newGame, migrateGame, evaluateAchievements } from '../core/gamestate.mjs';
 import { dateKey } from '../core/workout.mjs';
 
-export const store = { profile: null, bwLog: [], workouts: [], draft: null, bests: {}, overall: { pending: true, remaining: 3, rating: 0 }, routines: [], folders: [], plans: [], custom: [], game: newGame(), requests: [], bases: {}, makeup: null, model: null, modelPhotoUrl: '', schedule: { days: {}, done: {} } };
+export const store = { adjust: 0, profile: null, bwLog: [], workouts: [], draft: null, bests: {}, overall: { pending: true, remaining: 3, rating: 0 }, routines: [], folders: [], plans: [], custom: [], game: newGame(), requests: [], bases: {}, makeup: null, model: null, modelPhotoUrl: '', schedule: { days: {}, done: {} } };
+/** The rating shown to the member: strength + bonuses, then the crew leader's adjustment (a penalty or a prize, OUR DESIGN). store.overall stays the real one. */
+export function shownOverall() {
+  const o = store.overall, adj = Number(store.adjust) || 0;
+  if (o.pending || !adj) return o;
+  return { ...o, rating: Math.max(1, o.rating + adj), adjust: adj, rawRating: o.rating };
+}
 export const todayKey = () => dateKey(Date.now());
 let achievementListener = null;
 export const onAchievements = (fn) => { achievementListener = fn; };

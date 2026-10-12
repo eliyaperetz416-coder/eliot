@@ -986,6 +986,16 @@ for (const lang of ['he', 'en']) {
           await page.locator('.sheet .chip-select', { hasText: chip }).last().click();
           await page.waitForFunction(() => !document.querySelector('.crew-leader-tools'));
         };
+        const adjustTool = async (nick, pick, quiet = false) => {
+          await board(page); await rowOf(page, nick).click(); await page.waitForSelector('.crew-leader-tools');
+          await page.locator('.crew-leader-tools .btn-secondary').nth(1).click();
+          await page.waitForSelector('.crew-adjust .rank-preview');
+          if (quiet) await page.locator('.sheet .announce-toggle').click();
+          await pick();
+          await page.getByRole('button', { name: T('החל', 'Apply'), exact: true }).click();
+          await page.waitForFunction(() => !document.querySelector('.crew-leader-tools'));
+        };
+        const chipOf = (txt) => page.locator('.crew-adjust .chip-select', { hasText: txt }).first();
         await leaderTool('Dan', 0, /^1 (שעות|hours)$/);
         // the ban covers the whole app, not only the chat
         await p2.reload(); await p2.waitForSelector('.app-lock');
@@ -1000,20 +1010,23 @@ for (const lang of ['he', 'en']) {
         await p2.getByRole('button', { name: T('בדוק שוב', 'Check again') }).click();
         await p2.waitForSelector('.app-lock', { state: 'detached' });
         await p2.reload(); await p2.waitForSelector('#crew-say');
-        await leaderTool('Dan', 1, /^(−100|-100)$/);
+        await adjustTool('Dan', async () => { await chipOf(/^-100$/).click(); });
         await board(page);
         assert.ok((await rowOf(page, 'Dan').locator('.chip-warn').textContent()).includes('100'), 'the adjustment shows on the board');
-        await leaderTool('Dan', 1, T('איפוס', 'Reset'));
+        // the member sees it too: his own Progress rating includes the leader's adjustment, with a note
+        await p2.reload();
+        for (let i = 0; i < 40 && (await p2.evaluate(async () => (await import('./src/ui/store.js')).store.adjust)) !== -100; i++) await p2.waitForTimeout(250);
+        const shown = await p2.evaluate(async () => { const m = await import('./src/ui/store.js'); m.store.overall = { pending: false, rating: 500, strength: 500, bonus: 0, remaining: 0 }; return m.shownOverall(); });
+        assert.deepEqual([shown.rating, shown.rawRating, shown.adjust], [400, 500, -100]);
+        await p2.goto(`${base}#/ranks`); await p2.waitForSelector('.rank-card');
+        await p2.goto(`${base}#/crew`); await p2.waitForSelector('#crew-say, .crew-board, .crew-tabs');
+        await adjustTool('Dan', async () => { await page.getByRole('button', { name: T('איפוס', 'Reset'), exact: true }).click(); });
         const dracBefore = await p2.evaluate(async () => (await import('./src/ui/store.js')).store.game.drachmas);
         // a quiet punishment is not announced in the chat
         const sysBodies = () => [...fake.groups.values()].flatMap((g) => g.messages).filter((m) => m.kind === 'system').map((m) => m.body);
-        await board(page); await rowOf(page, 'Dan').click(); await page.waitForSelector('.crew-leader-tools');
-        await page.locator('.crew-leader-tools .btn-secondary').nth(1).click(); await page.waitForSelector('.sheet .announce-toggle');
-        await page.locator('.sheet .announce-toggle').click();
-        await page.locator('.sheet .chip-select', { hasText: /^(−50|-50)$/ }).last().click();
-        await page.waitForFunction(() => !document.querySelector('.crew-leader-tools'));
+        await adjustTool('Dan', async () => { await chipOf(/^-50$/).click(); }, true);
         assert.ok(!sysBodies().includes('adjust:-50'), 'a quiet action is not announced');
-        await leaderTool('Dan', 1, T('איפוס', 'Reset'));
+        await adjustTool('Dan', async () => { await page.getByRole('button', { name: T('איפוס', 'Reset'), exact: true }).click(); });
         // the gift: first the progress review, then the amount (no limit, any number)
         await board(page); await rowOf(page, 'Dan').click(); await page.waitForSelector('.crew-leader-tools');
         await page.locator('.crew-leader-tools .btn-secondary').nth(2).click();
@@ -1027,7 +1040,7 @@ for (const lang of ['he', 'en']) {
         assert.ok(sysBodies().includes('gift:12345') && sysBodies().includes('adjust:40'), 'drachmas and a rating prize are both announced');
         await board(page);
         assert.ok((await rowOf(page, 'Dan').locator('.chip-warn').textContent()).includes('+40'), 'the prize shows on the board');
-        await leaderTool('Dan', 1, T('איפוס', 'Reset'));
+        await adjustTool('Dan', async () => { await page.getByRole('button', { name: T('איפוס', 'Reset'), exact: true }).click(); });
         await p2.reload(); await p2.waitForSelector('#crew-say');
         await p2.waitForFunction(async (b) => (await import('./src/ui/store.js')).store.game.drachmas === b + 12345, dracBefore);
         await p2.getByRole('button', { name: new RegExp(T("צ'אט", 'Chat')) }).click();

@@ -685,3 +685,9 @@ a.btn { text-decoration: none; }
 .lock-icon { width: 56px; height: 56px; color: var(--accent); }
 .lock-body { margin: 0; }
 .bonus-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-3); padding-block: 2px; }
+
+/* Rating preview for the crew leader (OUR DESIGN) */
+.rank-preview { display: flex; align-items: center; justify-content: space-around; gap: var(--s-2); padding: var(--s-3); border-radius: var(--r-lg); background: var(--surface-2); }
+.rp-side { display: grid; justify-items: center; gap: 2px; text-align: center; }
+.rp-arrow { font-size: 24px; color: var(--text-dim); }
+[dir="rtl"] .rp-arrow { transform: scaleX(-1); }

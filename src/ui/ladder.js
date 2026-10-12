@@ -5,7 +5,7 @@ import { t } from '../core/i18n.mjs';
 import { rankLadder, TIER_COLORS } from '../core/ranks.mjs';
 import { emblem } from './emblem.js';
 import { backLink } from './components.js';
-import { store } from './store.js';
+import { store, shownOverall } from './store.js';
 import { formatNum } from './format.js';
 
 const tierName = (id) => t(`tier.${id}`);
@@ -26,7 +26,7 @@ function summary(L) {
 
 /** A compact path for the Progress tab: ten small emblems on a line, filled up to you. Tap it for the full path. */
 export function ladderStrip() {
-  const L = rankLadder(store.overall.pending ? 0 : store.overall.rating);
+  const L = rankLadder(shownOverall().pending ? 0 : shownOverall().rating);
   const curIdx = L.tiers.findIndex((x) => x.status === 'current');
   const dots = L.tiers.map((x, i) => h('li', { class: `ladder-dot ${x.status}`, 'aria-label': `${tierName(x.id)}: ${rangeText(x)}${x.status === 'current' ? `, ${t('ladder.you')}` : ''}`, style: `--c:${TIER_COLORS[x.id]}` },
     emblem({ tier: x.id, divisionIndex: 2, size: x.status === 'current' ? 40 : 28, label: tierName(x.id) }),
@@ -38,7 +38,7 @@ export function ladderStrip() {
 }
 
 export function ladderScreen() {
-  const L = rankLadder(store.overall.pending ? 0 : store.overall.rating);
+  const L = rankLadder(shownOverall().pending ? 0 : shownOverall().rating);
   const rows = [...L.tiers].reverse().map((x) => h('li', { class: `ladder-row ${x.status}`, style: `--c:${TIER_COLORS[x.id]}`, 'aria-current': x.status === 'current' ? 'step' : null },
     emblem({ tier: x.id, divisionIndex: x.status === 'current' ? L.current.divisionIndex : 2, size: 56, label: tierName(x.id) }),
     h('div', { class: 'ladder-info' },

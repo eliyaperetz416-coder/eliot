@@ -5,14 +5,15 @@ import { consistencyBonus, BONUS } from './consistency.mjs';
 import { muscleRatings } from './ranks.mjs';
 
 export const PARTS = Object.freeze({
-  VOLUME_MAX: 15,          // this week's volume vs your average week over the 4 weeks before: 1 point per 2% more, up to +30%
-  VOLUME_STEP_PCT: 2,
-  COVER_MAX: 10,           // 1 point per main muscle group trained in the last 7 days
-  BALANCE_MAX: 5,          // weakest main group relative to your strongest one (needs all 10 groups ranked)
-  MILESTONES: Object.freeze([[25, 3], [50, 6], [100, 10], [200, 15]]), // permanent: workouts done -> points
+  VOLUME_MAX: 38,          // this week's volume vs your average week over the 4 weeks before: 1.25 points per 1% more, up to +30%
+  VOLUME_PER_PCT: 1.25,
+  COVER_PER_GROUP: 2.5,    // points per main muscle group trained in the last 7 days (rounded)
+  COVER_MAX: 25,
+  BALANCE_MAX: 13,         // weakest main group relative to your strongest one (needs all 10 groups ranked)
+  MILESTONES: Object.freeze([[25, 8], [50, 15], [100, 25], [200, 38]]), // permanent: workouts done -> points
   GOAL_WEEKS: 5,           // the current week and the 4 before it
-  GOAL_POINTS_PER_WEEK: 2, // for each week with at least your weekly goal of training days
-  GOAL_MAX: 10,
+  GOAL_POINTS_PER_WEEK: 5, // for each week with at least your weekly goal of training days
+  GOAL_MAX: 25,
 });
 export const MAIN_GROUPS = Object.freeze(['chest', 'back', 'shoulders', 'biceps', 'triceps', 'quads', 'hamstrings', 'glutes', 'calves', 'abs']);
 
@@ -33,7 +34,7 @@ export function volumeBonus(workouts, now) {
   const avg = prior.reduce((n, w) => n + vol(w), 0) / 4;
   if (prior.length < 2 || !(avg > 0)) return { points: 0, pct: 0, week: Math.round(cur), avg: Math.round(avg || 0) };
   const pct = Math.round((cur / avg - 1) * 100);
-  return { points: Math.max(0, Math.min(PARTS.VOLUME_MAX, Math.floor(pct / PARTS.VOLUME_STEP_PCT))), pct, week: Math.round(cur), avg: Math.round(avg) };
+  return { points: Math.max(0, Math.min(PARTS.VOLUME_MAX, Math.floor(pct * PARTS.VOLUME_PER_PCT))), pct, week: Math.round(cur), avg: Math.round(avg) };
 }
 
 /** Main muscle groups trained in the last 7 days + how even your group ratings are. */
@@ -46,7 +47,7 @@ export function balanceBonus(workouts, byId, ratings, now) {
       if (MAIN_GROUPS.includes(g) && e.sets?.some((s) => s.done && s.type !== 'warmup')) hit.add(g);
     }
   }
-  const coverPoints = Math.min(PARTS.COVER_MAX, hit.size);
+  const coverPoints = Math.min(PARTS.COVER_MAX, Math.round(hit.size * PARTS.COVER_PER_GROUP));
   const g = muscleRatings(ratings ?? {}, byId);
   const list = MAIN_GROUPS.map((x) => g[x] ?? 0);
   const balancePoints = list.every((r) => r > 0) ? Math.round((PARTS.BALANCE_MAX * Math.min(...list)) / Math.max(...list)) : 0;

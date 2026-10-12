@@ -2,7 +2,7 @@ import { h } from './dom.js';
 import { icon } from './icons.js';
 import { t, getLanguage } from '../core/i18n.mjs';
 import { button, list, listRow, numberField, openSheet, segmented, showToast } from './components.js';
-import { store, saveProfile, bodyweightKg } from './store.js';
+import { store, shownOverall, saveProfile, bodyweightKg } from './store.js';
 import { data } from './data.js';
 import { validateProfile } from '../core/profile.mjs';
 import { rankCard } from './rank-card.js';
@@ -65,7 +65,7 @@ export function profileScreen({ onLanguage }) {
     const log = [...store.bwLog].sort((a, b) => b.ms - a.ms);
     const kids = [
       h('header', { class: 'screen-head' }, icon('bolt', 'mark'), h('div', {}, h('h1', { text: p.name }), (() => { const ti = data().shop.cosmetics.find((c) => c.id === store.game.inventory.equipped.title); return ti ? h('div', { class: 'profile-title', text: getLanguage() === 'he' ? ti.nameHe : ti.nameEn }) : null; })())),
-      rankCard(store.overall),
+      rankCard(shownOverall()),
       h('section', { class: 'card' }, levelBar(), h('div', { style: 'padding-block-start:10px' }, gameStrip())),
       list([listRow({ title: t('ach.title'), sub: t('ach.count', { n: Object.keys(store.game.achievements.unlocked).length, total: data().achievements.length }), icon: 'trophy', onClick: () => { location.hash = '#/achievements'; } }), listRow({ title: t('tab.shop'), sub: t('game.drachmas'), icon: 'coin', end: h('span', { class: 'num', text: formatNum(store.game.drachmas, 0) }), onClick: () => { location.hash = '#/shop'; } })]),
       h('div', { class: 'section-label', text: t('profile.you') }),

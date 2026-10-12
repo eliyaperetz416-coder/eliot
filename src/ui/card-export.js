@@ -5,7 +5,7 @@ import { t, getLanguage } from '../core/i18n.mjs';
 import { cardModel, cardFileName } from '../core/card.mjs';
 import { TIER_COLORS } from '../core/ranks.mjs';
 import { button } from './components.js';
-import { store, todayKey } from './store.js';
+import { store, shownOverall, todayKey } from './store.js';
 import { data } from './data.js';
 import { emblem } from './emblem.js';
 import { formatNum } from './format.js';
@@ -101,7 +101,7 @@ export async function saveCard(canvas, name) {
 }
 
 export function cardScreen() {
-  const model = cardModel({ profile: store.profile, overall: store.overall, workoutsCount: store.workouts.length, game: store.game, todayKey: todayKey(), shop: data().shop });
+  const model = cardModel({ profile: store.profile, overall: shownOverall(), workoutsCount: store.workouts.length, game: store.game, todayKey: todayKey(), shop: data().shop });
   const box = h('div', { class: 'card-preview', 'aria-busy': 'true' });
   const msg = h('p', { class: 'row-sub center', role: 'status' });
   let canvas = null;

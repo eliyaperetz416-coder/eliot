@@ -20,6 +20,7 @@ export async function initCrew() {
   crew.local = (await dbGet('kv', 'crew').catch(() => null)) ?? null;
   crew.ownerKey = (await dbGet('kv', 'ownerKey').catch(() => null)) ?? null;
   crew.lockUntil = (await dbGet('kv', 'lock').catch(() => null)) ?? null;
+  store.adjust = (await dbGet('kv', 'adjust').catch(() => null)) ?? 0;
   if (crew.local) { fetchView().catch(() => {}); refreshUnread(); syncStats(true); claimGifts(); }
 }
 
@@ -40,6 +41,7 @@ export async function leaveCrew() {
   if (!crew.local) return;
   try { await rpc('leave_group', { p_token: crew.local.token }); } catch (e) { if (errorKey(e) !== 'not_member') throw e; }
   crew.local = null; crew.unread = 0;
+  await setAdjustLocal(0);
   await dbPut('kv', null, 'crew');
   emit();
 }
@@ -77,6 +79,13 @@ export async function syncGroupInfo(group) {
   await persist();
 }
 /** The ban end time (ms) is kept on the phone so the lock screen also holds offline. null = not banned. */
+async function setAdjustLocal(n) {
+  n = Number(n) || 0;
+  if (n === store.adjust) return;
+  store.adjust = n;
+  await dbPut('kv', n, 'adjust').catch(() => {});
+  emit();
+}
 async function setLock(ms) {
   if ((ms ?? null) === (crew.lockUntil ?? null)) return;
   crew.lockUntil = ms ?? null;
@@ -85,7 +94,8 @@ async function setLock(ms) {
 }
 export async function fetchView() {
   let v;
-  try { v = await rpc('my_group', { p_token: tok() }); } catch (e) { if (String(e?.message).includes('not_member')) await setLock(null); throw e; }
+  try { v = await rpc('my_group', { p_token: tok() }); } catch (e) { if (String(e?.message).includes('not_member')) { await setLock(null); await setAdjustLocal(0); } throw e; }
+  await setAdjustLocal(v?.me?.adjust);
   await setLock(v?.me?.suspended_until ? Date.parse(v.me.suspended_until) : null);
   crew.returnsUsed = Number(v?.me?.returns_used) || 0;
   const key = v?.me?.owner_key;

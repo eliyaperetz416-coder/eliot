@@ -12,7 +12,7 @@ test('no workouts, no bonus', () => {
 });
 
 test('one point per training day in the last 4 weeks, capped', () => {
-  assert.equal(consistencyBonus([at(1), at(1), at(3)], now).dayPoints, 2); // two on the same day count once
+  assert.equal(consistencyBonus([at(1), at(1), at(3)], now).dayPoints, 5); // two on the same day count once
   assert.equal(consistencyBonus([at(30)], now).dayPoints, 0);              // too old
   const many = Array.from({ length: 20 }, (_, i) => at(i));
   assert.equal(consistencyBonus(many, now).dayPoints, BONUS.DAY_POINTS_CAP);
@@ -21,7 +21,7 @@ test('one point per training day in the last 4 weeks, capped', () => {
 test('streak weeks add points; a gap over 3 days breaks it', () => {
   const steady = Array.from({ length: 8 }, (_, i) => at(i * 2)); // every 2 days for 15 days
   assert.equal(consistencyBonus(steady, now).streakWeeks, 2);
-  assert.equal(consistencyBonus(steady, now).streakPoints, 4);
+  assert.equal(consistencyBonus(steady, now).streakPoints, 10);
   assert.equal(consistencyBonus([at(0), at(5), at(7)], now).streakWeeks, 0); // broken by the 5-day gap
   assert.equal(consistencyBonus(steady.map((w) => ({ endedMs: w.endedMs - 5 * DAY })), now).streakWeeks, 0); // last workout 5+ days ago
 });
