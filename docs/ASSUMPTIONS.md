@@ -209,3 +209,5 @@ Maximum bonus in total: 95 points (a bit under one tier). Everything is worked o
 
 ## Zip the mascot (v1.37)
 Zip is a small pixel-alien mascot made by Elia in the Quill repo (`packages/zip`). The two files are copied unchanged into `src/vendor/zip/`; `src/ui/mascot.js` mounts him. He floats at the start-side bottom corner (right in Hebrew) above the tab bar, **only on the Profile screen**, with the jetpack, and is hidden on every other screen. Display only: he is not wired to app events. His speech lines are the built-in Hebrew and English ones. `--zip-z: 30` keeps him under sheets and toasts. To change corner, accessory or colours edit `src/ui/mascot.js` (`position.side`, `accessory`, `palette: { G: '#ff7a00' }`).
+
+**v1.38:** Zip now carries dumbbells as well as the jetpack (`accessory: 'jetpack+dumbbells'` in `src/ui/mascot.js`). The new accessory was added to Zip in the Quill repo (branch `zip-dumbbells`, jetpack stays the default there) and `src/vendor/zip/zip.js` was copied from it. Other accessories: `'jetpack'`, `'pen'`, `'dumbbells'`, `'none'`.

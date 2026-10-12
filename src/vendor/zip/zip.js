@@ -16,7 +16,7 @@ export const PALETTE = {
 };
 
 export const MOODS = ['idle', 'blink', 'happy', 'sad', 'think', 'wow', 'sleep', 'wave', 'cheer', 'walkA', 'walkB', 'fly'];
-export const ACCESSORIES = ['jetpack', 'pen', 'none'];
+export const ACCESSORIES = ['jetpack', 'pen', 'dumbbells', 'jetpack+dumbbells', 'none'];   // join two with '+' (jetpack+dumbbells)
 
 const inEll = (x, y, cx, cy, rx, ry) => ((x + 0.5 - cx) / rx) ** 2 + ((y + 0.5 - cy) / ry) ** 2 <= 1;
 const ratio = (x, y, cx, cy, rx, ry) => ((x + 0.5 - cx) / rx) ** 2 + ((y + 0.5 - cy) / ry) ** 2;
@@ -28,12 +28,13 @@ export function frame(mood = 'idle', { accessory = 'jetpack' } = {}) {
   const sym = (x, y, c) => { set(x, y, c); set(W - 1 - x, y, c); };
   const fill = (x0, y0, x1, y1, c) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) set(x, y, c); };
 
+  const has = (name) => String(accessory).split('+').includes(name);
   const armsUp = mood === 'cheer';
   const waving = mood === 'wave';
   const flying = mood === 'fly';
 
   // ---- jetpack (behind everything) ----
-  if (accessory === 'jetpack') {
+  if (has('jetpack')) {
     for (const side of [0, 1]) {
       const x0 = side ? 19 : 2;
       fill(x0, 20, x0 + 2, 27, 'J'); fill(x0 + (side ? 2 : 0), 20, x0 + (side ? 2 : 0), 27, 'j');
@@ -120,12 +121,29 @@ export function frame(mood = 'idle', { accessory = 'jetpack' } = {}) {
   leg(8, lift === 1); leg(14, lift === 2);
 
   // ---- pen accessory (a feather quill in the right hand) ----
-  if (accessory === 'pen' && !armsUp && !waving) {
+  if (has('pen') && !armsUp && !waving) {
     const feather = [
       [22, 13, 'N'], [21, 14, 'N'], [22, 14, 'H'], [23, 14, 'N'], [21, 15, 'N'], [22, 15, 'H'], [23, 15, 'N'], [20, 16, 'N'], [21, 16, 'H'], [22, 16, 'N'], [23, 16, 'N'],
       [20, 17, 'N'], [21, 17, 'H'], [22, 17, 'N'], [20, 18, 'N'], [21, 18, 'N'], [21, 19, 'S'], [21, 20, 'S'], [21, 21, 'S'], [20, 22, 'S'], [20, 23, 'S'], [20, 24, 'K'], [19, 25, 'K'], [19, 26, 'K'], [19, 27, 'K'],
     ];
     for (const [x, y, c] of feather) set(x, y, c);
+  }
+  // ---- dumbbells accessory (one in each hand; a raised hand holds its dumbbell upright) ----
+  if (has('dumbbells')) {
+    for (const side of [0, 1]) {
+      const mx = (x) => (side ? W - 1 - x : x);          // the right side mirrors the left
+      const raised = side ? (armsUp || waving) : armsUp;
+      if (raised) {
+        // upright: a plate above and below the raised hand (hand = the bar)
+        for (const y of [13, 16]) { for (let x = 3; x <= 6; x++) set(mx(x), y, 'K'); set(mx(3), y, 'S'); }
+      } else {
+        // held at the side: a big plate and a small one on the outer end, the bar through the hand, a cap on the inner end
+        for (let y = 25; y <= 29; y++) { set(mx(0), y, 'K'); set(mx(1), y, 'K'); }
+        set(mx(0), 25, 'S'); set(mx(1), 25, 'S');
+        for (let y = 26; y <= 28; y++) set(mx(2), y, 'K');
+        for (let x = 3; x <= 7; x++) set(mx(x), 27, 'S');
+      }
+    }
   }
   return g.map((r) => r.join(''));
 }
@@ -155,7 +173,7 @@ const el = (tag, attrs = {}, ...kids) => {
 
 const DEFAULTS = {
   size: 56,                         // px width of the floating Zip
-  accessory: 'jetpack',             // 'jetpack' | 'pen' | 'none'
+  accessory: 'jetpack',             // 'jetpack' | 'pen' | 'dumbbells' | 'jetpack+dumbbells' | 'none'
   palette: {},                      // override any PALETTE colour, e.g. { G: '#ff7a00' }
   motion: true,                     // wanders, waves, naps by himself
   position: { side: 'start', bottom: 14 },   // side: 'start' | 'end' (follows page direction), bottom in px
@@ -271,7 +289,7 @@ function mount(opts = {}) {
 
   function wake() { asleep = false; zzz?.remove(); zzz = null; actor.setMood('wow'); setTimeout(() => { if (!asleep) actor.setMood('idle'); }, 700); }
   function fall() { asleep = true; actor.setMood('sleep'); zzz = el('span', { class: 'zip-zzz', 'aria-hidden': 'true' }, 'z', el('i', {}, 'z'), el('i', {}, 'Z')); btn.append(zzz); }
-  const anim = async (cls, ms, withFlame = false) => { actor.el.classList.add(cls); if (withFlame && actor.accessory === 'jetpack') actor.setMood('fly'); await sleep(ms); actor.el.classList.remove(cls); if (actor.mood === 'fly') actor.setMood('idle'); };
+  const anim = async (cls, ms, withFlame = false) => { actor.el.classList.add(cls); if (withFlame && String(actor.accessory).split('+').includes('jetpack')) actor.setMood('fly'); await sleep(ms); actor.el.classList.remove(cls); if (actor.mood === 'fly') actor.setMood('idle'); };
   const maxLeft = () => Math.max(0, innerWidth - o.size - 40);
   const dirSign = () => ((getComputedStyle(host).direction === 'rtl') === (o.position.side === 'start') ? -1 : 1);   // which way is "into the screen"
 
