@@ -1465,6 +1465,23 @@ for (const lang of ['he', 'en']) {
     await page.screenshot({ path: `${shots}${lang}-profile-edited.png`, fullPage: true });
   });
 
+  await check(`${lang}: Zip the mascot lives only on Profile, above the tab bar, and his bubble stays on screen`, async () => {
+    await page.goto(`${base}#/profile`);
+    await page.waitForSelector('.zip-host:not([hidden])');
+    const host = await page.locator('.zip-host').boundingBox();
+    const nav = await page.locator('#nav-root > *').first().boundingBox();
+    assert.ok(host.y + host.height <= nav.y + 1, 'Zip stands above the tab bar');
+    assert.ok(host.x >= 0 && host.x + host.width <= 390, 'inside the screen');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.zip-host')).direction), lang === 'he' ? 'rtl' : 'ltr');
+    await page.mouse.click(host.x + host.width / 2, host.y + host.height / 2);
+    await page.waitForSelector('.zip-bubble:not([hidden])');
+    const b = await page.locator('.zip-bubble').boundingBox();
+    assert.ok(b.x >= 0 && b.x + b.width <= 390 && b.y >= 0, 'the bubble stays on screen');
+    await page.screenshot({ path: `${shots}${lang}-zip.png` });
+    await page.goto(`${base}#/workout`);
+    await page.waitForFunction(() => document.querySelector('.zip-host')?.hidden === true);
+  });
+
   await check(`${lang}: manifest + service worker + works offline after first load`, async () => {
     await page.evaluate(() => navigator.serviceWorker.ready);
     await page.reload();

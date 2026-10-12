@@ -1,0 +1,36 @@
+/* Zip: styles for zip.js. Everything is prefixed zip- so it won't collide with your app. */
+.zip { display: inline-block; line-height: 0; flex: none; image-rendering: pixelated; filter: drop-shadow(0 4px 10px rgba(88, 204, 2, 0.35)); }
+.zip svg { display: block; }
+.zip.zip-bob { animation: zip-bob 3.2s ease-in-out infinite; }
+.zip[data-mood="happy"], .zip[data-mood="wow"] { animation: zip-hop 0.5s cubic-bezier(.22,1,.36,1) 2; }
+.zip[data-mood="cheer"] { animation: zip-hop 0.45s cubic-bezier(.22,1,.36,1) 3; }
+.zip[data-mood="sad"] { animation: zip-droop 1.6s ease-in-out; }
+.zip[data-mood="sleep"] { animation: zip-breathe 3s ease-in-out infinite; filter: drop-shadow(0 4px 10px rgba(88, 204, 2, 0.15)) brightness(0.8); }
+.zip.zip-a-hop { animation: zip-jump 0.45s cubic-bezier(.22,1,.36,1) 2; }
+.zip.zip-a-spin { animation: zip-spin 0.8s cubic-bezier(.22,1,.36,1); }
+@keyframes zip-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes zip-hop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px) rotate(-4deg); } }
+@keyframes zip-droop { 0%, 100% { transform: none; } 30% { transform: translateY(3px) rotate(3deg); } }
+@keyframes zip-jump { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-22px); } }
+@keyframes zip-spin { to { transform: rotate(360deg); } }
+@keyframes zip-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04, 0.97); } }
+
+/* the floating companion: stays in the bottom corner (override --zip-bottom or pass position.bottom) */
+.zip-host { position: fixed; z-index: var(--zip-z, 2147483000); bottom: calc(env(safe-area-inset-bottom, 0px) + var(--zip-bottom, 14px)); pointer-events: none; }
+.zip-host[data-side="start"] { inset-inline-start: 12px; }
+.zip-host[data-side="end"] { inset-inline-end: 12px; }
+.zip-host[hidden] { display: none; }
+.zip-float { position: relative; pointer-events: auto; padding: 4px; border: 0; background: transparent; cursor: pointer; will-change: transform; -webkit-tap-highlight-color: transparent; }
+.zip-float:active { scale: 0.92; }
+.zip-bubble { position: fixed; z-index: calc(var(--zip-z, 2147483000) + 1); pointer-events: none; max-width: 220px; padding: 10px 14px; border-radius: 16px;
+  background: #232736; color: #f3f4f9; border: 1px solid rgba(255, 255, 255, 0.16); font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+  box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.6); }
+.zip-bubble[hidden] { display: none; }
+.zip-zzz { position: absolute; top: -6px; inset-inline-end: -4px; font: 800 14px/1 system-ui, sans-serif; color: #1cb0f6; pointer-events: none; }
+.zip-zzz i { position: absolute; font-style: normal; top: -12px; inset-inline-end: -10px; font-size: 11px; opacity: 0; animation: zip-zz 2.4s ease-in-out infinite; }
+.zip-zzz i + i { top: -24px; inset-inline-end: -18px; font-size: 9px; animation-delay: 0.8s; }
+@keyframes zip-zz { 0% { opacity: 0; transform: translateY(6px); } 40% { opacity: 1; } 100% { opacity: 0; transform: translateY(-8px); } }
+.zip-confetti { position: fixed; inset: 0; pointer-events: none; z-index: calc(var(--zip-z, 2147483000) + 2); overflow: hidden; }
+.zip-confetti i { position: absolute; width: 8px; height: 8px; image-rendering: pixelated; animation: zip-confetti 1.2s cubic-bezier(0.1, 0.7, 0.3, 1) forwards; }
+@keyframes zip-confetti { from { transform: translate(0, 0) rotate(0); opacity: 1; } 70% { opacity: 1; } to { transform: translate(var(--dx), calc(var(--dy) + 90px)) rotate(240deg); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .zip, .zip * { animation-duration: 0.01ms !important; } }

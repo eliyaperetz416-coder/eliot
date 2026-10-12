@@ -10,6 +10,7 @@ import { initRestTimer, refreshRestTimer } from './ui/rest-timer.js';
 import { keepAwake } from './ui/wakelock.js';
 import { initCrew, onCrew, crew, startCrewWatcher } from './ui/crew-state.js';
 import { installLock } from './ui/lock.js';
+import { showMascot } from './ui/mascot.js';
 
 const TABS = [
   { id: 'workout', icon: 'workout' }, { id: 'workouts', icon: 'bolt' }, { id: 'ranks', icon: 'ranks' }, { id: 'profile', icon: 'profile' },
@@ -69,6 +70,7 @@ function render() {
   app.replaceChildren(el);
   const tab = { exercises: 'workouts', exercise: 'workouts', custom: 'workouts', requests: 'workouts', routines: 'workouts', routine: 'workouts', plans: 'workouts', plan: 'workouts', schedule: 'workouts', history: 'profile', achievements: 'profile', crew: 'profile', settings: 'profile', calendar: 'profile', numbers: 'profile', result: 'workout', progress: 'ranks', ladder: 'ranks', weakest: 'ranks', card: 'ranks', shop: 'profile', model: 'profile' }[id] ?? id;
   currentTab = tab;
+  showMascot(id === 'profile');
   // Safety net: every sub-screen (any screen that is not a tab root) has a way back, even in empty/error states.
   if (id !== tab && !el.querySelector('.back-link')) el.prepend(backLink(`#/${tab}`, t(`tab.${tab}`)));
   drawNav();
