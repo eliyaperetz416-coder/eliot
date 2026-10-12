@@ -1,4 +1,4 @@
-// Daily and weekly quests. Deterministic from the local date: no rerolls, reset at local midnight / Monday 00:00. Pure.
+// Daily and weekly quests (they give rank LP, not drachmas, since v1.36). Deterministic from the local date: no rerolls, reset at local midnight / Monday 00:00. Pure.
 import { hashSeed, mulberry32 } from './generator.mjs';
 import { weekStart } from './charts.mjs';
 import { dateKey } from './workout.mjs';
@@ -66,7 +66,7 @@ export function claimQuest(game, board, claimKey, nowMs) {
   if (!q || !q.complete || game.quests.claimed[claimKey]) return null;
   const g = structuredClone(game);
   g.quests.claimed[claimKey] = nowMs;
-  g.drachmas += q.reward;
+  // v1.36: a quest gives rank points (LP, see bonus.mjs), no drachmas. The claim time is what counts.
   // keep the record small: forget claims older than 60 days of keys
   return { game: g, reward: q.reward };
 }

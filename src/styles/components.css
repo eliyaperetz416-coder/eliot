@@ -691,3 +691,9 @@ a.btn { text-decoration: none; }
 .rp-side { display: grid; justify-items: center; gap: 2px; text-align: center; }
 .rp-arrow { font-size: 24px; color: var(--text-dim); }
 [dir="rtl"] .rp-arrow { transform: scaleX(-1); }
+
+/* Weakest muscle groups (OUR DESIGN) */
+.weak-card { display: flex; align-items: center; gap: var(--s-3); width: 100%; text-align: start; }
+.weak-card.weakest { border-color: rgb(var(--accent-rgb) / .6); }
+.weak-main { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.weak-next { color: var(--text-dim); font-size: 14px; }

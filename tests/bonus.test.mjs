@@ -49,11 +49,41 @@ test('weekly goal: 5 points for each of the last 5 Monday-to-Sunday weeks with e
 test('the total is the sum of the parts and never passes the maximum', () => {
   const r = rankBonus({ workouts: [], byId, ratings: {}, now });
   assert.equal(r.total, 0);
-  assert.equal(MAX_BONUS, BONUS.MAX + 38 + 25 + 13 + 38 + 25);
+  assert.equal(MAX_BONUS, BONUS.MAX + 38 + 25 + 13 + 38 + 25 + 100);
   const daily = Array.from({ length: 250 }, (_, i) => w(i, 1000 + (i === 1 ? 9000 : 0), MAIN_GROUPS, `d${i}`));
   const even = Object.fromEntries(MAIN_GROUPS.map((g) => [`ex-${g}`, 500]));
   const full = rankBonus({ workouts: daily, byId, ratings: even, now, weeklyGoal: 3 });
   assert.ok(full.total <= MAX_BONUS);
   assert.equal(full.total, Object.values(full.parts).reduce((n, p) => n + p.points, 0));
   assert.equal(full.parts.milestones.points, 38);
+});
+
+test('quests: claimed quests give LP for 28 days (5 per daily, 20 per weekly), capped; the amounts match the quest pool', async () => {
+  const { questBonus } = await import('../src/core/bonus.mjs');
+  const pool = JSON.parse((await import('node:fs')).readFileSync(new URL('../src/data/quests.json', import.meta.url), 'utf8'));
+  assert.deepEqual([PARTS.QUEST_DAILY_LP, PARTS.QUEST_WEEKLY_LP], [pool.reward.daily, pool.reward.weekly]);
+  const claims = { 'd:2026-10-13:d_finish': now - DAY, 'd:2026-10-12:d_sets': now - 2 * DAY, 'w:2026-10-12:w_vol': now - DAY, 'd:2026-08-01:old': now - 60 * DAY };
+  assert.equal(questBonus(claims, now).points, 5 + 5 + 20);
+  assert.equal(questBonus(claims, now).claimed, 3);
+  const many = Object.fromEntries(Array.from({ length: 40 }, (_, i) => [`d:${i}:x`, now - 1000]));
+  assert.equal(questBonus(many, now).points, PARTS.QUEST_MAX);
+  assert.equal(rankBonus({ workouts: [], byId, ratings: {}, now, claims }).parts.quests.points, 30);
+});
+
+test('weakest report: untrained groups first, then the lowest rating; each ranked group gets a next-division target', async () => {
+  const { weakestGroups, starterExercise, bonusTips } = await import('../src/core/weakest.mjs');
+  const exercises = Object.values(byId).map((e) => ({ ...e, R: 100, type: 'weight', equipment: 'barbell', family: 'f' }));
+  const by = Object.fromEntries(exercises.map((e) => [e.id, e]));
+  const bests = { 'ex-chest': { rating: 500, reps: 5, weight: 80 }, 'ex-back': { rating: 300, reps: 8, weight: 60 } };
+  const ratings = { 'ex-chest': 500, 'ex-back': 300 };
+  const list = weakestGroups({ ratings, bests, byId: by, exercises, bodyweightKg: 80 });
+  assert.equal(list.length, 10);
+  assert.deepEqual(list.slice(-2).map((x) => x.group), ['back', 'chest'], 'ranked groups come last, weakest of them first');
+  assert.equal(list[0].rating, 0); assert.equal(list[0].target, null); assert.ok(list[0].ex, 'an untrained group gets a starter exercise');
+  const back = list.find((x) => x.group === 'back');
+  assert.ok(back.target.rating > 300 && back.target.load > 0, 'a next-division load');
+  assert.equal(starterExercise('chest', exercises).id, 'ex-chest');
+  const tips = bonusTips({ workouts: [], byId: by, ratings: {}, now, claims: {} });
+  assert.ok(tips.length >= 5 && tips[0].missing >= tips[tips.length - 1].missing, 'biggest gap first');
+  assert.equal(tips.find((x) => x.id === 'cover').groups.length, 10);
 });

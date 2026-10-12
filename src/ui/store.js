@@ -3,7 +3,7 @@ import { dbAll, dbGet, dbPut, dbBatch, dbDelete } from './db.js';
 import { migrateWorkout, newestDraft } from '../core/draft.mjs';
 import { bestsFrom, ratingsOf, afterEdit } from '../core/post.mjs';
 import { overallRating } from '../core/ranks.mjs';
-import { rankBonus, setWeeklyGoal } from '../core/bonus.mjs';
+import { rankBonus, setWeeklyGoal, setQuestClaims } from '../core/bonus.mjs';
 import { getSettings } from './storage.js';
 import { cleanSchedule } from '../core/schedule.mjs';
 import { latestBodyweight, bodyweightEntry } from '../core/profile.mjs';
@@ -30,8 +30,10 @@ const LS_DRAFT = 'dg.draft';
 const lsDraft = () => { try { return JSON.parse(localStorage.getItem(LS_DRAFT)); } catch { return null; } };
 
 export function recompute() {
+  if (!data()) return; // the library is not loaded yet
   store.bests = bestsFrom(store.workouts);
   setWeeklyGoal(getSettings().weeklyGoal);
+  setQuestClaims(store.game?.quests?.claimed);
   store.overall = overallRating(ratingsOf(store.bests), data().byId, rankBonus({ workouts: store.workouts, byId: data().byId, ratings: ratingsOf(store.bests) }).total);
 }
 
@@ -109,6 +111,7 @@ addEventListener('pagehide', flushDraft);
 /** Commit a posted workout (result of postWorkout). Atomic: workout + cleared draft in one transaction. */
 export async function saveGame(g) {
   store.game = g;
+  recompute(); // quest LP counts toward the overall rank
   await dbPut('game', g, 'me').catch(() => {});
   emit();
 }

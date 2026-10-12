@@ -11,6 +11,7 @@ import { historyScreen, historyDetailScreen } from './history.js';
 import { ranksScreen } from './ranks.js';
 import { modelScreen } from './model.js';
 import { ladderScreen } from './ladder.js';
+import { weakestScreen } from './weakest.js';
 import { scheduleScreen } from './schedule.js';
 import { progressScreen } from './progress.js';
 import { cardScreen } from './card-export.js';
@@ -95,6 +96,7 @@ export function buildScreens(ctx) {
     crew: crewScreen,
     model: modelScreen,
     ladder: ladderScreen,
+    weakest: weakestScreen,
     schedule: scheduleScreen,
     kit,
   };

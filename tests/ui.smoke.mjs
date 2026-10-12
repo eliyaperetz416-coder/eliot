@@ -11,7 +11,7 @@ mkdirSync(shots, { recursive: true });
 const server = await serve(0);
 const base = `http://localhost:${server.address().port}/`;
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-const ROUTES = ['workout', 'workouts', 'exercises', 'exercise/barbell-bench-press-medium-grip', 'exercise/plank', 'ranks', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'requests', 'calendar', 'crew', 'profile', 'history', 'kit', 'ranks-preview'];
+const ROUTES = ['weakest', 'workout', 'workouts', 'exercises', 'exercise/barbell-bench-press-medium-grip', 'exercise/plank', 'ranks', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'requests', 'calendar', 'crew', 'profile', 'history', 'kit', 'ranks-preview'];
 const errors = [];
 let failed = 0;
 const ONLY = process.env.ONLY;
@@ -1392,6 +1392,16 @@ for (const lang of ['he', 'en']) {
     assert.ok(await page.locator('.ladder-row.locked').count() >= 1, 'tiers above you are locked');
     assert.ok((await page.textContent('.ladder-summary')).match(/\d/), 'points left are shown');
     await page.screenshot({ path: `${shots}${lang}-ladder.png`, fullPage: true });
+    // the button at the bottom opens the weakest-groups screen (it used to just go back to Progress)
+    await page.getByRole('link', { name: T('איפה אני הכי חלש ומה צריך', 'Where I am weakest and what I need') }).click();
+    await page.waitForSelector('.weak-card');
+    assert.equal(await page.locator('.weak-card').count(), 10);
+    assert.equal(await page.locator('.weak-card.weakest').count(), 1);
+    assert.ok(await page.locator('.weak-tip').count() >= 1, 'bonus tips');
+    assert.ok((await page.textContent('.weak-card.weakest')).length > 10);
+    await page.screenshot({ path: `${shots}${lang}-weakest.png`, fullPage: true });
+    await page.locator('.weak-card').first().click(); await page.waitForSelector('.sheet');
+    await page.keyboard.press('Escape'); await page.waitForFunction(() => !document.querySelector('.sheet'));
   });
 
   await check(`${lang}: every sub-screen has a back link`, async () => {

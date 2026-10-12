@@ -17,17 +17,17 @@ test('daily quests: 3 distinct, deterministic for a date, different across dates
   assert.equal(new Set(a.map((q) => q.id)).size, 3);
   const days = new Set(); for (let i = 0; i < 30; i++) days.add(dailyQuests(pool, addDays(KEY, i)).map((q) => q.id).join());
   assert.ok(days.size > 5, 'varies over the month');
-  for (const q of a) { assert.equal(q.reward, 15); assert.equal(q.period, 'daily'); assert.equal(q.claimKey, `d:${KEY}:${q.id}`); }
+  for (const q of a) { assert.equal(q.reward, 5); assert.equal(q.period, 'daily'); assert.equal(q.claimKey, `d:${KEY}:${q.id}`); }
   for (let i = 0; i < 40; i++) for (const q of dailyQuests(pool, addDays(KEY, i))) if (q.param === 'group') assert.ok(RANK_GROUPS.includes(q.group)); else assert.equal(q.group, null);
 });
 
-test('weekly quest: same all week (Monday to Sunday), changes next Monday, worth 60', () => {
+test('weekly quest: same all week (Monday to Sunday), changes next Monday, worth 20 LP', () => {
   const mon = '2026-06-01';
   const ids = Array.from({ length: 7 }, (_, i) => weeklyQuest(pool, addDays(mon, i)).id);
   assert.equal(new Set(ids).size, 1);
   assert.equal(weeklyQuest(pool, mon).key, mon); assert.equal(weeklyQuest(pool, '2026-06-07').key, mon, 'Sunday belongs to the week of the 1st');
   assert.equal(weeklyQuest(pool, '2026-06-08').key, '2026-06-08');
-  const q = weeklyQuest(pool, mon); assert.equal(q.reward, 60); assert.equal(q.period, 'weekly');
+  const q = weeklyQuest(pool, mon); assert.equal(q.reward, 20); assert.equal(q.period, 'weekly');
   const seen = new Set(); for (let i = 0; i < 20; i++) seen.add(weeklyQuest(pool, addDays(mon, 7 * i)).id);
   assert.ok(seen.size >= 3, 'rotates between weeks');
 });
@@ -90,7 +90,7 @@ test('board: progress is capped at the target; claiming pays once and only when 
   assert.ok(done.length >= 2);
   for (const q of done) assert.ok(q.progress <= q.target);
   const c = claimQuest(s.game, board, done[0].claimKey, T0);
-  assert.equal(c.reward, done[0].reward); assert.equal(c.game.drachmas, s.game.drachmas + done[0].reward);
+  assert.equal(c.reward, done[0].reward); assert.equal(c.game.drachmas, s.game.drachmas, 'quests give rank LP, no drachmas');
   assert.equal(claimQuest(c.game, questBoard(p, KEY, T0, s.workouts, byId, c.game.quests.claimed), done[0].claimKey, T0), null, 'claimed only once');
   assert.equal(questBoard(p, KEY, T0, s.workouts, byId, c.game.quests.claimed).find((q) => q.claimKey === done[0].claimKey).claimed, true);
 });
@@ -103,10 +103,10 @@ test('posting reports the quests that just became complete', () => {
   assert.ok(Array.isArray(s.rewards.questsCompleted));
 });
 
-test('quest pool is valid: unique ids, both languages, placeholders match, rewards 15 and 60', () => {
+test('quest pool is valid: unique ids, both languages, placeholders match, rewards are 5 and 20 rank LP', () => {
   const all = [...pool.daily, ...pool.weekly];
   assert.equal(new Set(all.map((q) => q.id)).size, all.length);
-  assert.deepEqual(pool.reward, { daily: 15, weekly: 60 });
+  assert.deepEqual(pool.reward, { daily: 5, weekly: 20 });
   assert.ok(pool.daily.length >= 5 && pool.weekly.length >= 4);
   for (const q of all) {
     assert.ok(q.textEn && q.textHe && q.target > 0, q.id);

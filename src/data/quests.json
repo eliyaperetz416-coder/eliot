@@ -1,5 +1,5 @@
 {
-  "reward": { "daily": 15, "weekly": 60 },
+  "reward": { "daily": 5, "weekly": 20 },
   "daily": [
     { "id": "d_finish", "metric": "workouts", "target": 1, "textEn": "Finish a workout", "textHe": "מסיימים אימון" },
     { "id": "d_group", "metric": "sets_group", "target": 5, "param": "group", "textEn": "Do {target} sets for {group}", "textHe": "עושים {target} סטים ל{group}" },

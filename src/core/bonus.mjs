@@ -14,8 +14,16 @@ export const PARTS = Object.freeze({
   GOAL_WEEKS: 5,           // the current week and the 4 before it
   GOAL_POINTS_PER_WEEK: 5, // for each week with at least your weekly goal of training days
   GOAL_MAX: 25,
+  QUEST_DAILY_LP: 5,       // v1.36: quests give rank points (LP) instead of drachmas. A claimed daily quest counts for 5 ...
+  QUEST_WEEKLY_LP: 20,     // ... and the weekly one for 20, for 28 days after you claim it
+  QUEST_WINDOW_DAYS: 28,
+  QUEST_MAX: 100,
 });
 export const MAIN_GROUPS = Object.freeze(['chest', 'back', 'shoulders', 'biceps', 'triceps', 'quads', 'hamstrings', 'glutes', 'calves', 'abs']);
+
+let questClaims = {};
+/** The claimed quests ({ claimKey: claimedAtMs }) come from the game state; the app sets them here so the pure rank code can count them. */
+export const setQuestClaims = (map) => { questClaims = map && typeof map === 'object' ? map : {}; };
 
 let defaultGoal = 3;
 /** The weekly goal (training days) comes from Settings; the app sets it here so the pure rank code can use it. */
@@ -51,7 +59,7 @@ export function balanceBonus(workouts, byId, ratings, now) {
   const g = muscleRatings(ratings ?? {}, byId);
   const list = MAIN_GROUPS.map((x) => g[x] ?? 0);
   const balancePoints = list.every((r) => r > 0) ? Math.round((PARTS.BALANCE_MAX * Math.min(...list)) / Math.max(...list)) : 0;
-  return { cover: hit.size, coverPoints, balancePoints, points: coverPoints + balancePoints };
+  return { cover: hit.size, trained: [...hit], coverPoints, balancePoints, points: coverPoints + balancePoints };
 }
 
 export function milestoneBonus(workouts) {
@@ -59,6 +67,16 @@ export function milestoneBonus(workouts) {
   let points = 0, next = null;
   for (const [count, pts] of PARTS.MILESTONES) { if (n >= count) points = pts; else if (!next) next = { count, pts }; }
   return { points, workouts: n, next };
+}
+
+/** LP from quests you claimed in the last 28 days (daily keys start with 'd:', the weekly one with 'w:'). */
+export function questBonus(claims, now) {
+  let sum = 0, count = 0;
+  for (const [key, at] of Object.entries(claims ?? {})) {
+    if (!(Number(at) > 0) || now - at >= PARTS.QUEST_WINDOW_DAYS * DAY || at > now + DAY) continue;
+    sum += key.startsWith('w:') ? PARTS.QUEST_WEEKLY_LP : PARTS.QUEST_DAILY_LP; count++;
+  }
+  return { points: Math.min(PARTS.QUEST_MAX, sum), claimed: count };
 }
 
 /** Weeks (Monday to Sunday, the current one and the 4 before) with at least `goal` training days. */
@@ -79,14 +97,15 @@ export function goalBonus(workouts, now, goal = defaultGoal) {
  * Everything that adds to the overall rating besides strength. `ratings` is { exerciseId: bestRating }.
  * Returns { total, max, parts: { consistency, volume, balance, milestones, goal } } (each part has its own `points`).
  */
-export function rankBonus({ workouts, byId, ratings, now = Date.now(), weeklyGoal } = {}) {
+export function rankBonus({ workouts, byId, ratings, now = Date.now(), weeklyGoal, claims } = {}) {
   const consistency = consistencyBonus(workouts, now);
   const volume = volumeBonus(workouts, now);
   const balance = balanceBonus(workouts, byId, ratings, now);
   const milestones = milestoneBonus(workouts);
   const goal = goalBonus(workouts, now, weeklyGoal ?? defaultGoal);
-  const parts = { consistency: { ...consistency, points: consistency.total }, volume, balance, milestones, goal };
+  const quests = questBonus(claims ?? questClaims, now);
+  const parts = { consistency: { ...consistency, points: consistency.total }, volume, balance, milestones, goal, quests };
   const total = Object.values(parts).reduce((n, p) => n + p.points, 0);
   return { total, max: MAX_BONUS, parts };
 }
-export const MAX_BONUS = BONUS.MAX + PARTS.VOLUME_MAX + PARTS.COVER_MAX + PARTS.BALANCE_MAX + PARTS.MILESTONES[PARTS.MILESTONES.length - 1][1] + PARTS.GOAL_MAX;
+export const MAX_BONUS = BONUS.MAX + PARTS.VOLUME_MAX + PARTS.COVER_MAX + PARTS.BALANCE_MAX + PARTS.MILESTONES[PARTS.MILESTONES.length - 1][1] + PARTS.GOAL_MAX + PARTS.QUEST_MAX;

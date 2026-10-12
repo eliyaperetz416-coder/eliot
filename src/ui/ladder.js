@@ -53,5 +53,5 @@ export function ladderScreen() {
     h('section', { class: 'card ladder-summary' }, ...summary(L)),
     h('p', { class: 'row-sub', text: t('ladder.how') }),
     h('ol', { class: 'ladder-list' }, rows),
-    h('a', { class: 'btn btn-secondary btn-block', href: '#/ranks' }, t('ladder.weakest')));
+    h('a', { class: 'btn btn-secondary btn-block', href: '#/weakest' }, t('ladder.weakest')));
 }
