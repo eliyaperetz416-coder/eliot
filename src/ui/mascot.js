@@ -11,7 +11,7 @@ export function showMascot(on) {
   const lang = getLanguage();
   if (!zip || mountedLang !== lang) {
     zip?.destroy();
-    zip = Zip.mount({ lang, accessory: 'jetpack+dumbbells', style: 'fit', position: { side: 'start', bottom: 'calc(var(--tabbar-h) + 10px)' } });
+    zip = Zip.mount({ lang, accessory: 'dumbbells', style: 'fit', position: { side: 'start', bottom: 'calc(var(--tabbar-h) + 10px)' } });
     mountedLang = lang;
   }
   zip.show();

@@ -213,3 +213,5 @@ Zip is a small pixel-alien mascot made by Elia in the Quill repo (`packages/zip`
 **v1.38:** Zip now carries dumbbells as well as the jetpack (`accessory: 'jetpack+dumbbells'` in `src/ui/mascot.js`). The new accessory was added to Zip in the Quill repo (branch `zip-dumbbells`, jetpack stays the default there) and `src/vendor/zip/zip.js` was copied from it. Other accessories: `'jetpack'`, `'pen'`, `'dumbbells'`, `'none'`.
 
 **v1.39:** Zip no longer hops or spins. In the `'fit'` style he curls one dumbbell at a time, squats with a barbell across his shoulders and drops for push-ups, every so often and when tapped. The weight plates are big and bright red so they read on the dark background. This lives in Zip itself (Quill repo, branch `zip-dumbbells`: style `'fit'`, new moods and moves; `'classic'` stays the default there) and the app copy in `src/vendor/zip/` was updated from it.
+
+**v1.39.1:** Zip has no jetpack any more (`accessory: 'dumbbells'`), so the tanks do not get in the way of the gym moves.
