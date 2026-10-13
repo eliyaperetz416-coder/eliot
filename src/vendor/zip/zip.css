@@ -8,6 +8,15 @@
 .zip[data-mood="sleep"] { animation: zip-breathe 3s ease-in-out infinite; filter: drop-shadow(0 4px 10px rgba(88, 204, 2, 0.15)) brightness(0.8); }
 .zip.zip-a-hop { animation: zip-jump 0.45s cubic-bezier(.22,1,.36,1) 2; }
 .zip.zip-a-spin { animation: zip-spin 0.8s cubic-bezier(.22,1,.36,1); }
+/* style 'fit': no jumping, he stays on the ground (the gym moves are drawn frame by frame) */
+.zip.zip-calm[data-mood] { animation: zip-bob 3.2s ease-in-out infinite; }
+.zip.zip-calm[data-mood="sleep"] { animation: zip-breathe 3s ease-in-out infinite; }
+.zip.zip-calm[data-mood="curlL"], .zip.zip-calm[data-mood="curlR"], .zip.zip-calm[data-mood="squat"], .zip.zip-calm[data-mood="squatDown"] { animation: none; }
+/* push-ups: he lies down facing into the screen (-l: head to the left, -r: head to the right) and presses */
+.zip.zip-a-push-l, .zip.zip-calm.zip-a-push-l { animation: zip-push-l 0.95s ease-in-out 3; }
+.zip.zip-a-push-r, .zip.zip-calm.zip-a-push-r { animation: zip-push-r 0.95s ease-in-out 3; }
+@keyframes zip-push-l { 0%, 100% { transform: translateY(8px) rotate(-90deg) translateX(0); } 50% { transform: translateY(8px) rotate(-90deg) translateX(-8px); } }
+@keyframes zip-push-r { 0%, 100% { transform: translateY(8px) rotate(90deg) scaleX(-1) translateX(0); } 50% { transform: translateY(8px) rotate(90deg) scaleX(-1) translateX(-8px); } }
 @keyframes zip-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 @keyframes zip-hop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px) rotate(-4deg); } }
 @keyframes zip-droop { 0%, 100% { transform: none; } 30% { transform: translateY(3px) rotate(3deg); } }

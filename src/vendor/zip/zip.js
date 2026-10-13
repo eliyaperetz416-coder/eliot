@@ -13,9 +13,10 @@ export const PALETTE = {
   B: '#7c6cff', b: '#5646e0', U: '#a99dff', K: '#262a44', S: '#a3aedb',       // suit, suit shade, suit light, dark trim, metal
   Y: '#ffc800', O: '#ff9600', J: '#ff9600', j: '#c76d00', F: '#fff3a0',       // lights, antenna, jetpack, jetpack shade, flame core
   N: '#ffd9a0',                                                               // feather
+  Q: '#ff4b4b', q: '#b02a3a', T: '#ffb3b3',                                   // weight plates (bright so they read on dark and light), shade, shine
 };
 
-export const MOODS = ['idle', 'blink', 'happy', 'sad', 'think', 'wow', 'sleep', 'wave', 'cheer', 'walkA', 'walkB', 'fly'];
+export const MOODS = ['idle', 'blink', 'happy', 'sad', 'think', 'wow', 'sleep', 'wave', 'cheer', 'walkA', 'walkB', 'fly', 'curlL', 'curlR', 'squat', 'squatDown', 'push'];
 export const ACCESSORIES = ['jetpack', 'pen', 'dumbbells', 'jetpack+dumbbells', 'none'];   // join two with '+' (jetpack+dumbbells)
 
 const inEll = (x, y, cx, cy, rx, ry) => ((x + 0.5 - cx) / rx) ** 2 + ((y + 0.5 - cy) / ry) ** 2 <= 1;
@@ -114,11 +115,36 @@ export function frame(mood = 'idle', { accessory = 'jetpack' } = {}) {
     if (up) { fill(side ? 18 : 4, 16, side ? 19 : 5, 22, 'B'); set(side ? 19 : 4, 16, 'S'); fill(side ? 18 : 4, 14, side ? 19 : 5, 15, 'S'); return; }
     fill(x0, 23, x0 + 1, 26, 'B'); set(x0 + (side ? 1 : 0), 23, 'b'); fill(x0, 27, x0 + 1, 27, 'S');
   };
-  arm(0, armsUp); arm(1, armsUp || waving);
+  const curl = mood === 'curlL' || mood === 'curlR';
+  const squat = mood === 'squat' || mood === 'squatDown';
+  const push = mood === 'push';
+  const curlSide = mood === 'curlL' ? 0 : 1;                                  // which arm is lifting
+  const mxs = (side, x) => (side ? W - 1 - x : x);                            // mirror a left-side x for the right side
+  if (curl) {
+    for (const side of [0, 1]) {
+      const m = (x) => mxs(side, x);
+      if (side !== curlSide) { arm(side, false); continue; }
+      fill(m(5), 23, m(4), 25, 'B'); fill(m(5), 24, m(3), 24, 'b');           // upper arm and elbow
+      fill(m(4), 21, m(3), 24, 'B');                                           // forearm going up
+      fill(m(4), 15, m(3), 20, 'S');                                           // the hand / bar
+    }
+  } else if (squat) {
+    for (const side of [0, 1]) { const m = (x) => mxs(side, x); fill(m(5), 23, m(4), 26, 'B'); set(m(4), 26, 'b'); fill(m(5), 22, m(4), 22, 'S'); }   // arms hang from the bar
+  } else if (push) {
+    fill(0, 23, 5, 24, 'B'); fill(0, 23, 1, 24, 'S'); fill(4, 25, 5, 25, 'B'); // one arm out to the floor (the sprite is turned on its side by CSS)
+  } else { arm(0, armsUp); arm(1, armsUp || waving); }
   // legs + boots (walkA / walkB lift one foot)
   const lift = mood === 'walkA' ? 1 : mood === 'walkB' ? 2 : 0;
   const leg = (x0, raised) => { fill(x0, 28, x0 + 1, 29, 'B'); fill(x0 - 1, raised ? 29 : 30, x0 + 2, raised ? 30 : 31, 'K'); set(x0 - 1, raised ? 29 : 30, 'S'); };
-  leg(8, lift === 1); leg(14, lift === 2);
+  if (mood !== 'squatDown') { leg(8, lift === 1); leg(14, lift === 2); }
+  // a plate: x0..x1 by y0..y1, shaded on the inner / lower edge, shine on the top-left
+  const plate = (x0, y0, x1, y1, side) => {
+    const m = (x) => mxs(side, x);
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) set(m(x), y, 'Q');
+    for (let y = y0; y <= y1; y++) set(m(x1), y, 'q');
+    for (let x = x0; x <= x1; x++) set(m(x), y1, 'q');
+    set(m(x0), y0, 'T'); if (x1 - x0 >= 2) set(m(x0 + 1), y0, 'T');
+  };
 
   // ---- pen accessory (a feather quill in the right hand) ----
   if (has('pen') && !armsUp && !waving) {
@@ -128,20 +154,37 @@ export function frame(mood = 'idle', { accessory = 'jetpack' } = {}) {
     ];
     for (const [x, y, c] of feather) set(x, y, c);
   }
-  // ---- dumbbells accessory (one in each hand; a raised hand holds its dumbbell upright) ----
-  if (has('dumbbells')) {
+  // ---- dumbbells accessory: bright plates so they read on any background (one in each hand) ----
+  if (has('dumbbells') && !squat && !push) {
     for (const side of [0, 1]) {
-      const mx = (x) => (side ? W - 1 - x : x);          // the right side mirrors the left
+      const m = (x) => mxs(side, x);
       const raised = side ? (armsUp || waving) : armsUp;
-      if (raised) {
-        // upright: a plate above and below the raised hand (hand = the bar)
-        for (const y of [13, 16]) { for (let x = 3; x <= 6; x++) set(mx(x), y, 'K'); set(mx(3), y, 'S'); }
+      if (curl && side === curlSide) {
+        plate(1, 13, 6, 14, side); plate(1, 19, 6, 20, side);                  // upright at the shoulder, the hand is the bar
+        for (let y = 15; y <= 18; y++) { set(m(3), y, 'S'); set(m(4), y, 'H'); }
+      } else if (raised) {
+        plate(2, 11, 7, 12, side); plate(2, 17, 7, 18, side);                  // upright above the raised hand
+        for (let y = 13; y <= 16; y++) { set(m(4), y, 'S'); set(m(5), y, 'H'); }
       } else {
-        // held at the side: a big plate and a small one on the outer end, the bar through the hand, a cap on the inner end
-        for (let y = 25; y <= 29; y++) { set(mx(0), y, 'K'); set(mx(1), y, 'K'); }
-        set(mx(0), 25, 'S'); set(mx(1), 25, 'S');
-        for (let y = 26; y <= 28; y++) set(mx(2), y, 'K');
-        for (let x = 3; x <= 7; x++) set(mx(x), 27, 'S');
+        plate(0, 24, 2, 30, side); plate(3, 25, 3, 29, side);                  // held at the side: a big plate and a small one on the outer end
+        for (let x = 4; x <= 7; x++) { set(m(x), 27, 'H'); set(m(x), 28, 'S'); }
+      }
+    }
+  }
+
+  // ---- barbell for squats: across the shoulders with big plates (drawn whatever the accessory is) ----
+  if (squat) {
+    for (let x = 0; x < W; x++) { set(x, 21, 'H'); set(x, 22, 'S'); }
+    for (const side of [0, 1]) { plate(0, 17, 2, 26, side); plate(3, 19, 3, 24, side); }
+    if (mood === 'squatDown') {
+      // sink three rows (the legs are drawn bent below) and put the weight on the knees
+      for (let y = H - 1; y >= 3; y--) g[y] = g[y - 3].slice();
+      for (let y = 0; y < 3; y++) g[y] = Array(W).fill('.');
+      for (const side of [0, 1]) {
+        const m = (x) => mxs(side, x);
+        for (let y = 29; y <= 30; y++) for (let x = 5; x <= 8; x++) set(m(x), y, 'B');   // thighs out to the sides
+        for (let y = 30; y <= 31; y++) for (let x = 3; x <= 7; x++) set(m(x), y, 'K');   // boots, wide stance
+        set(m(3), 30, 'S');
       }
     }
   }
@@ -179,6 +222,7 @@ const DEFAULTS = {
   position: { side: 'start', bottom: 14 },   // side: 'start' | 'end' (follows page direction), bottom in px
   parent: null,                     // where to mount (default: document.body)
   lang: 'en',
+  style: 'classic',                 // 'classic' (hops and spins) | 'fit' (curls, squats, push-ups; no jumping)
   lines: null,                      // { tap: [...], hello: '...' } override the built-in speech lines
   lifeEveryMs: [7000, 14000],
   weights: { wave: 25, hop: 20, walk: 35, peek: 10, spin: 10 },
@@ -188,6 +232,7 @@ const DEFAULTS = {
   confetti: 16,
   blinkMs: 4200,
 };
+const FIT = { weights: { wave: 16, walk: 22, peek: 8, curl: 28, squat: 15, pushups: 11 }, tap: ['curl', 'squat', 'pushups', 'wave'] };
 const LINES = {
   en: { hello: 'Hi! I am Zip 👽', tap: ['You are doing great!', 'One step at a time 🚀', 'Need a break? I will wait.', 'Beep boop! 🤖', 'I like it here.'] },
   he: { hello: 'היי! אני זיפ 👽', tap: ['אתה מצוין!', 'צעד אחד בכל פעם 🚀', 'צריך הפסקה? אני אחכה.', 'ביפ בופ! 🤖', 'טוב לי כאן.'] },
@@ -228,10 +273,11 @@ function inline(opts = {}) {
 
 /** The floating companion. Returns a controller. */
 function mount(opts = {}) {
-  const o = { ...DEFAULTS, ...opts, position: { ...DEFAULTS.position, ...(opts.position || {}) }, weights: { ...DEFAULTS.weights, ...(opts.weights || {}) } };
+  const fit = opts.style === 'fit';
+  const o = { ...DEFAULTS, ...opts, position: { ...DEFAULTS.position, ...(opts.position || {}) }, weights: fit ? { ...FIT.weights, ...(opts.weights || {}) } : { ...DEFAULTS.weights, ...(opts.weights || {}) } };
   const lines = { ...(LINES[o.lang] || LINES.en), ...(o.lines || {}) };
   const parent = o.parent || document.body;
-  const actor = inline({ ...o, class: 'zip-bob' });
+  const actor = inline({ ...o, class: 'zip-bob' + (fit ? ' zip-calm' : '') });
   const bubble = el('div', { class: 'zip-bubble', hidden: true, role: 'status' });
   const btn = el('button', { class: 'zip-float', type: 'button', 'aria-label': 'Zip' }, actor.el);
   const host = el('div', { class: 'zip-host', 'data-side': o.position.side }, btn);
@@ -263,7 +309,7 @@ function mount(opts = {}) {
     setBottom(v) { host.style.setProperty('--zip-bottom', typeof v === 'number' ? v + 'px' : v); },   // px number or any CSS length, e.g. 'calc(var(--tabbar) + 8px)'
     setMotion(on) { motion = !!on; },
     setAccessory(a) { actor.setAccessory(a); },
-    /** Run one move now: wave | hop | spin | walk | peek | nap */
+    /** Run one move now: wave | hop | spin | walk | peek | nap | curl | squat | pushups */
     async play(name) {
       if (destroyed) return false;
       if (name === 'nap') { fall(); return true; }
@@ -296,6 +342,10 @@ function mount(opts = {}) {
   const ACTIONS = {
     async wave() { actor.setMood('wave'); await sleep(1100); actor.setMood('idle'); },
     async hop() { await anim('zip-a-hop', 900, true); },
+    // gym moves (style 'fit'): curl one dumbbell at a time, squat with a barbell, drop for push-ups
+    async curl() { clearTimeout(moodTimer); for (let i = 0; i < 6; i++) { actor.setMood(i % 2 ? 'curlR' : 'curlL'); await sleep(430); } actor.setMood('idle'); },
+    async squat() { clearTimeout(moodTimer); for (let i = 0; i < 3; i++) { actor.setMood('squat'); await sleep(520); actor.setMood('squatDown'); await sleep(640); } actor.setMood('squat'); await sleep(500); actor.setMood('idle'); },
+    async pushups() { clearTimeout(moodTimer); actor.setMood('push'); await anim(dirSign() < 0 ? 'zip-a-push-l' : 'zip-a-push-r', 3 * 950); actor.setMood('idle'); },
     async spin() { await anim('zip-a-spin', 800, true); },
     async walk() {
       const sign = dirSign(), to = sign * Math.round(Math.random() * maxLeft()), from = x;
@@ -325,8 +375,8 @@ function mount(opts = {}) {
   }
   btn.addEventListener('click', async () => {
     api.touch(); if (busy) return; busy = true;
-    api.react('wow', pick(lines.tap), 3200);
-    try { await ACTIONS[pick(['hop', 'spin', 'wave'])](); } finally { busy = false; }
+    if (fit) api.say(pick(lines.tap), 3200); else api.react('wow', pick(lines.tap), 3200);
+    try { await ACTIONS[pick(fit ? FIT.tap : ['hop', 'spin', 'wave'])](); } finally { busy = false; }
   });
   addEventListener('pointerdown', api.touch, { passive: true });
   schedule();
