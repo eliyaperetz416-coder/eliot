@@ -8,6 +8,8 @@ import { summarize } from '../core/backup.mjs';
 import { formatDate, formatNum } from './format.js';
 import { recompute } from './store.js';
 import { APP_VERSION } from '../version.js';
+import { linkSection } from './link-ui.js';
+import { revokeLinkQuietly } from './link-state.js';
 
 const mb = (n) => `${formatNum(n / 1048576, n < 10485760 ? 1 : 0)} MB`;
 
@@ -45,6 +47,7 @@ function resetFlow() {
   const word = t('set.reset.word');
   const input = h('input', { class: 'text-input', type: 'text', autocomplete: 'off', autocapitalize: 'off', 'aria-label': t('set.reset.type', { word }) });
   const go = button({ label: t('set.reset.go'), variant: 'danger', block: true, disabled: true, onClick: async () => {
+    await revokeLinkQuietly();
     await resetAll();
     sh.close();
     showToast({ message: t('set.reset.done') });
@@ -96,6 +99,7 @@ export function settingsScreen({ onLanguage }) {
         } }),
         listRow({ title: t('set.backup.import'), sub: t('set.backup.import.sub'), icon: 'upload', onClick: () => fileInput.click() }),
       ]), fileInput,
+      ...linkSection(draw),
       h('div', { class: 'section-label', text: t('set.storage') }),
       list([
         listRow({ title: t('set.storage.used'), icon: 'info', end: h('span', { class: 'num', dir: 'ltr', text: info.usage != null ? mb(info.usage) : '-' }) }),

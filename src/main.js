@@ -9,6 +9,7 @@ import { onboarding } from './ui/onboarding.js';
 import { initRestTimer, refreshRestTimer } from './ui/rest-timer.js';
 import { keepAwake } from './ui/wakelock.js';
 import { initCrew, onCrew, crew, startCrewWatcher } from './ui/crew-state.js';
+import { initLink } from './ui/link-state.js';
 import { installLock } from './ui/lock.js';
 import { showMascot } from './ui/mascot.js';
 
@@ -101,6 +102,7 @@ async function boot() {
   await loadData();
   await initStore();
   await initCrew();
+  await initLink();
   const lang = settings.lang ?? store.profile?.lang ?? detectLanguage(navigator.language);
   setLanguage(lang);
   document.documentElement.lang = lang;
