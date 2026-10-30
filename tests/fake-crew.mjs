@@ -7,6 +7,7 @@ export function createFakeCrew() {
   const add = (g, m, kind, body) => { g.messages.push({ id: ++msgId, member_id: m.id, nickname: m.nickname, kind, body, created_at: new Date().toISOString() }); return msgId; };
   const me = (t) => (t && t.length >= 32 ? byToken.get(t) ?? fail('not_member') : fail('bad_token'));
   let memberSeq = 0;
+  const links = new Map(); // token -> { snapshot, updated_at, active }
   const OWNER_KEY = 'owner-key-for-tests';
   const month = () => new Date().toISOString().slice(0, 7);
   const fns = {
@@ -58,6 +59,15 @@ export function createFakeCrew() {
       const { group: g } = me(p_token); const t = g.members.find((y) => y.id === p_member_id && y.active);
       return t?.plan ? (t.planX ?? {}) : {};
     },
+    // Habit Coach link (supabase/migrations/008_link.sql): one summary per token, soft delete on revoke.
+    link_put({ p_token, p_snapshot }) {
+      if (!p_token || p_token.length < 32) fail('bad_token');
+      if (!p_snapshot || typeof p_snapshot !== 'object' || Array.isArray(p_snapshot)) fail('bad_snapshot');
+      if (JSON.stringify(p_snapshot).length > 24576) fail('too_large');
+      links.set(p_token, { snapshot: p_snapshot, updated_at: new Date().toISOString(), active: true }); return null;
+    },
+    link_get({ p_token }) { if (!p_token || p_token.length < 32) fail('bad_token'); const l = links.get(p_token); return l?.active ? { snapshot: l.snapshot, updated_at: l.updated_at } : null; },
+    link_revoke({ p_token }) { if (!p_token || p_token.length < 32) fail('bad_token'); const l = links.get(p_token); if (l) { l.active = false; l.snapshot = {}; } return null; },
     post_message({ p_token, p_kind, p_body }) {
       const { group: g, member: m } = me(p_token);
       if (!['chat', 'status'].includes(p_kind)) fail('bad_kind');
@@ -129,5 +139,5 @@ export function createFakeCrew() {
       return route.fulfill({ status: 400, headers, body: JSON.stringify({ code: 'P0001', message: e.message }) });
     }
   }
-  return { handle, calls, groups, OWNER_KEY, install: (ctx) => ctx.route(/supabase\.co\/rest\/v1\/rpc\//, handle) };
+  return { handle, calls, groups, links, OWNER_KEY, install: (ctx) => ctx.route(/supabase\.co\/rest\/v1\/rpc\//, handle) };
 }

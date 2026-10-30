@@ -216,6 +216,7 @@ Zip is a small pixel-alien mascot made by Elia in the Quill repo (`packages/zip`
 
 **v1.39.1:** Zip has no jetpack any more (`accessory: 'dumbbells'`), so the tanks do not get in the way of the gym moves.
 
-## v1.39.2: huge typed numbers no longer freeze the app
+## v1.40.1: huge typed numbers no longer freeze the app
 - A weight like 9,999,999 kg made the plate calculator build a table of millions of entries; the open workout is saved, so the app froze on every start.
 - Fix (OUR DESIGN): typed weight is limited to 0-1500 kg and reps to 0-20000 (inputs also stop at 7 / 5 characters); out-of-range values are stored as empty. Saved drafts and history are healed on load (absurd numbers become empty). The plate calculator returns nothing above 2000 kg.
+**v1.40:** Habit Coach link (Settings > Habit Coach). OUR DESIGN: after every posted workout (and when the app opens) a short summary goes to the `link_snapshots` table in the crew's Supabase project, where Habit Coach (Elia's habit app) reads it with a code you paste once. Shared: level, XP, rank, streak, workout counts, last workout, recent all-time records (60 days, up to 10), weekly volume (12 weeks), workouts per week (8 weeks), muscle-group ratings, and the best-per-workout series of your 3 most trained exercises (last 20 points). Never bodyweight, photos, notes, the crew or the list of sets. Limits on the server: 24 KB, 60 updates an hour, 500 links. Disconnect empties it. The code lives only on the phone (not in the backup); the server keeps its sha256. Built in `src/core/link.mjs` (pure, tested) and `src/ui/link-state.js`; SQL in `supabase/migrations/008_link.sql`.
