@@ -13,6 +13,7 @@ import { data } from './data.js';
 import { store, commitPost, clearDraft, bodyweightKg, saveRoutine, saveMakeup } from './store.js';
 import { getSettings } from './storage.js';
 import { crew, syncStats, sendMessage } from './crew-state.js';
+import { syncLink } from './link-state.js';
 import { showToast } from './components.js';
 import { bumpPlannedWeights, missedEntries } from '../core/routines.mjs';
 import { skipRest } from './rest-timer.js';
@@ -63,6 +64,7 @@ export function openFinishSheet() {
     await commitPost(result, g.game);
     if (missed.length) await saveMakeup({ name: w.name || '', entries: missed, createdMs: now });
     syncStats(true);
+    syncLink(true);
     lastResult = { ...result, game: g.game, rewards: g.rewards, routineUpdate: await updateSavedWorkout(result.workout) };
     skipRest(); keepAwake(false);
     sh.close();
