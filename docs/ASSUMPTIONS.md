@@ -223,3 +223,6 @@ Zip is a small pixel-alien mascot made by Elia in the Quill repo (`packages/zip`
 
 ## v1.40.2: the fix takes over by itself (one-time)
 - The v1.40.1 fix could not reach a phone whose old version froze at start: the new service worker waited for the "new version ready" toast, which never appeared. For this one release the worker activates immediately (`RESCUE` in `sw.js`); remove it next release so updates ask first again (OUR DESIGN).
+
+## v1.40.3: faster takeover
+- The rescue worker (`RESCUE` in `sw.js`) now takes over at once and fills its cache afterwards, so a frozen old app cannot be killed halfway through a long install. Until the cache is full, files come from the network. Remove `RESCUE` in the next release (OUR DESIGN).
