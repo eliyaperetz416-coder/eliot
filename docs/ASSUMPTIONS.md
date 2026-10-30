@@ -215,3 +215,7 @@ Zip is a small pixel-alien mascot made by Elia in the Quill repo (`packages/zip`
 **v1.39:** Zip no longer hops or spins. In the `'fit'` style he curls one dumbbell at a time, squats with a barbell across his shoulders and drops for push-ups, every so often and when tapped. The weight plates are big and bright red so they read on the dark background. This lives in Zip itself (Quill repo, branch `zip-dumbbells`: style `'fit'`, new moods and moves; `'classic'` stays the default there) and the app copy in `src/vendor/zip/` was updated from it.
 
 **v1.39.1:** Zip has no jetpack any more (`accessory: 'dumbbells'`), so the tanks do not get in the way of the gym moves.
+
+## v1.39.2: huge typed numbers no longer freeze the app
+- A weight like 9,999,999 kg made the plate calculator build a table of millions of entries; the open workout is saved, so the app froze on every start.
+- Fix (OUR DESIGN): typed weight is limited to 0-1500 kg and reps to 0-20000 (inputs also stop at 7 / 5 characters); out-of-range values are stored as empty. Saved drafts and history are healed on load (absurd numbers become empty). The plate calculator returns nothing above 2000 kg.

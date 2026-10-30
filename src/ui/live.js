@@ -38,7 +38,7 @@ function prevText(ex, p, factor = 1) {
 }
 
 function numInput({ value, placeholder, integer, label, onInput, onChange }) {
-  const el = h('input', { class: 'set-input', type: 'text', inputmode: integer ? 'numeric' : 'decimal', pattern: integer ? '[0-9]*' : '[0-9]*[.,]?[0-9]*', enterkeyhint: 'done', autocomplete: 'off', dir: 'ltr', value: value ?? '', placeholder: placeholder ?? '', 'aria-label': label });
+  const el = h('input', { class: 'set-input', type: 'text', inputmode: integer ? 'numeric' : 'decimal', pattern: integer ? '[0-9]*' : '[0-9]*[.,]?[0-9]*', enterkeyhint: 'done', autocomplete: 'off', dir: 'ltr', maxlength: integer ? 5 : 7, value: value ?? '', placeholder: placeholder ?? '', 'aria-label': label });
   el.addEventListener('input', () => onInput(el.value));
   el.addEventListener('change', () => onChange?.(el.value));
   el.addEventListener('focus', () => el.select?.());

@@ -34,7 +34,7 @@ export function plateBase(ex, savedBase = 0) {
 
 /** { perSide, plates, left } for a total on a base, or null when it cannot be loaded (below the base). left = kg per side the plates could not make. */
 export function platesPerSide(total, base, plates = PLATES) {
-  if (!(total > 0) || base == null || total < base) return null;
+  if (!(total > 0) || total > 2000 || base == null || total < base) return null; // above 2000 kg it cannot be loaded on a bar, and the table below would explode
   const perSide = round2((total - base) / 2);
   // Fewest plates; on a tie the more even set (smaller biggest plate): 35 = 20 + 15 rather than 25 + 10. Units of 0.05 kg.
   const U = 20, target = Math.round(perSide * U), ps = plates.map((p) => Math.round(p * U));

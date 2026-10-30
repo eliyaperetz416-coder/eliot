@@ -1,5 +1,5 @@
 // Draft persistence helpers: pick the newest of two copies (IndexedDB vs localStorage mirror) and migrate old shapes.
-import { SCHEMA_VERSION } from './workout.mjs';
+import { SCHEMA_VERSION, saneSetValue } from './workout.mjs';
 
 export function migrateWorkout(w) {
   if (!w || typeof w !== 'object') return null;
@@ -14,6 +14,11 @@ export function migrateWorkout(w) {
     out.schemaVersion = 1;
   }
   out.entries ??= [];
+  // Heal absurd numbers saved before the limits existed (they froze the app on open).
+  out.entries = out.entries.map((e) => ({ ...e, sets: (e.sets ?? []).map((s) => {
+    const bad = (k) => s[k] != null && saneSetValue(k, Number(s[k])) == null;
+    return bad('weight') || bad('reps') ? { ...s, weight: bad('weight') ? null : s.weight, reps: bad('reps') ? null : s.reps } : s;
+  }) }));
   out.schemaVersion = SCHEMA_VERSION;
   return out;
 }

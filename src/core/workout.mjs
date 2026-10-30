@@ -80,10 +80,15 @@ export function setType(w, entryId, idx, type) {
   find(w, entryId).sets[idx].type = type;
 }
 
+/** Sanity limits for typed numbers. A slip like 9999999 kg must never reach the rating/plate maths (it froze the app once). */
+export const MAX_WEIGHT_KG = 1500;
+export const MAX_REPS = 20000; // also seconds / minutes x 60
+export const saneSetValue = (field, n) => (Number.isFinite(n) && n >= 0 && n <= (field === 'weight' ? MAX_WEIGHT_KG : MAX_REPS) ? n : null);
+
 export function setField(w, entryId, idx, field, value) {
   const s = find(w, entryId).sets[idx];
   const n = value === '' || value == null ? null : Number(String(value).replace(',', '.'));
-  s[field] = Number.isFinite(n) ? n : null;
+  s[field] = field === 'weight' || field === 'reps' ? saneSetValue(field, n) : (Number.isFinite(n) ? n : null);
   s.touched = true; // typed by the user (prefilled numbers from last time are not)
 }
 

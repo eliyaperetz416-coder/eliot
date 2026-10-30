@@ -50,8 +50,8 @@ export function historyDetailScreen(id) {
     if (tr && s.type !== 'warmup') info.push(`${formatNum(s.rating, 0)} · ${t(`tier.${tr.tier}`)}${tr.division ? ' ' + tr.division : ''}`);
     if (s.prAllTime) info.push(t('fb.pr.all')); else if (s.prWeekly) info.push(t('fb.pr.week')); else if (s.prFirst) info.push(t('fb.pr.first'));
     const field = (key, integer, label) => {
-      const el = h('input', { class: 'set-input', type: 'text', inputmode: integer ? 'numeric' : 'decimal', 'aria-label': label, dir: 'ltr', value: s[key] ?? '' });
-      el.addEventListener('input', () => { const n = el.value.trim() === '' ? null : Number(el.value.replace(',', '.')); s[key] = Number.isFinite(n) ? n : null; mark(); });
+      const el = h('input', { class: 'set-input', type: 'text', inputmode: integer ? 'numeric' : 'decimal', 'aria-label': label, dir: 'ltr', maxlength: integer ? 5 : 7, value: s[key] ?? '' });
+      el.addEventListener('input', () => { const n = el.value.trim() === '' ? null : Number(el.value.replace(',', '.')); s[key] = key === 'weight' || key === 'reps' ? W.saneSetValue(key, n) : (Number.isFinite(n) ? n : null); mark(); });
       return el;
     };
     const typeBtn = h('button', { class: `set-num type-${s.type}`, type: 'button', 'aria-label': t('settype.title'), onclick: () => {
