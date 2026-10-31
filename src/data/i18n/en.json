@@ -1099,5 +1099,9 @@
   "link.disconnect.body": "The summary is deleted from the server and Habit Coach can no longer read it. You can connect again any time, with a new code.",
   "link.disconnected": "Disconnected",
   "link.err.offline": "No internet connection. Try again in a moment.",
-  "link.err.server": "The server could not do it. Try again later."
+  "link.err.server": "The server could not do it. Try again later.",
+  "crash.title": "Something went wrong on this screen",
+  "crash.body": "Your data is safe. You can go back to Profile or save a backup.",
+  "crash.home": "Back to Profile",
+  "crash.backup": "Export backup"
 }

@@ -226,3 +226,7 @@ Zip is a small pixel-alien mascot made by Elia in the Quill repo (`packages/zip`
 
 ## v1.40.3: faster takeover
 - The rescue worker (`RESCUE` in `sw.js`) now takes over at once and fills its cache afterwards, so a frozen old app cannot be killed halfway through a long install. Until the cache is full, files come from the network. Remove `RESCUE` in the next release (OUR DESIGN).
+
+## v1.40.4: back to asking before an update; a crashing screen no longer leaves a black page
+- `RESCUE` in `sw.js` is off again: a new version waits and the "new version ready" toast asks first.
+- If a screen throws while it is drawn, the app shows a short message with "Back to Profile" and "Export backup" instead of a black page (OUR DESIGN). Strings: `crash.*`.

@@ -1,7 +1,7 @@
 import { DIR, LANGS, detectLanguage, setDictionaries, setLanguage, t } from './core/i18n.mjs';
 import { TIER_COLORS } from './core/ranks.mjs';
 import { buildScreens } from './ui/screens.js';
-import { tabBar, showToast, backLink } from './ui/components.js';
+import { tabBar, showToast, backLink, button } from './ui/components.js';
 import { loadSettings, requestPersistence, getSettings, updateSettings, onSettings } from './ui/storage.js';
 import { loadData, data } from './ui/data.js';
 import { initStore, store, saveProfile, subscribe, onAchievements } from './ui/store.js';
@@ -12,6 +12,8 @@ import { initCrew, onCrew, crew, startCrewWatcher } from './ui/crew-state.js';
 import { initLink } from './ui/link-state.js';
 import { installLock } from './ui/lock.js';
 import { showMascot } from './ui/mascot.js';
+import { exportBackup } from './ui/backup.js';
+import { h } from './ui/dom.js';
 
 const TABS = [
   { id: 'workout', icon: 'workout' }, { id: 'workouts', icon: 'bolt' }, { id: 'ranks', icon: 'ranks' }, { id: 'profile', icon: 'profile' },
@@ -66,7 +68,16 @@ function render() {
     return;
   }
   const { id, param } = route();
-  const el = screens[id](param);
+  let el;
+  try { el = screens[id](param); }
+  catch (err) { // a screen that crashes must never leave a black page: offer a way out and a backup (OUR DESIGN)
+    console.error(err);
+    el = h('main', { class: 'screen' },
+      h('h1', { class: 'display', text: t('crash.title') }), h('p', { class: 'row-sub', text: t('crash.body') }),
+      h('div', { class: 'stack' },
+        button({ label: t('crash.home'), block: true, onClick: () => { location.hash = '#/profile'; } }),
+        button({ label: t('crash.backup'), variant: 'secondary', block: true, onClick: () => exportBackup() })));
+  }
   dispose = el._dispose ?? null;
   app.replaceChildren(el);
   const tab = { exercises: 'workouts', exercise: 'workouts', custom: 'workouts', requests: 'workouts', routines: 'workouts', routine: 'workouts', plans: 'workouts', plan: 'workouts', schedule: 'workouts', history: 'profile', achievements: 'profile', crew: 'profile', settings: 'profile', calendar: 'profile', numbers: 'profile', result: 'workout', progress: 'ranks', ladder: 'ranks', weakest: 'ranks', card: 'ranks', shop: 'profile', model: 'profile' }[id] ?? id;
