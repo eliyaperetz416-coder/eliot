@@ -15,15 +15,8 @@
   <main>
     <h1 id="t">You're offline</h1>
     <p id="b">Demigod needs to load once with a connection. After that it works anywhere in the gym.</p>
-    <button id="r" onclick="location.href='./'">Try again</button>
+    <button id="r" type="button">Try again</button>
   </main>
-  <script>
-    if ((navigator.language || '').toLowerCase().startsWith('he')) {
-      document.documentElement.lang = 'he'; document.documentElement.dir = 'rtl';
-      t.textContent = 'אין חיבור';
-      b.textContent = 'צריך לטעון את Demigod פעם אחת עם אינטרנט. אחרי זה הוא עובד בכל מקום בחדר הכושר.';
-      r.textContent = 'ניסיון נוסף';
-    }
-  </script>
+  <script src="offline.js"></script>
 </body>
 </html>
