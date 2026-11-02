@@ -230,3 +230,7 @@ Zip is a small pixel-alien mascot made by Elia in the Quill repo (`packages/zip`
 ## v1.40.4: back to asking before an update; a crashing screen no longer leaves a black page
 - `RESCUE` in `sw.js` is off again: a new version waits and the "new version ready" toast asks first.
 - If a screen throws while it is drawn, the app shows a short message with "Back to Profile" and "Export backup" instead of a black page (OUR DESIGN). Strings: `crash.*`.
+
+## v1.40.5: security headers
+- `vercel.json` sends a Content-Security-Policy (scripts only from this site, connections only to this site and the Supabase project, no framing), X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy, HSTS and COOP. The offline page's inline script moved to `offline.js` (added to the precache list) so inline scripts can stay forbidden. If the app ever talks to a new outside host, add it to `connect-src` (OUR DESIGN).
+- Server side (Supabase, applied separately): `save_push` only accepts endpoints of real push services (Apple, Google, Mozilla, Microsoft), so the `notify` function can never be pointed at another address.
