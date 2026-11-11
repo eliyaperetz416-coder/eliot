@@ -254,3 +254,8 @@ Following the apple-design guide (OUR DESIGN, after Apple's WWDC talks; no Apple
 - **Modal for real:** while a sheet is open, the page, the tab bar and the rest timer are inert (they were reachable before); a lock screen keeps them locked.
 - **Accessibility modes:** "Increase contrast" gives stronger lines, brighter secondary text, a solid island and a filled active tab; "Reduce transparency" gives solid chrome; "Reduce motion" (system or in-app) closes sheets without a slide; the focus ring is thicker.
 - Not done: text that grows with the iPhone text-size setting (most sizes are fixed pixels; switching them all is a large change).
+
+## v1.43.0: stronger glass (Liquid-Glass-like)
+- Every floating layer (island, sheets, toasts, rest timer) uses one glass recipe: a very translucent tint, strong blur and saturation, a bright rim on top and a faint one below, a sheen across the upper half and a deep shadow. Sheets are thicker glass (more opaque) because they are bigger and carry text. The active tab is a small lens. Content cards stay solid (glass is for the floating layer, not content).
+- Soft colour fields sit behind the app (a fixed layer), because glass only reads as glass when colour moves under it. The dim behind a sheet is lighter so the glass shows what is behind.
+- "Reduce transparency" and "Increase contrast" turn all of it solid (and drop the colour fields for contrast). OUR DESIGN, after Apple's WWDC 2025 material; no Apple code or assets.

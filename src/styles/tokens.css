@@ -42,7 +42,9 @@
   /* Floating tab bar ("island"): it hovers above the bottom edge. --tabbar-space = everything a floating thing must clear. */
   --island-gap: max(12px, calc(var(--safe-b) - 6px));
   --tabbar-space: calc(var(--tabbar-h) + var(--island-gap));
-  --material: rgb(28 31 50 / .62);          /* translucent chrome */
+  --material: rgb(30 34 58 / .34);          /* translucent chrome: Liquid-Glass-like, lets colour through */
+  --material-thick: rgb(26 29 48 / .74);    /* bigger surfaces (sheets) read thicker: more opaque, still glass */
+  --glass-filter: blur(26px) saturate(2.1) brightness(1.06);
   --material-solid: #1b1e30;
   --material-edge: rgb(255 255 255 / .12);
   --spring: cubic-bezier(.32, .72, 0, 1);  /* iOS sheet curve: fast start, no overshoot */
@@ -58,9 +60,9 @@
 }
 /* Increase contrast (iOS setting): stronger lines and brighter secondary text. */
 @media (prefers-contrast: more) {
-  :root { --line: rgb(255 255 255 / .28); --text-dim: #d6d9e8; --text-mute: #b9bed4; --material: var(--material-solid); --material-edge: rgb(255 255 255 / .4); }
+  :root { --line: rgb(255 255 255 / .28); --text-dim: #d6d9e8; --text-mute: #b9bed4; --material: var(--material-solid); --material-thick: var(--material-solid); --material-edge: rgb(255 255 255 / .4); }
 }
 /* Reduce transparency (iOS setting): solid chrome instead of glass. */
 @media (prefers-reduced-transparency: reduce) {
-  :root { --material: var(--material-solid); }
+  :root { --material: var(--material-solid); --material-thick: var(--material-solid); }
 }
