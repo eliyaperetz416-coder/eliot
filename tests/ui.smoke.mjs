@@ -1542,6 +1542,38 @@ for (const lang of ['he', 'en']) {
   await ctx.close();
 }
 
+await check('start-up: a failed first request is retried; if it keeps failing there is a message and a button, not a black page', async () => {
+  const c1 = await browser.newContext({ serviceWorkers: 'block' });
+  const p1 = await c1.newPage(); let n = 0;
+  await p1.route('**/src/data/i18n/he.json', (r) => (n++ === 0 ? r.abort() : r.continue()));
+  await p1.goto(base); await p1.waitForSelector('html[data-ready="1"]', { timeout: 15000 });
+  assert.ok(n >= 2, 'the request was repeated');
+  await c1.close();
+  const c2 = await browser.newContext({ serviceWorkers: 'block' });
+  const p2 = await c2.newPage();
+  await p2.route('**/src/data/i18n/he.json', (r) => r.abort());
+  await p2.goto(base); await p2.waitForSelector('#app button.btn-primary', { timeout: 20000 });
+  assert.ok((await p2.textContent('#app')).includes('Try again'));
+  await c2.close();
+});
+
+await check('start-up guard: when the app script cannot load, the page reloads once, then shows a message and a button', async () => {
+  const c1 = await browser.newContext({ serviceWorkers: 'block' });
+  const p1 = await c1.newPage(); let n = 0;
+  await p1.route('**/src/main.js', (r) => (n++ === 0 ? r.abort() : r.continue()));
+  await p1.goto(base);
+  await p1.waitForSelector('html[data-ready="1"]', { timeout: 25000 });
+  assert.ok(n >= 2, 'reloaded and loaded the script again');
+  await c1.close();
+  const c2 = await browser.newContext({ serviceWorkers: 'block' });
+  const p2 = await c2.newPage();
+  await p2.route('**/src/main.js', (r) => r.abort());
+  await p2.goto(base);
+  await p2.waitForSelector('#app button', { timeout: 40000 });
+  assert.ok((await p2.textContent('#app')).includes('Try again'));
+  await c2.close();
+});
+
 await check('no console errors', async () => assert.deepEqual(errors, [], errors.slice(0, 5).join(' || ')));
 await browser.close();
 server.close();

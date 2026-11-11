@@ -9,7 +9,7 @@ const walk = (d) => readdirSync(d).flatMap((n) => {
   return statSync(p).isDirectory() ? walk(p) : [p];
 });
 const files = [
-  'index.html', 'offline.html', 'offline.js', 'manifest.webmanifest',
+  'index.html', 'boot-guard.js', 'offline.html', 'offline.js', 'manifest.webmanifest',
   ...walk(join(root, 'src')).map((p) => relative(root, p)),
   ...walk(join(root, 'assets/fonts')).filter((p) => p.endsWith('.woff2')).map((p) => relative(root, p)),
   ...walk(join(root, 'assets/icons')).map((p) => relative(root, p)),

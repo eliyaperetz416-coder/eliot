@@ -77,6 +77,6 @@ export function emblem({ tier = 'unranked', divisionIndex = 0, size = 96, label 
   wrap.className = `emblem emblem-${tier}`;
   wrap.style.setProperty('--em-glow', gg ? '#7df9ff' : base);
   wrap.style.width = `${size}px`;
-  wrap.innerHTML = `<svg viewBox="0 0 160 168" width="${size}" height="${size * 168 / 160}" role="img" aria-label="${label ?? tier}">${body}</svg>`;
+  wrap.innerHTML = `<svg viewBox="0 0 160 168" width="${size}" height="${size * 168 / 160}" role="img" aria-label="${String(label ?? tier).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)}">${body}</svg>`;
   return wrap;
 }

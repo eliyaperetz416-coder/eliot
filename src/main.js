@@ -167,4 +167,14 @@ function registerServiceWorker() {
 for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, (e) => e.preventDefault(), { passive: false });
 document.addEventListener('touchmove', (e) => { if (e.touches.length > 1 || (e.scale && e.scale !== 1)) e.preventDefault(); }, { passive: false });
 
-boot();
+/** A failed first request (bad network, a busy server) must never leave a black page: try again a few times, then say so (OUR DESIGN). */
+async function start() {
+  for (let i = 0; i < 4; i++) {
+    try { await boot(); return; } catch (err) { console.error(err); await new Promise((r) => setTimeout(r, 700 * (i + 1))); }
+  }
+  const retry = h('button', { class: 'btn btn-primary btn-block', type: 'button', onclick: () => location.reload(), text: 'נסה שוב / Try again' });
+  app.replaceChildren(h('main', { class: 'screen' }, h('h1', { class: 'display', text: 'Demigod' }),
+    h('p', { class: 'row-sub', text: 'לא הצלחנו לפתוח את האפליקציה. הנתונים שלך שמורים. בדוק חיבור ונסה שוב.' }),
+    h('p', { class: 'row-sub', text: "Couldn't open the app. Your data is safe. Check your connection and try again." }), retry));
+}
+start();

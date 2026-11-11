@@ -967,7 +967,7 @@
   "crew.err.offline": "No connection. Try again when you are online.",
   "crew.err.nick_taken": "That nickname is already used in this crew.",
   "crew.err.no_group": "No crew with this code.",
-  "crew.err.group_full": "The crew is full (8 people).",
+  "crew.err.group_full": "The crew is full (20 people).",
   "crew.err.already_member": "You are already in a crew.",
   "crew.err.not_member": "You are no longer in this crew.",
   "crew.err.too_fast": "Slow down a little.",

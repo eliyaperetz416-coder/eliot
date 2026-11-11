@@ -700,3 +700,9 @@ a.btn { text-decoration: none; }
 
 /* Zip the mascot: above the tab bar (20), below sheets and toasts (40+) */
 :root { --zip-z: 30; }
+
+/* Apple-style craft (OUR DESIGN): pressable things answer the finger at once, without changing their size (a shrinking button can drop a tap at its edge);
+   translucent chrome gets a solid fallback. */
+button.chip:active, .seg button:active, .tab:active { opacity: .65; }
+@media (prefers-reduced-transparency: reduce) { .tabbar { background: rgb(10 11 18); backdrop-filter: none; -webkit-backdrop-filter: none; } }
+@media (prefers-contrast: more) { .tabbar { background: rgb(10 11 18); backdrop-filter: none; -webkit-backdrop-filter: none; border-block-start-color: var(--text-dim); } }

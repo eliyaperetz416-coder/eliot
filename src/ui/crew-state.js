@@ -150,7 +150,9 @@ export async function syncPlan() {
 export function startCrewWatcher() {
   const tick = () => { if (document.visibilityState === 'visible' && crew.local) { fetchView().catch(() => {}); refreshUnread(); syncStats(); claimGifts(); } };
   document.addEventListener('visibilitychange', tick);
-  setInterval(tick, 60000);
+  // 50-70 s with a random spread, so many phones never ask the server in the same second (OUR DESIGN)
+  const loop = () => setTimeout(() => { tick(); loop(); }, 50000 + Math.random() * 20000);
+  loop();
 }
 
 /* ---------- notifications (Web Push) ---------- */

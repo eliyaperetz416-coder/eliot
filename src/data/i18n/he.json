@@ -981,7 +981,7 @@
   "crew.err.offline": "אין חיבור. נסה שוב כשיש אינטרנט.",
   "crew.err.nick_taken": "הכינוי הזה כבר בשימוש בקבוצה.",
   "crew.err.no_group": "אין קבוצה עם הקוד הזה.",
-  "crew.err.group_full": "הקבוצה מלאה (8 אנשים).",
+  "crew.err.group_full": "הקבוצה מלאה (20 אנשים).",
   "crew.err.already_member": "אתה כבר בקבוצה.",
   "crew.err.not_member": "אתה כבר לא בקבוצה הזאת.",
   "crew.err.too_fast": "לאט יותר.",

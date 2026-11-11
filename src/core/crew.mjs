@@ -3,7 +3,7 @@ import { tierFor } from './ranks.mjs';
 import { levelFromXp } from './game.mjs';
 import { dayNumber } from './streak.mjs';
 
-export const MAX_MEMBERS = 8;
+export const MAX_MEMBERS = 20;
 export const MAX_MESSAGE = 280;
 export const SORTS = ['rating', 'level', 'week', 'streak'];
 
@@ -103,7 +103,7 @@ export function errorKey(err) {
   return 'generic';
 }
 
-export const normalizeCode = (s) => String(s ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+export const normalizeCode = (s) => String(s ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8); // old crews have 6 characters, new and regenerated codes 8
 export const validNick = (s) => { const n = String(s ?? '').trim().replace(/\s+/g, ' '); return n.length >= 1 && n.length <= 24 ? n : null; };
 
 /** Unread = messages from other people newer than the last one you saw. */

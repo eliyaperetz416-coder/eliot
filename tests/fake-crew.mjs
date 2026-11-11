@@ -25,7 +25,7 @@ export function createFakeCrew() {
       if (byToken.has(p_token)) fail('already_member');
       const g = groups.get(String(p_code).trim().toUpperCase()) ?? fail('no_group');
       const nick = String(p_nick ?? '').trim(); if (!nick) fail('bad_nick');
-      if (g.members.filter((x) => x.active).length >= 8) fail('group_full');
+      if (g.members.filter((x) => x.active).length >= 20) fail('group_full');
       if (g.members.some((x) => x.nickname.toLowerCase() === nick.toLowerCase())) fail('nick_taken');
       const m = { id: `m${++memberSeq}`, nickname: nick, stats: {}, active: true }; g.members.push(m); byToken.set(p_token, { group: g, member: m });
       add(g, m, 'system', 'joined');
@@ -119,7 +119,7 @@ export function createFakeCrew() {
     },
     new_code({ p_token }) {
       const { group: g, member: m } = me(p_token); if (!m.leader) fail('not_leader');
-      groups.delete(g.code); g.code = Math.random().toString(36).slice(2, 8).toUpperCase().padEnd(6, 'Z'); groups.set(g.code, g); return g.code;
+      groups.delete(g.code); g.code = Math.random().toString(36).slice(2, 10).toUpperCase().padEnd(8, 'Z'); groups.set(g.code, g); return g.code;
     },
     save_push({ p_token }) { me(p_token); return null; },
     delete_push({ p_token }) { me(p_token); return null; },

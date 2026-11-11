@@ -38,7 +38,8 @@ test('error names, code and nickname cleanup', () => {
   assert.equal(errorKey(new Error('offline')), 'offline');
   assert.equal(errorKey(new TypeError('Failed to fetch')), 'offline');
   assert.equal(errorKey(new Error('???')), 'generic');
-  assert.equal(normalizeCode(' ab-c d23x9 '), 'ABCD23');
+  assert.equal(normalizeCode(' ab-c d23x9 '), 'ABCD23X9');
+  assert.equal(normalizeCode('ab23cd'), 'AB23CD'); // old 6-character codes still work
   assert.equal(validNick('  Dan   the  man '), 'Dan the man');
   assert.equal(validNick('   '), null);
   assert.equal(validNick('x'.repeat(25)), null);

@@ -156,7 +156,7 @@ export function crewScreen() {
       if (!n) return fail(t('crew.err.bad_nick'));
       btn.disabled = true;
       try {
-        if (formMode === 'join') { const c = normalizeCode(code.value); if (c.length !== 6) { btn.disabled = false; return fail(t('crew.err.no_group')); } await joinCrew(c, n); }
+        if (formMode === 'join') { const c = normalizeCode(code.value); if (c.length !== 6 && c.length !== 8) { btn.disabled = false; return fail(t('crew.err.no_group')); } await joinCrew(c, n); }
         else { if (!name.value.trim()) { btn.disabled = false; return fail(t('crew.err.bad_name')); } await createCrew(name.value.trim(), n); }
         showToast({ message: t('crew.welcome') });
         begin();
