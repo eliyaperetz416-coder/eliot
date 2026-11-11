@@ -76,27 +76,91 @@ export function tabBar({ tabs, current, badges = {} }) {
 }
 
 /* ---------- sheet ---------- */
+// OUR DESIGN, after Apple's fluid interfaces: the sheet comes up from the bottom edge and leaves the same way; it can be dragged
+// down by its grabber/title row, tracks the finger 1:1, resists when pulled up (rubber band), and on release uses the finger's
+// velocity to decide (projected end point) and to continue the motion. While a sheet is open everything behind it is inert.
+let openSheets = 0;
+const reducedMotion = () => document.documentElement.dataset.motion === 'reduce' || matchMedia('(prefers-reduced-motion: reduce)').matches;
+const behind = () => ['app', 'nav-root', 'rest-root'].map((id) => document.getElementById(id)).filter(Boolean);
+const rubberband = (over, dim, c = 0.55) => (over * dim * c) / (dim + c * Math.abs(over));
+const project = (v, d = 0.99) => ((v / 1000) * d) / (1 - d); // v in px/s; 0.99 = Apple's snappier rate (0.998 is for long scrolls)
+
 export function openSheet({ title, content, tall = false }) {
   const root = document.getElementById('overlay-root');
-  const app = document.getElementById('app');
   const prevFocus = document.activeElement;
-  const close = () => {
-    ov.remove(); app.inert = false; document.removeEventListener('keydown', onKey);
-    prevFocus?.focus?.();
-  };
+  let closed = false;
+  const closeBtn = h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('common.close'), onclick: () => close() }, icon('close'));
+  const grab = h('div', { class: 'sheet-grab sheet-drag' });
+  const head = h('div', { class: 'sheet-head sheet-drag' }, h('h2', { text: title }), closeBtn);
+  const bg = h('div', { class: 'overlay-bg', onclick: () => close() });
+  const sheet = h('div', { class: `sheet${tall ? ' sheet-tall' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': title }, grab, head, content);
+  const ov = h('div', { class: 'overlay' }, bg, sheet);
   const onKey = (e) => { if (e.key === 'Escape') close(); };
-  const closeBtn = h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('common.close'), onclick: close }, icon('close'));
-  const ov = h('div', { class: 'overlay' },
-    h('div', { class: 'overlay-bg', onclick: close }),
-    h('div', { class: `sheet${tall ? ' sheet-tall' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
-      h('div', { class: 'sheet-grab' }),
-      h('div', { class: 'sheet-head' }, h('h2', { text: title }), closeBtn),
-      content));
+
+  function close(velocity = 0) {
+    if (closed) return;
+    closed = true;
+    document.removeEventListener('keydown', onKey);
+    openSheets = Math.max(0, openSheets - 1);
+    if (!openSheets && !document.querySelector('.app-lock')) for (const el of behind()) el.inert = false; // a lock screen keeps them locked
+    prevFocus?.focus?.();
+    // leaves the DOM's `.sheet` / `.overlay` names at once, so nothing can talk to a sheet that is on its way out
+    sheet.classList.replace('sheet', 'sheet-exit'); sheet.removeAttribute('role'); ov.classList.replace('overlay', 'overlay-exit'); ov.inert = true;
+    for (const el of sheet.querySelectorAll('[id]')) el.removeAttribute('id'); // ids stay unique if the same sheet opens again at once
+    if (reducedMotion()) { ov.remove(); return; }
+    const y = currentY();
+    const dist = Math.max(1, sheet.offsetHeight + 40 - y);
+    const ms = velocity > 0 ? Math.min(320, Math.max(140, (dist / velocity) * 1000 * 1.6)) : 280; // continue at the finger's speed
+    sheet.style.animation = 'none';
+    sheet.style.transform = `translateY(${y}px)`;
+    sheet.getBoundingClientRect(); // start from where it is now (presentation value), never from the target
+    sheet.style.transition = `transform ${ms}ms var(--spring)`;
+    sheet.style.transform = `translateY(${sheet.offsetHeight + 40}px)`;
+    setTimeout(() => ov.remove(), ms + 40);
+  }
+  const currentY = () => { const m = new DOMMatrixReadOnly(getComputedStyle(sheet).transform); return Number.isFinite(m.m42) ? m.m42 : 0; };
+
+  // drag to dismiss
+  let drag = null;
+  const onDown = (e) => {
+    if (closed || e.button > 0 || e.target.closest('button')) return;
+    const y0 = currentY();
+    sheet.style.animation = 'none'; sheet.style.transition = 'none'; sheet.style.transform = `translateY(${y0}px)`;
+    drag = { id: e.pointerId, startY: e.clientY - y0, hist: [{ y: e.clientY, t: e.timeStamp }] };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  };
+  const onMove = (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const raw = e.clientY - drag.startY;
+    const y = raw >= 0 ? raw : rubberband(raw, sheet.offsetHeight); // pulling up resists instead of stopping dead
+    sheet.style.transform = `translateY(${y}px)`;
+    bg.style.opacity = String(Math.max(0, 1 - Math.max(0, y) / sheet.offsetHeight));
+    drag.hist.push({ y: e.clientY, t: e.timeStamp }); if (drag.hist.length > 6) drag.hist.shift();
+  };
+  const onUp = (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const recent = drag.hist.filter((p) => e.timeStamp - p.t <= 100); // only the last 100 ms: a pause before letting go means no momentum
+    const h0 = recent[0], h1 = recent[recent.length - 1];
+    const v = h0 && h1 && h1.t > h0.t ? ((h1.y - h0.y) / (h1.t - h0.t)) * 1000 : 0; // px/s, down is positive
+    drag = null;
+    const y = currentY();
+    if (y + project(v) > sheet.offsetHeight * 0.45 || v > 1100) { close(Math.max(v, 0)); return; }
+    sheet.style.transition = 'transform 360ms var(--spring)'; sheet.style.transform = 'translateY(0)';
+    bg.style.transition = 'opacity 360ms var(--spring)'; bg.style.opacity = '1';
+  };
+  for (const el of [grab, head]) {
+    el.addEventListener('pointerdown', onDown);
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', onUp);
+    el.addEventListener('pointercancel', onUp);
+  }
+
   root.append(ov);
-  app.inert = true;
+  openSheets += 1;
+  for (const el of behind()) el.inert = true;
   document.addEventListener('keydown', onKey);
   if (!tall) closeBtn.focus();
-  return { close };
+  return { close: () => close() };
 }
 
 /* ---------- toast ---------- */
