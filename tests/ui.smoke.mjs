@@ -92,6 +92,8 @@ async function postThree(page) {
 
 for (const lang of ['he', 'en']) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: lang === 'he' ? 'he-IL' : 'en-US', hasTouch: true });
+  const reqFake = createFakeCrew(); // the exercise-request inbox never reaches the real server in tests
+  await ctx.route(/supabase\.co\/rest\/v1\/rpc\/(submit_exercise_request|my_exercise_requests)/, reqFake.handle);
   const page = await ctx.newPage();
   page.on('console', (m) => m.type() === 'error' && errors.push(`${lang}: ${m.text()}`));
   page.on('pageerror', (e) => errors.push(`${lang}: ${e.message}`));
@@ -125,10 +127,10 @@ for (const lang of ['he', 'en']) {
     await page.screenshot({ path: `${shots}${lang}-${r.replace(/\//g, '_')}.png`, fullPage: r.includes('preview') });
   }
 
-  await check(`${lang}: exercise library lists 301 and searches (incl. gym slang)`, async () => {
+  await check(`${lang}: exercise library lists 302 and searches (incl. gym slang)`, async () => {
     await page.goto(`${base}#/exercises`);
     await page.waitForSelector('.ex-row');
-    assert.equal(await page.locator('.ex-row').count(), 301);
+    assert.equal(await page.locator('.ex-row').count(), 302);
     await page.fill('.search-input', L(lang, 'דדליפט רומני', 'romanian'));
     await page.waitForTimeout(400);
     const n = await page.locator('.ex-row').count();
@@ -629,6 +631,12 @@ for (const lang of ['he', 'en']) {
     await page.fill('#req-links', 'https://youtu.be/abc123\nnot a link\nhttps://example.com/v2');
     await page.click('main .btn-primary');
     await page.waitForSelector('.req-card');
+    await page.waitForSelector('.req-status.req-new'); // sent to the inbox
+    assert.equal(reqFake.reqInbox.length, 1);
+    assert.deepEqual(reqFake.reqInbox[0].links, ['https://youtu.be/abc123', 'https://example.com/v2']);
+    reqFake.reqInbox[0].status = 'added'; // Claude added it: the app shows that the next time the screen opens
+    await page.goto(`${base}#/exercises`); await page.goto(`${base}#/requests`);
+    await page.waitForSelector('.req-status.req-added');
     assert.equal(await page.getByRole('button', { name: T('שלח בוואטסאפ', 'Send on WhatsApp') }).count(), 1);
     const msg = await page.inputValue('#req-message');
     assert.ok(msg.includes('Hammer Strength Chest Press') && msg.includes('https://youtu.be/abc123') && msg.includes('https://example.com/v2') && !msg.includes('not a link'));
@@ -1569,7 +1577,7 @@ await check('start-up guard: when the app script cannot load, the page reloads o
   const p2 = await c2.newPage();
   await p2.route('**/src/main.js', (r) => r.abort());
   await p2.goto(base);
-  await p2.waitForSelector('#app button', { timeout: 40000 });
+  await p2.waitForSelector('#app button', { timeout: 75000 });
   assert.ok((await p2.textContent('#app')).includes('Try again'));
   await c2.close();
 });

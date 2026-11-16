@@ -7,6 +7,7 @@ import { buildRequest, requestsMessage } from '../core/requests.mjs';
 import { uid } from '../core/workout.mjs';
 import { formatDate } from './format.js';
 import { shareViaWhatsApp } from './share.js';
+import { sendPendingRequests, refreshRequestStatus } from './request-state.js';
 
 export function requestsScreen() {
   const root = h('main', { class: 'screen' });
@@ -38,14 +39,18 @@ export function requestsScreen() {
             if (!r.ok) { draw(); return; }
             await saveRequests([...store.requests, r.value]);
             form.name = ''; form.linksText = ''; form.notes = ''; attempted = false;
-            showToast({ message: t('req.added') }); draw();
+            draw();
+            const res2 = await sendPendingRequests();
+            showToast({ message: res2.sent ? t('req.sent') : res2.error === 'too_many' ? t('req.err.too_many') : t('req.saved.offline') }); draw();
           } }))),
       store.requests.length ? h('div', { class: 'section-label', text: t('req.list', { n: store.requests.length }) }) : null,
       ...store.requests.map((r) => h('section', { class: 'card req-card' },
-        h('div', { class: 'row' }, h('span', { class: 'row-main' }, h('div', { class: 'row-title', text: r.name }), h('div', { class: 'row-sub', text: `${formatDate(r.createdMs)} · ${t('req.videos', { n: r.links.length })}` })),
+        h('div', { class: 'row' }, h('span', { class: 'row-main' }, h('div', { class: 'row-title', text: r.name }), h('div', { class: 'row-sub', text: `${formatDate(r.createdMs)} · ${t('req.videos', { n: r.links.length })}` }),
+            h('span', { class: `chip req-status req-${statusOf(r)}`, text: t(`req.status.${statusOf(r)}`) }),
+            r.reply ? h('div', { class: 'row-sub', text: r.reply }) : null),
           h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('req.delete'), onclick: async () => { await saveRequests(store.requests.filter((x) => x.id !== r.id)); draw(); } }, icon('trash'))))),
       store.requests.length ? h('div', { class: 'stack', style: 'padding-block-start:12px' },
-        h('div', { class: 'section-label', text: t('req.message') }), out,
+        h('div', { class: 'section-label', text: t('req.other') }), out,
         button({ label: t('req.whatsapp'), icon: 'share', block: true, onClick: async () => { const r = await shareViaWhatsApp(msg); if (r === 'copied') showToast({ message: t('req.copied') }); } }),
         button({ label: t('req.copy'), icon: 'share', variant: 'secondary', block: true, onClick: async () => {
           try { await navigator.clipboard.writeText(msg); showToast({ message: t('req.copied') }); } catch { out.focus(); out.select(); showToast({ message: t('req.copyManual') }); }
@@ -53,5 +58,8 @@ export function requestsScreen() {
         h('p', { class: 'row-sub', text: t('req.next') })) : null);
   }
   draw();
+  // send what is still waiting and pull the latest status (added / not added), then redraw
+  sendPendingRequests().then(refreshRequestStatus).then(() => { if (root.isConnected) draw(); }).catch(() => {});
   return root;
 }
+const statusOf = (r) => (!r.sentId ? 'pending' : r.status === 'added' ? 'added' : r.status === 'rejected' ? 'rejected' : 'new');

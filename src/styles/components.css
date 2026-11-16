@@ -745,3 +745,8 @@ button.chip:active, .seg button:active, .tab:active { opacity: .65; }
   .tabbar::after { display: none; }
   .tab[aria-current="page"]::before { background: var(--accent); box-shadow: none; } .tab[aria-current="page"] { color: var(--accent-ink); }
 }
+
+/* exercise request status (OUR DESIGN) */
+.req-status { justify-self: start; margin-block-start: 4px; }
+.req-added { background: rgb(79 227 160 / .14); border-color: rgb(79 227 160 / .5); color: var(--ok); }
+.req-rejected { background: rgb(255 138 61 / .14); border-color: rgb(255 138 61 / .5); color: #ffb685; }

@@ -169,8 +169,8 @@ document.addEventListener('touchmove', (e) => { if (e.touches.length > 1 || (e.s
 
 /** A failed first request (bad network, a busy server) must never leave a black page: try again a few times, then say so (OUR DESIGN). */
 async function start() {
-  for (let i = 0; i < 4; i++) {
-    try { await boot(); return; } catch (err) { console.error(err); await new Promise((r) => setTimeout(r, 700 * (i + 1))); }
+  for (let i = 0; i < 3; i++) { // about 3 s in all, well before boot-guard.js (9 s) would reload the page
+    try { await boot(); return; } catch (err) { console.error(err); await new Promise((r) => setTimeout(r, 500 * (i + 1))); }
   }
   const retry = h('button', { class: 'btn btn-primary btn-block', type: 'button', onclick: () => location.reload(), text: 'נסה שוב / Try again' });
   app.replaceChildren(h('main', { class: 'screen' }, h('h1', { class: 'display', text: 'Demigod' }),

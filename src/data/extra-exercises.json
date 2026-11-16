@@ -33,6 +33,39 @@
       "family": "abs-floor",
       "R": 117.0,
       "bwFactor": 0.3
+    },
+    {
+      "id": "bayesian-cable-curl",
+      "nameEn": "Bayesian Cable Curl",
+      "nameHe": "כפיפת בייסיאן בכבל",
+      "equipment": "cable",
+      "primaryMuscles": [
+        "biceps"
+      ],
+      "secondaryMuscles": [
+        "forearm"
+      ],
+      "muscleGroup": "biceps",
+      "ranked": true,
+      "type": "weight",
+      "instructionsEn": [
+        "Set a pulley at its lowest point and attach a single handle. Stand with your back to the machine and hold the handle in one hand, palm facing forward.",
+        "Take a step or two forward in a split stance until the cable pulls your arm back behind your body. Your upper arm points slightly behind your torso: this is the stretched start.",
+        "Curl the handle up and forward by bending only at the elbow. Keep the elbow back; do not let it swing forward to help.",
+        "Squeeze at the top, then lower slowly all the way back to the full stretch behind you.",
+        "Finish all reps on one arm, then switch. Type the weight of the cable stack for one arm."
+      ],
+      "instructionsHe": [
+        "מכוונים את הכבל לנקודה הנמוכה ומחברים ידית אחת. עומדים עם הגב למכונה ואוחזים בידית ביד אחת, כף היד פונה קדימה.",
+        "צועדים צעד או שניים קדימה בעמידת פיסוק, עד שהכבל מושך את היד אחורה מאחורי הגוף. הזרוע העליונה מעט מאחורי הגו: זו עמדת המתיחה.",
+        "מכופפים את המרפק ומרימים את הידית קדימה ולמעלה. המרפק נשאר מאחור ולא נזרק קדימה כדי לעזור.",
+        "מכווצים למעלה, ואז מורידים לאט עד המתיחה המלאה מאחור.",
+        "מסיימים את כל החזרות ביד אחת ועוברים לשנייה. רושמים את משקל הערימה של יד אחת."
+      ],
+      "image": "",
+      "image2": "",
+      "family": "curl-cable",
+      "R": 45
     }
   ],
   "aliases": {
@@ -60,6 +93,16 @@
       "hollow body",
       "hollow hold",
       "כפיפות הולובאדי"
+    ],
+    "bayesian-cable-curl": [
+      "בייסיאן",
+      "ביאסיאן",
+      "בייזיאן",
+      "כפיפת בייסיאן",
+      "bayesian",
+      "bayesian curl",
+      "bayesian curls",
+      "behind the body cable curl"
     ]
   }
 }

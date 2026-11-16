@@ -1,5 +1,6 @@
 // An in-memory stand-in for the crew database (same rules as the SQL functions) so UI tests do not need the network.
 export function createFakeCrew() {
+  const reqInbox = [];
   const groups = new Map(); // code -> { name, members: [] , messages: [] }
   const byToken = new Map(); // token -> { group, member }
   let msgId = 0;
@@ -123,6 +124,15 @@ export function createFakeCrew() {
     },
     save_push({ p_token }) { me(p_token); return null; },
     delete_push({ p_token }) { me(p_token); return null; },
+    // the exercise-request inbox (not crew, but on the same server)
+    submit_exercise_request({ p_device, p_name, p_links }) {
+      if (!p_device || String(p_device).length < 32) fail('bad_token');
+      if (!String(p_name ?? '').trim()) fail('bad_name');
+      const id = reqInbox.length + 1;
+      reqInbox.push({ id, device: p_device, name: String(p_name).trim(), links: (p_links ?? []).filter((x) => /^https:\/\//.test(x)), status: 'new', reply: '' });
+      return id;
+    },
+    my_exercise_requests({ p_device }) { return reqInbox.filter((r) => r.device === p_device).map(({ id, status, reply }) => ({ id, status, reply })); },
   };
   const calls = [];
   async function handle(route) {
@@ -139,5 +149,5 @@ export function createFakeCrew() {
       return route.fulfill({ status: 400, headers, body: JSON.stringify({ code: 'P0001', message: e.message }) });
     }
   }
-  return { handle, calls, groups, links, OWNER_KEY, install: (ctx) => ctx.route(/supabase\.co\/rest\/v1\/rpc\//, handle) };
+  return { handle, calls, groups, links, reqInbox, OWNER_KEY, install: (ctx) => ctx.route(/supabase\.co\/rest\/v1\/rpc\//, handle) };
 }

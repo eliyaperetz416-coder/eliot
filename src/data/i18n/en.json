@@ -831,7 +831,7 @@
   "missing.ask.sub": "Send the name and videos. It gets researched and added in an update.",
   "req.title": "Request an exercise",
   "req.intro": "Missing an exercise? Write its name and add one or more video links showing how it is done.",
-  "req.honest": "There is no AI inside the app. Copy the request and send it to Claude in the chat. It researches the exercise and adds it to the library in the next update, with muscles, steps and a rank curve. Until then you can use \"Create it myself\".",
+  "req.honest": "Your request goes to Demigod's request inbox. Claude goes through it when Elia asks, researches the exercise and adds it to the library in the next update, with muscles, steps and a rank curve. You can see the status here. Until then you can use \"Create it myself\".",
   "req.name": "Exercise name",
   "req.name.ph": "For example: Hammer Strength Chest Press",
   "req.links": "Video links (optional)",
@@ -1103,5 +1103,13 @@
   "crash.title": "Something went wrong on this screen",
   "crash.body": "Your data is safe. You can go back to Profile or save a backup.",
   "crash.home": "Back to Profile",
-  "crash.backup": "Export backup"
+  "crash.backup": "Export backup",
+  "req.sent": "Request sent to the inbox",
+  "req.saved.offline": "Saved on your phone; it will be sent when you are online",
+  "req.err.too_many": "You sent many requests today. It is saved and will be sent tomorrow.",
+  "req.status.pending": "Not sent yet",
+  "req.status.new": "Sent, waiting",
+  "req.status.added": "Added to the library ✓",
+  "req.status.rejected": "Not added",
+  "req.other": "Another way: a message to Claude"
 }
