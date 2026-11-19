@@ -2,7 +2,7 @@
 // A day can hold several items (for example basketball and a strength workout). Pure: no DOM, no storage (see src/ui/schedule.js).
 
 export const ACTIVITIES = Object.freeze(['basketball', 'football', 'running', 'swimming', 'cycling', 'walking', 'martial', 'yoga', 'other']);
-export const KINDS = Object.freeze(['workout', 'rest', 'activity']);
+export const KINDS = Object.freeze(['workout', 'rest', 'activity', 'wod']);
 export const MAX_PER_DAY = 4;
 export const EMPTY_SCHEDULE = Object.freeze({ days: {}, done: {} });
 
@@ -18,6 +18,11 @@ function cleanEntry(e, fallbackId) {
   const id = typeof e.id === 'string' && ID.test(e.id) ? e.id : fallbackId;
   if (e.kind === 'rest') return { id, kind: 'rest' };
   if (e.kind === 'workout') return { id, kind: 'workout', ref: typeof e.ref === 'string' && e.ref ? e.ref : 'free' };
+  if (e.kind === 'wod') { // a benchmark workout (Cindy, Fran...): ref = its id, name kept for the crew plan (v1.46)
+    if (typeof e.ref !== 'string' || !/^[a-z0-9-]{1,30}$/.test(e.ref)) return null;
+    const name = String(e.name ?? '').trim().slice(0, 30);
+    return { id, kind: 'wod', ref: e.ref, ...(name ? { name } : {}) };
+  }
   const type = ACTIVITIES.includes(e.type) ? e.type : 'other';
   const label = String(e.label ?? '').trim().slice(0, 30);
   return { id, kind: 'activity', type, ...(label ? { label } : {}) };
@@ -25,7 +30,7 @@ function cleanEntry(e, fallbackId) {
 
 /**
  * Keeps only valid entries. days[weekday] is a list of up to 4 items: { id, kind: 'workout', ref } (ref = a saved workout id, 'plan' or 'free'),
- * { id, kind: 'rest' } (alone on its day) or { id, kind: 'activity', type, label? }. Older single-entry days are upgraded.
+ * { id, kind: 'rest' } (alone on its day), { id, kind: 'activity', type, label? } or { id, kind: 'wod', ref, name? }. Older single-entry days are upgraded.
  * done: { 'YYYY-MM-DD|<item id>': true } (an older plain 'YYYY-MM-DD' key means every activity that day).
  */
 export function cleanSchedule(raw) {

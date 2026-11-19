@@ -142,6 +142,7 @@ export function planPayload({ schedule, routines, workouts, todayKey, planNext =
     days[d] = items.map((e) => {
       if (e.kind === 'rest') return { k: 'rest' };
       if (e.kind === 'activity') return { k: 'activity', n: e.label || e.type };
+      if (e.kind === 'wod') return { k: 'activity', n: e.name || e.ref }; // shown to friends like an activity: the workout's name only
       const r = routines.find((x) => x.id === e.ref);
       const x = e.ref === 'plan' ? list(planNext) : list(r?.entries);
       return { k: 'workout', n: r?.name ?? '', ...(x.length ? { x } : {}) };

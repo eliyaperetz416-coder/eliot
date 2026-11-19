@@ -82,3 +82,18 @@ test('WODs add rank points: 5 each and 5 more for a personal best, last 28 days,
   assert.equal(wodBonus(Array.from({ length: 10 }, (_, i) => r(i, true)), now).points, PARTS.WOD_MAX);
   assert.equal(wodBonus([{ id: 'x', endedMs: now, entries: [] }], now).points, 0, 'normal workouts do not count');
 });
+
+test('a WOD result has a date key (calendar, "done today") and a WOD can be planned in the week', async () => {
+  const { dateKey } = await import('../src/core/workout.mjs');
+  const S = await import('../src/core/schedule.mjs');
+  const w = buildWodWorkout({ id: 'd', wod: byId.cindy, division: 'rx', score: { type: 'rounds', rounds: 10, reps: 0 }, startedMs: Date.UTC(2026, 10, 18, 9), endedMs: Date.UTC(2026, 10, 18, 9, 20) });
+  assert.equal(w.dateKey, dateKey(Date.UTC(2026, 10, 18, 9)));
+  let s = S.addEntry(S.EMPTY_SCHEDULE, 2, { kind: 'wod', ref: 'fran', name: 'Fran' }, 'w1');
+  assert.deepEqual(s.days[2], [{ id: 'w1', kind: 'wod', ref: 'fran', name: 'Fran' }]);
+  s = S.addEntry(s, 2, { kind: 'activity', type: 'running' }, 'a1');
+  assert.equal(s.days[2].length, 2, 'a WOD and an activity on one day');
+  assert.equal(S.addEntry(S.EMPTY_SCHEDULE, 3, { kind: 'wod', ref: '<script>' }, 'x').days[3], undefined, 'a bad id is dropped');
+  const { planPayload } = await import('../src/core/crew.mjs');
+  const p = planPayload({ schedule: s, routines: [], workouts: [], todayKey: '2026-11-18' });
+  assert.deepEqual(p.days[2][0], { k: 'activity', n: 'Fran' }, 'friends see only the name');
+});

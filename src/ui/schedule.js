@@ -7,6 +7,8 @@ import { store, saveSchedule } from './store.js';
 import { ACTIVITIES, MAX_PER_DAY, addEntry, removeEntry, clearDay } from '../core/schedule.mjs';
 import { activePlan } from './routines.js';
 import { syncPlan } from './crew-state.js';
+import { data } from './data.js';
+import { formatLine } from './wods.js';
 
 const weekdayName = (d) => new Intl.DateTimeFormat(getLanguage() === 'he' ? 'he-IL' : 'en-GB', { weekday: 'long', timeZone: 'UTC' }).format(Date.UTC(2026, 9, 11 + d)); // 2026-10-11 is a Sunday
 
@@ -14,6 +16,7 @@ const weekdayName = (d) => new Intl.DateTimeFormat(getLanguage() === 'he' ? 'he-
 export function entryText(e) {
   if (e.kind === 'rest') return t('sched.rest');
   if (e.kind === 'activity') return e.label || t(`sched.act.${e.type}`);
+  if (e.kind === 'wod') return data().wods?.wods?.find((w) => w.id === e.ref)?.name ?? e.name ?? e.ref;
   if (e.ref === 'plan') return t('sched.plan');
   if (e.ref === 'free') return t('sched.free');
   const r = store.routines.find((x) => x.id === e.ref);
@@ -50,6 +53,9 @@ export function scheduleScreen() {
         full ? h('p', { class: 'row-sub', text: t('sched.full', { n: MAX_PER_DAY }) }) : h('div', { class: 'stack' },
           h('div', { class: 'section-label', text: t('sched.add') }),
           h('div', { class: 'section-label', text: t('sched.kind.workout') }), list_(workouts),
+          h('div', { class: 'section-label', text: t('sched.kind.wod') }),
+          h('details', { class: 'sched-wods' }, h('summary', { class: 'row', text: t('sched.wods.open', { n: data().wods?.wods?.length ?? 0 }) }),
+            list_((data().wods?.wods ?? []).map((w) => row(w.name, formatLine(w), w.kind === 'hero' ? 'shield' : 'flame', () => add({ kind: 'wod', ref: w.id, name: w.name }))))),
           h('div', { class: 'section-label', text: t('sched.kind.activity') }),
           h('div', { class: 'chips-wrap' }, ACTIVITIES.map((a) => h('button', { class: 'chip chip-select', type: 'button', onclick: () => add({ kind: 'activity', type: a, label: label.value }) }, t(`sched.act.${a}`)))),
           h('div', { class: 'field', style: 'padding-block-start:8px' }, h('label', { text: t('sched.label') }), h('div', { class: 'field-box' }, label), h('p', { class: 'row-sub', text: t('sched.label.hint') })),
@@ -69,7 +75,7 @@ export function scheduleScreen() {
       h('div', { class: 'list sched-list', style: 'margin-block-start:12px' }, order.map((d) => {
         const list = store.schedule.days[d] ?? [];
         return h('button', { class: `row sched-row${d === today ? ' today' : ''}`, type: 'button', onclick: () => pick(d) },
-          h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: weekdayName(d) }), h('span', { class: `row-sub sched-${list.length ? (list.some((e) => e.kind === 'activity') ? 'activity' : list[0].kind) : 'none'}`, text: planText(list) })),
+          h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: weekdayName(d) }), h('span', { class: `row-sub sched-${list.length ? (list.some((e) => e.kind === 'activity' || e.kind === 'wod') ? 'activity' : list[0].kind) : 'none'}`, text: planText(list) })),
           icon('chevron', 'chev'));
       })));
   }

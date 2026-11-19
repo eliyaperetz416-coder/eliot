@@ -221,7 +221,7 @@
   "model.remove": "Remove role model",
   "model.removed": "Removed",
   "sched.title": "Plan my week",
-  "sched.intro": "For each day choose a strength workout, rest, or another activity like basketball. The Today screen shows what is planned.",
+  "sched.intro": "For each day choose a strength workout, a benchmark workout (like Cindy or Fran), rest, or another activity like basketball. The Today screen shows what is planned.",
   "sched.none": "Not planned",
   "sched.rest": "Rest",
   "sched.rest.sub": "Recovery day",
@@ -1196,5 +1196,8 @@
   "wod.scale.pushups": "Push-ups: from the knees or hands on a bench.",
   "wod.scale.run": "Run: half the distance, or row/bike for the same time.",
   "wod.scale.squat-snatch": "Snatch: lighter, or power snatch.",
-  "wod.scale.squat-clean": "Clean: lighter, or power clean."
+  "wod.scale.squat-clean": "Clean: lighter, or power clean.",
+  "sched.kind.wod": "Benchmark workout",
+  "sched.wods.open": "Choose from {n} workouts (Cindy, Fran, Murph...)",
+  "home.sched.wodDone": "Done today ✓ · do it again"
 }

@@ -273,3 +273,9 @@ Following the apple-design guide (OUR DESIGN, after Apple's WWDC talks; no Apple
 - **Rank:** a new bonus part: 5 LP for each WOD in the last 28 days and 5 more for a personal best, at most 40 (`MAX_BONUS` 339 -> 379).
 - **18 new exercises** in the extra library (no photos yet, unranked): air squat, thruster, wall ball, kettlebell swing, box jump, burpee, double-under, run, handstand push-up, pistol, ring dip, squat clean, clean and jerk, squat snatch, power snatch, muscle-up, knees-to-elbows, push jerk.
 - **Checks:** an accessibility sweep of 30 screens in both languages (names for every control, labels for every input, alt text, one h1, a main landmark, lang/dir, unique ids) found one problem, fixed: rank emblems reused the gradient id "GG"; each emblem now has its own. Security: workout text is static and shown as text only; notes are cut to 500 characters; scores are range-checked.
+
+## v1.46.0: benchmark workouts in "plan my week"
+- A day in the weekly plan can hold a benchmark workout (WOD): the day sheet has a "Benchmark workout" section with the 29 workouts (folded, so the sheet stays short). It sits next to strength workouts and activities (up to 4 items a day; rest still replaces everything).
+- On the Today screen a planned WOD shows with a Start button that opens its timer; once you saved a result for it that day it says "done today" (you can still do it again).
+- Friends in the crew see it like an activity: only the workout's name. Schedule entries are checked: a WOD entry must have a valid id (`[a-z0-9-]`, at most 30) or it is dropped.
+- WOD results now carry the same day key as other workouts (`dateKey`), so calendars and "done today" read them the same way.

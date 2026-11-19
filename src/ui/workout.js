@@ -108,8 +108,15 @@ function scheduleCard() {
       const done = isDone(store.schedule, key, e.id);
       return h('div', { class: 'sched-item-home' },
         h('div', { class: 'row-title', text: planText([e]) }),
+        e.kind === 'wod' ? wodTodayButton(e, key) : null,
         e.kind === 'activity' ? button({ label: done ? t('home.sched.undo') : t('home.sched.done'), variant: done ? 'secondary' : 'primary', block: true, onClick: async () => { await saveSchedule(markDone(store.schedule, key, e.id, !done)); syncPlan(); window.dispatchEvent(new HashChangeEvent('hashchange')); } }) : null);
     }));
+}
+
+/** A planned benchmark workout on the home card: start it, or see it was done today (a saved result counts). */
+function wodTodayButton(e, key) {
+  const done = store.workouts.some((w) => w.wod?.id === e.ref && w.dateKey === key);
+  return button({ label: done ? t('home.sched.wodDone') : t('wod.start'), icon: 'bolt', variant: done ? 'secondary' : 'primary', block: true, onClick: () => { location.hash = `#/wod/${e.ref}`; } });
 }
 
 /** One calm card: the days of this week, and how many you trained. Tap it for the calendar. */
@@ -121,7 +128,7 @@ function weekCard() {
   const label = (k) => new Intl.DateTimeFormat(getLanguage() === 'he' ? 'he-IL' : 'en-GB', { weekday: 'short', timeZone: 'UTC' }).format(Date.UTC(+k.slice(0, 4), +k.slice(5, 7) - 1, +k.slice(8, 10)));
   return h('a', { class: 'card week-card', href: '#/calendar', 'aria-label': t('cal.title') },
     h('div', { class: 'week-top' }, h('b', { text: t('home.week') }), h('span', { class: 'row-sub', text: t('home.week.count', { n: done }) })),
-    h('div', { class: 'week-days' }, keys.map((k) => { const pl = planFor(store.schedule, k); return h('span', { class: `week-day${days.has(k) || dayDone(store.schedule, k) ? ' on' : ''}${k === today ? ' today' : ''}${pl.length && pl.every((e) => e.kind === 'rest') ? ' planned-rest' : ''}${pl.some((e) => e.kind === 'activity') ? ' planned-act' : ''}` }, h('i', {}), h('span', { text: label(k) })); })));
+    h('div', { class: 'week-days' }, keys.map((k) => { const pl = planFor(store.schedule, k); return h('span', { class: `week-day${days.has(k) || dayDone(store.schedule, k) ? ' on' : ''}${k === today ? ' today' : ''}${pl.length && pl.every((e) => e.kind === 'rest') ? ' planned-rest' : ''}${pl.some((e) => e.kind === 'activity' || e.kind === 'wod') ? ' planned-act' : ''}` }, h('i', {}), h('span', { text: label(k) })); })));
 }
 
 /** "Make up what you missed": exercises you did not get to last time, as a one-time workout (OUR DESIGN). */

@@ -773,3 +773,9 @@ button.chip:active, .seg button:active, .tab:active { opacity: .65; }
 .wod-num { display: grid; gap: 4px; }
 .wod-result { justify-items: center; text-align: center; }
 .wod-result .btn { justify-self: stretch; }
+/* the WOD list in "plan my week" opens like a row (OUR DESIGN) */
+.sched-wods > summary { list-style: none; cursor: pointer; justify-content: space-between; background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-lg); font-weight: 600; }
+.sched-wods > summary::-webkit-details-marker { display: none; }
+.sched-wods > summary::after { content: "▾"; color: var(--accent); font-size: 18px; transition: transform var(--dur-2) var(--ease); }
+.sched-wods[open] > summary::after { transform: rotate(180deg); }
+.sched-wods[open] > summary { margin-block-end: var(--s-2); }

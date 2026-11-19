@@ -1,3 +1,5 @@
+import { dateKey } from './workout.mjs';
+
 // Benchmark workouts ("WODs": the Girls and Hero workouts). OUR DESIGN on top of the well-known public workouts. Pure.
 // A result is stored as a posted workout with no sets and a `wod` field, so it counts for training days, streaks and milestones,
 // but never touches the strength ratings (reps done for time are not sets taken near failure).
@@ -86,7 +88,7 @@ export function isPr(workouts, wodId, division, score) {
 /** The workout record that stores a result. */
 export function buildWodWorkout({ id, wod, division, score, startedMs, endedMs, notes = '', workouts = [] }) {
   return {
-    id, schemaVersion: 1, name: wod.name, startedMs, endedMs, endedAt: new Date(endedMs).toISOString(),
+    id, schemaVersion: 1, name: wod.name, dateKey: dateKey(startedMs), startedMs, endedMs, endedAt: new Date(endedMs).toISOString(),
     entries: [], notes: String(notes).slice(0, 500), stats: { volume: 0, workingSets: 0, prs: 0, durationSec: Math.max(0, Math.round((endedMs - startedMs) / 1000)) },
     wod: { id: wod.id, name: wod.name, kind: wod.kind, division: division === 'scaled' ? 'scaled' : 'rx', score, pr: isPr(workouts, wod.id, division, score) },
   };

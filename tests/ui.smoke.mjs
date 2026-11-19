@@ -1383,6 +1383,18 @@ for (const lang of ['he', 'en']) {
     await page.locator('.sched-card .btn').click();
     await page.waitForFunction(() => document.querySelector('.week-day.today.on'));
     await page.screenshot({ path: `${shots}${lang}-schedule-home.png` });
+    // a benchmark workout (WOD) in the plan: chosen from the list, shown on today's card with a start button
+    await openToday();
+    await page.locator('.sheet .sched-wods summary').click();
+    await page.locator('.sheet .sched-wods .list .row', { hasText: /^\s*Fran/ }).click();
+    await page.waitForFunction(() => /Fran/.test(document.querySelector('.sheet .sched-items')?.textContent ?? ''));
+    await page.locator('.sheet .btn-primary').last().click();
+    await page.waitForFunction(() => /Fran/.test(document.querySelector('.sched-row.today')?.textContent ?? ''));
+    await page.goto(`${base}#/workout`);
+    await page.waitForSelector('.sched-card');
+    assert.ok((await page.textContent('.sched-card')).includes('Fran'));
+    await page.locator('.sched-card .btn', { hasText: T('התחל', 'Start') }).click();
+    await page.waitForFunction(() => location.hash === '#/wod/fran');
     // rest replaces everything and has no done button
     await openToday();
     await page.locator('.sheet .row', { hasText: T('יום החלמה', 'Recovery day') }).click();
