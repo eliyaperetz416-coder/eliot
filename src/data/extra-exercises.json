@@ -66,6 +66,565 @@
       "image2": "",
       "family": "curl-cable",
       "R": 45
+    },
+    {
+      "id": "air-squat",
+      "nameEn": "Air Squat",
+      "nameHe": "סקוואט בלי משקל",
+      "equipment": "bodyweight",
+      "primaryMuscles": [
+        "quadriceps",
+        "gluteal"
+      ],
+      "secondaryMuscles": [
+        "hamstring"
+      ],
+      "muscleGroup": "quads",
+      "ranked": false,
+      "type": "bodyweight",
+      "instructionsEn": [
+        "Stand with feet about shoulder width apart, toes slightly out.",
+        "Sit the hips back and down until the hip crease is below the knee, chest up and knees tracking over the toes.",
+        "Stand all the way up and open the hips at the top."
+      ],
+      "instructionsHe": [
+        "עומדים ברוחב כתפיים, קצות האצבעות מעט החוצה.",
+        "יורדים עם האגן אחורה ולמטה עד שקפל הירך מתחת לברך, חזה למעלה והברכיים בכיוון האצבעות.",
+        "קמים עד הסוף ופותחים את האגן למעלה."
+      ],
+      "image": "",
+      "image2": ""
+    },
+    {
+      "id": "thruster",
+      "nameEn": "Thruster",
+      "nameHe": "ת'ראסטר",
+      "equipment": "barbell",
+      "primaryMuscles": [
+        "quadriceps",
+        "front-deltoids"
+      ],
+      "secondaryMuscles": [
+        "gluteal",
+        "triceps",
+        "abs"
+      ],
+      "muscleGroup": "quads",
+      "ranked": false,
+      "type": "weight",
+      "instructionsEn": [
+        "Hold a barbell in the front rack: on the shoulders, elbows forward.",
+        "Front squat until the hip crease is below the knee.",
+        "Drive up hard and use that drive to press the bar overhead in one movement; lock out with the bar over the middle of the foot.",
+        "Lower the bar back to the shoulders as you go down into the next squat."
+      ],
+      "instructionsHe": [
+        "מחזיקים מוט על הכתפיים מקדימה, מרפקים קדימה.",
+        "יורדים לסקוואט קדמי עד שקפל הירך מתחת לברך.",
+        "קמים בכוח ומשתמשים בתנופה כדי לדחוף את המוט מעל הראש בתנועה אחת, ידיים נעולות למעלה.",
+        "מורידים את המוט לכתפיים תוך כדי ירידה לסקוואט הבא."
+      ],
+      "image": "",
+      "image2": ""
+    },
+    {
+      "id": "wall-ball",
+      "nameEn": "Wall Ball Shot",
+      "nameHe": "זריקת כדור לקיר",
+      "equipment": "other",
+      "primaryMuscles": [
+        "quadriceps",
+        "front-deltoids"
+      ],
+      "secondaryMuscles": [
+        "gluteal",
+        "triceps"
+      ],
+      "muscleGroup": "quads",
+      "ranked": false,
+      "type": "weight",
+      "instructionsEn": [
+        "Hold a medicine ball at chest height, facing a wall about an arm's length away.",
+        "Squat until the hip crease is below the knee.",
+        "Stand up fast and throw the ball to the target (3 m for men, 2.7 m for women).",
+        "Catch the ball and go straight down into the next squat."
+      ],
+      "instructionsHe": [
+        "מחזיקים כדור כוח בגובה החזה מול קיר, במרחק של בערך יד.",
+        "יורדים לסקוואט עד שקפל הירך מתחת לברך.",
+        "קמים מהר וזורקים את הכדור למטרה (3 מטר לגברים, 2.7 לנשים).",
+        "תופסים את הכדור ויורדים ישר לסקוואט הבא."
+      ],
+      "image": "",
+      "image2": ""
+    },
+    {
+      "id": "kettlebell-swing",
+      "nameEn": "Kettlebell Swing",
+      "nameHe": "הנפת קטלבל",
+      "equipment": "other",
+      "primaryMuscles": [
+        "gluteal",
+        "hamstring"
+      ],
+      "secondaryMuscles": [
+        "lower-back",
+        "front-deltoids",
+        "forearm"
+      ],
+      "muscleGroup": "glutes",
+      "ranked": false,
+      "type": "weight",
+      "instructionsEn": [
+        "Stand with feet a bit wider than the hips, kettlebell in both hands.",
+        "Hinge at the hips and swing the bell back between the legs, back flat.",
+        "Snap the hips forward to swing the bell up; the arms only guide it. In the American swing it goes overhead, in the Russian swing to eye level.",
+        "Let it fall back and hinge again into the next rep."
+      ],
+      "instructionsHe": [
+        "עומדים ברגליים מעט רחבות מהאגן, קטלבל בשתי הידיים.",
+        "מתכופפים מהאגן ומניפים את הקטלבל אחורה בין הרגליים, גב ישר.",
+        "דוחפים את האגן קדימה בחדות והקטלבל עולה; הידיים רק מכוונות. באמריקאי עד מעל הראש, ברוסי עד גובה העיניים.",
+        "נותנים לו ליפול חזרה ומתכופפים לחזרה הבאה."
+      ],
+      "image": "",
+      "image2": ""
+    },
+    {
+      "id": "box-jump",
+      "nameEn": "Box Jump",
+      "nameHe": "קפיצה לקופסה",
+      "equipment": "other",
+      "primaryMuscles": [
+        "quadriceps",
+        "gluteal"
+      ],
+      "secondaryMuscles": [
+        "calves",
+        "hamstring"
+      ],
+      "muscleGroup": "quads",
+      "ranked": false,
+      "type": "bodyweight",
+      "instructionsEn": [
+        "Stand facing a box (60 cm for men, 50 cm for women in the classic workouts).",
+        "Swing the arms and jump with both feet onto the box, landing softly.",
+        "Stand up fully on top, hips open.",
+        "Step or jump down and go again. Stepping down is easier on the Achilles tendons."
+      ],
+      "instructionsHe": [
+        "עומדים מול קופסה (60 ס״מ לגברים, 50 לנשים באימונים הקלאסיים).",
+        "מניפים ידיים וקופצים בשתי רגליים על הקופסה, נוחתים רך.",
+        "מתיישרים עד הסוף למעלה, אגן פתוח.",
+        "יורדים בצעד או בקפיצה וחוזרים. ירידה בצעד שומרת על גיד אכילס."
+      ],
+      "image": "",
+      "image2": ""
+    },
+    {
+      "id": "burpee",
+      "nameEn": "Burpee",
+      "nameHe": "ברפי",
+      "equipment": "bodyweight",
+      "primaryMuscles": [
+        "chest",
+        "quadriceps"
+      ],
+      "secondaryMuscles": [
+        "triceps",
+        "front-deltoids",
+        "abs"
+      ],
+      "muscleGroup": "chest",
+      "ranked": false,
+      "type": "bodyweight",
+      "instructionsEn": [
+        "From standing, put your hands on the floor and jump the feet back.",
+        "Lower the chest and thighs to the floor.",
+        "Push up, jump the feet back under you.",
+        "Stand and jump with a clap overhead."
+      ],
+      "instructionsHe": [
+        "מעמידה מניחים ידיים על הרצפה וקופצים עם הרגליים אחורה.",
+        "מורידים את החזה והירכיים לרצפה.",
+        "דוחפים למעלה וקופצים עם הרגליים חזרה מתחתיך.",
+        "נעמדים וקופצים עם מחיאת כף מעל הראש."
+      ],
+      "image": "",
+      "image2": ""
+    },
+    {
+      "id": "double-under",
+      "nameEn": "Double-Under",
+      "nameHe": "קפיצה כפולה בחבל",
+      "equipment": "other",
+      "primaryMuscles": [
+        "calves"
+      ],
+      "secondaryMuscles": [
+        "front-deltoids",
+        "forearm"
+      ],
+      "muscleGroup": "calves",
+      "ranked": false,
+      "type": "bodyweight",
+      "instructionsEn": [
+        "Hold the rope handles at hip height, elbows close to the body.",
+        "Jump a little higher than for single jumps, on the balls of the feet.",
+        "Spin the rope with the wrists so it passes under the feet twice in one jump.",
+        "Scaled: three single jumps for each double-under."
+      ],
+      "instructionsHe": [
+        "מחזיקים את ידיות החבל בגובה האגן, מרפקים צמודים לגוף.",
+        "קופצים קצת יותר גבוה מקפיצה רגילה, על כריות כפות הרגליים.",
+        "מסובבים את החבל בשורשי כף היד כך שיעבור מתחת לרגליים פעמיים בקפיצה אחת.",
+        "בגרסה מוקלת: שלוש קפיצות רגילות לכל קפיצה כפולה."
+      ],
+      "image": "",
+      "image2": ""
+    },
+    {
+      "id": "run",
+      "nameEn": "Run",
+      "nameHe": "ריצה",
+      "equipment": "bodyweight",
+      "primaryMuscles": [
+        "quadriceps",
+        "calves"
+      ],
+      "secondaryMuscles": [
+        "hamstring",
+        "gluteal"
+      ],
+      "muscleGroup": "other",
+      "ranked": false,
+      "type": "cardio",
+      "instructionsEn": [
+        "Run the distance at a pace you can hold for the whole workout.",
+        "Stay relaxed in the shoulders and land under the hips.",
+        "On a treadmill set a 1% incline to match running outside."
+      ],
+      "instructionsHe": [
+        "רצים את המרחק בקצב שאפשר להחזיק לאורך כל האימון.",
+        "כתפיים רפויות, נחיתה מתחת לאגן.",
+        "על הליכון שמים שיפוע של 1% כדי שידמה לריצה בחוץ."
+      ],
+      "image": "",
+      "image2": ""
+    },
+    {
+      "id": "handstand-push-up",
+      "nameEn": "Handstand Push-Up",
+      "nameHe": "שכיבת סמיכה בעמידת ידיים",
+      "equipment": "bodyweight",
+      "primaryMuscles": [
+        "front-deltoids",
+        "triceps"
+      ],
+      "secondaryMuscles": [
+        "trapezius",
+        "chest"
+      ],
+      "muscleGroup": "shoulders",
+      "ranked": false,
+      "type": "bodyweight",
+      "instructionsEn": [
+        "Kick up into a handstand with your back to a wall, hands a little wider than the shoulders.",
+        "Lower until the top of the head touches the floor or a mat.",
+        "Press back up to straight arms.",
+        "Scaled: pike push-ups with the feet on a box, or dumbbell overhead press."
+      ],
+      "instructionsHe": [
+        "עולים לעמידת ידיים עם הגב לקיר, ידיים מעט רחבות מהכתפיים.",
+        "יורדים עד שקודקוד הראש נוגע ברצפה או במזרן.",
+        "דוחפים חזרה עד ידיים ישרות.",
+        "בגרסה מוקלת: שכיבות פייק עם רגליים על קופסה, או לחיצת כתפיים עם משקולות."
+      ],
+      "image": "",
+      "image2": ""
+    },
+    {
+      "id": "pistol-squat",
+      "nameEn": "Pistol Squat",
+      "nameHe": "סקוואט על רגל אחת (פיסטול)",
+      "equipment": "bodyweight",
+      "primaryMuscles": [
+        "quadriceps",
+        "gluteal"
+      ],
+      "secondaryMuscles": [
+        "hamstring",
+        "abs"
+      ],
+      "muscleGroup": "quads",
+      "ranked": false,
+      "type": "bodyweight",
+      "instructionsEn": [
+        "Stand on one leg, the other leg straight in front of you.",
+        "Squat on the standing leg until the hip is below the knee, heel down, arms forward for balance.",
+        "Stand back up without touching the free leg to the floor. Alternate legs.",
+        "Scaled: sit to a box on one leg, or hold a post."
+      ],
+      "instructionsHe": [
+        "עומדים על רגל אחת, הרגל השנייה ישרה קדימה.",
+        "יורדים לסקוואט על רגל העמידה עד שהאגן מתחת לברך, עקב על הרצפה, ידיים קדימה לאיזון.",
+        "קמים בלי לגעת ברגל החופשית ברצפה. מחליפים רגליים.",
+        "בגרסה מוקלת: ישיבה לקופסה על רגל אחת, או החזקה בעמוד."
+      ],
+      "image": "",
+      "image2": ""
+    },
+    {
+      "id": "ring-dip",
+      "nameEn": "Ring Dip",
+      "nameHe": "מקבילים בטבעות",
+      "equipment": "other",
+      "primaryMuscles": [
+        "triceps",
+        "chest"
+      ],
+      "secondaryMuscles": [
+        "front-deltoids"
+      ],
+      "muscleGroup": "triceps",
+      "ranked": false,
+      "type": "bodyweight",
+      "instructionsEn": [
+        "Support yourself on gymnastic rings with straight arms, rings close to the body.",
+        "Lower until the shoulders are below the elbows, keeping the rings tight to your sides.",
+        "Press back up to straight arms and turn the rings out slightly at the top.",
+        "Scaled: bar dips, or dips with a band."
+      ],
+      "instructionsHe": [
+        "נתמכים על טבעות התעמלות עם ידיים ישרות, טבעות צמודות לגוף.",
+        "יורדים עד שהכתפיים מתחת למרפקים, טבעות צמודות לצדדים.",
+        "דוחפים עד ידיים ישרות ומסובבים מעט את הטבעות החוצה למעלה.",
+        "בגרסה מוקלת: מקבילים רגילים, או עם גומייה."
+      ],
+      "image": "",
+      "image2": ""
+    },
+    {
+      "id": "squat-clean",
+      "nameEn": "Squat Clean",
+      "nameHe": "קלין עם סקוואט",
+      "equipment": "barbell",
+      "primaryMuscles": [
+        "quadriceps",
+        "gluteal"
+      ],
+      "secondaryMuscles": [
+        "hamstring",
+        "trapezius",
+        "lower-back"
+      ],
+      "muscleGroup": "quads",
+      "ranked": false,
+      "type": "weight",
+      "instructionsEn": [
+        "Start with the bar over the middle of the foot, back flat, arms straight.",
+        "Push the floor away; when the bar passes the knees, extend the hips hard and shrug.",
+        "Pull yourself under the bar and catch it on the shoulders in a full front squat.",
+        "Stand up to finish."
+      ],
+      "instructionsHe": [
+        "מתחילים עם המוט מעל אמצע כף הרגל, גב ישר, ידיים ישרות.",
+        "דוחפים את הרצפה; כשהמוט עובר את הברכיים פותחים את האגן בחדות ומושכים כתפיים.",
+        "נכנסים מתחת למוט ותופסים אותו על הכתפיים בסקוואט קדמי מלא.",
+        "קמים עד הסוף."
+      ],
+      "image": "",
+      "image2": ""
+    },
+    {
+      "id": "clean-and-jerk",
+      "nameEn": "Clean and Jerk",
+      "nameHe": "קלין אנד ג'רק",
+      "equipment": "barbell",
+      "primaryMuscles": [
+        "quadriceps",
+        "front-deltoids"
+      ],
+      "secondaryMuscles": [
+        "gluteal",
+        "trapezius",
+        "triceps"
+      ],
+      "muscleGroup": "quads",
+      "ranked": false,
+      "type": "weight",
+      "instructionsEn": [
+        "Clean the bar from the floor to the shoulders (power or squat clean).",
+        "Dip a few centimetres by bending the knees, chest up.",
+        "Drive up and push yourself under the bar: split jerk, push jerk or push press.",
+        "Lock out overhead with the feet back in line, then lower the bar."
+      ],
+      "instructionsHe": [
+        "מרימים את המוט מהרצפה לכתפיים (קלין).",
+        "יורדים כמה סנטימטרים בכיפוף ברכיים, חזה למעלה.",
+        "דוחפים למעלה ונכנסים מתחת למוט: ספליט ג'רק, פוש ג'רק או פוש פרס.",
+        "נועלים ידיים מעל הראש עם הרגליים בקו, ואז מורידים את המוט."
+      ],
+      "image": "",
+      "image2": ""
+    },
+    {
+      "id": "squat-snatch",
+      "nameEn": "Squat Snatch",
+      "nameHe": "סנאץ' עם סקוואט",
+      "equipment": "barbell",
+      "primaryMuscles": [
+        "quadriceps",
+        "front-deltoids"
+      ],
+      "secondaryMuscles": [
+        "gluteal",
+        "trapezius",
+        "hamstring",
+        "lower-back"
+      ],
+      "muscleGroup": "quads",
+      "ranked": false,
+      "type": "weight",
+      "instructionsEn": [
+        "Wide grip, bar over the middle of the foot, back flat.",
+        "Push the floor away; at the hips extend hard and shrug.",
+        "Pull yourself under the bar and catch it overhead with straight arms in a full overhead squat.",
+        "Stand up with the bar locked out overhead."
+      ],
+      "instructionsHe": [
+        "אחיזה רחבה, מוט מעל אמצע כף הרגל, גב ישר.",
+        "דוחפים את הרצפה; ליד האגן פותחים בחדות ומושכים כתפיים.",
+        "נכנסים מתחת למוט ותופסים אותו מעל הראש בידיים ישרות בסקוואט עילי מלא.",
+        "קמים עם המוט נעול מעל הראש."
+      ],
+      "image": "",
+      "image2": ""
+    },
+    {
+      "id": "power-snatch",
+      "nameEn": "Power Snatch",
+      "nameHe": "פאוור סנאץ'",
+      "equipment": "barbell",
+      "primaryMuscles": [
+        "front-deltoids",
+        "gluteal"
+      ],
+      "secondaryMuscles": [
+        "trapezius",
+        "hamstring",
+        "quadriceps"
+      ],
+      "muscleGroup": "shoulders",
+      "ranked": false,
+      "type": "weight",
+      "instructionsEn": [
+        "Wide grip, bar over the middle of the foot, back flat.",
+        "Push the floor away and extend the hips hard at the top of the pull.",
+        "Catch the bar overhead with straight arms in a partial squat, thighs above parallel.",
+        "Stand up and lower the bar."
+      ],
+      "instructionsHe": [
+        "אחיזה רחבה, מוט מעל אמצע כף הרגל, גב ישר.",
+        "דוחפים את הרצפה ופותחים את האגן בחדות בסוף המשיכה.",
+        "תופסים את המוט מעל הראש בידיים ישרות בחצי סקוואט, ירכיים מעל המקביל.",
+        "קמים ומורידים את המוט."
+      ],
+      "image": "",
+      "image2": ""
+    },
+    {
+      "id": "muscle-up",
+      "nameEn": "Muscle-Up",
+      "nameHe": "מאסל אפ",
+      "equipment": "other",
+      "primaryMuscles": [
+        "upper-back",
+        "triceps"
+      ],
+      "secondaryMuscles": [
+        "biceps",
+        "chest",
+        "abs"
+      ],
+      "muscleGroup": "back",
+      "ranked": false,
+      "type": "bodyweight",
+      "instructionsEn": [
+        "Hang from rings (or a bar) with a false grip.",
+        "Pull hard to the chest while bringing the rings close to the body.",
+        "Turn the wrists over and push yourself over the rings into the bottom of a dip.",
+        "Press out to straight arms. Scaled: pull-ups plus dips."
+      ],
+      "instructionsHe": [
+        "נתלים על טבעות (או מוט) באחיזה מעל (false grip).",
+        "מושכים חזק לחזה ומקרבים את הטבעות לגוף.",
+        "מסובבים את שורשי כף היד ועוברים מעל הטבעות לתחתית של מקבילים.",
+        "דוחפים עד ידיים ישרות. בגרסה מוקלת: מתח ועוד מקבילים."
+      ],
+      "image": "",
+      "image2": ""
+    },
+    {
+      "id": "knees-to-elbows",
+      "nameEn": "Knees-to-Elbows",
+      "nameHe": "ברכיים למרפקים",
+      "equipment": "bodyweight",
+      "primaryMuscles": [
+        "abs"
+      ],
+      "secondaryMuscles": [
+        "obliques",
+        "forearm"
+      ],
+      "muscleGroup": "abs",
+      "ranked": false,
+      "type": "bodyweight",
+      "instructionsEn": [
+        "Hang from a pull-up bar with straight arms.",
+        "Lift the knees until they touch the elbows.",
+        "Lower with control and keep the swing small.",
+        "Scaled: hanging knee raises as high as you can."
+      ],
+      "instructionsHe": [
+        "נתלים על מוט מתח בידיים ישרות.",
+        "מרימים את הברכיים עד שהן נוגעות במרפקים.",
+        "מורידים בשליטה ושומרים על נדנוד קטן.",
+        "בגרסה מוקלת: הרמות ברכיים בתלייה כמה שאפשר."
+      ],
+      "image": "",
+      "image2": ""
+    },
+    {
+      "id": "push-jerk",
+      "nameEn": "Push Jerk",
+      "nameHe": "פוש ג'רק",
+      "equipment": "barbell",
+      "primaryMuscles": [
+        "front-deltoids",
+        "triceps"
+      ],
+      "secondaryMuscles": [
+        "quadriceps",
+        "trapezius"
+      ],
+      "muscleGroup": "shoulders",
+      "ranked": false,
+      "type": "weight",
+      "instructionsEn": [
+        "Bar on the shoulders, feet hip width.",
+        "Dip a few centimetres by bending the knees, chest up.",
+        "Drive up and press the bar while you drop under it, catching it on straight arms with bent knees.",
+        "Stand up with the bar locked out overhead."
+      ],
+      "instructionsHe": [
+        "מוט על הכתפיים, רגליים ברוחב האגן.",
+        "יורדים כמה סנטימטרים בכיפוף ברכיים, חזה למעלה.",
+        "דוחפים למעלה ולוחצים את המוט תוך כדי ירידה מתחתיו, תופסים בידיים ישרות וברכיים כפופות.",
+        "מתיישרים עם המוט נעול מעל הראש."
+      ],
+      "image": "",
+      "image2": ""
     }
   ],
   "aliases": {
@@ -103,6 +662,105 @@
       "bayesian curl",
       "bayesian curls",
       "behind the body cable curl"
+    ],
+    "air-squat": [
+      "air squat",
+      "סקוואט אוויר",
+      "סקוואט משקל גוף",
+      "squats"
+    ],
+    "thruster": [
+      "thrusters",
+      "טראסטר",
+      "תראסטר",
+      "ת'ראסטרים"
+    ],
+    "wall-ball": [
+      "wall ball",
+      "wallball",
+      "וול בול",
+      "כדור לקיר"
+    ],
+    "kettlebell-swing": [
+      "kb swing",
+      "kettlebell swings",
+      "קטלבל סווינג",
+      "סווינג"
+    ],
+    "box-jump": [
+      "box jumps",
+      "בוקס ג'אמפ",
+      "קפיצות לקופסה"
+    ],
+    "burpee": [
+      "burpees",
+      "ברפיז",
+      "בורפי"
+    ],
+    "double-under": [
+      "double unders",
+      "double under",
+      "דאבל אנדר",
+      "דאבלים",
+      "du"
+    ],
+    "run": [
+      "running",
+      "ריצה",
+      "run"
+    ],
+    "handstand-push-up": [
+      "hspu",
+      "handstand pushup",
+      "שכיבות עמידת ידיים",
+      "עמידת ידיים"
+    ],
+    "pistol-squat": [
+      "pistol",
+      "pistols",
+      "פיסטול",
+      "פיסטולים"
+    ],
+    "ring-dip": [
+      "ring dips",
+      "דיפס בטבעות",
+      "מקבילים טבעות"
+    ],
+    "squat-clean": [
+      "squat cleans",
+      "קלין",
+      "סקוואט קלין"
+    ],
+    "clean-and-jerk": [
+      "c&j",
+      "clean & jerk",
+      "קלין וג'רק",
+      "קלין אנד ג'רק"
+    ],
+    "squat-snatch": [
+      "snatch",
+      "snatches",
+      "סנאץ'",
+      "סנאצ'"
+    ],
+    "power-snatch": [
+      "power snatches",
+      "פאוור סנאץ'"
+    ],
+    "muscle-up": [
+      "muscle ups",
+      "מאסל אפ",
+      "מאסלאפ"
+    ],
+    "knees-to-elbows": [
+      "k2e",
+      "knees to elbows",
+      "ברכיים למרפקים",
+      "ברך מרפק"
+    ],
+    "push-jerk": [
+      "push jerks",
+      "פוש ג'רק"
     ]
   }
 }

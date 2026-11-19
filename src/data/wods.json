@@ -1,0 +1,791 @@
+{
+ "schemaVersion": 1,
+ "note": "Benchmark workouts (OUR DESIGN collection). The workouts are the well-known public benchmark and Hero workouts; loads converted to kg. Text is our own.",
+ "heroNoteHe": "אימון גיבור (Hero): נקרא לזכרו של איש כוחות ביטחון או הצלה שנפל בתפקיד.",
+ "heroNoteEn": "Hero workout: named in memory of a soldier or first responder who died in the line of duty.",
+ "wods": [
+  {
+   "id": "angie",
+   "name": "Angie",
+   "kind": "girl",
+   "format": "fortime",
+   "score": "time",
+   "movements": [
+    {
+     "ex": "pullups",
+     "reps": 100
+    },
+    {
+     "ex": "pushups",
+     "reps": 100
+    },
+    {
+     "ex": "sit-up",
+     "reps": 100
+    },
+    {
+     "ex": "air-squat",
+     "reps": 100
+    }
+   ],
+   "noteHe": "מסיימים את כל החזרות של תרגיל לפני שעוברים לבא.",
+   "noteEn": "Finish all reps of one movement before the next."
+  },
+  {
+   "id": "barbara",
+   "name": "Barbara",
+   "kind": "girl",
+   "format": "fortime",
+   "score": "time",
+   "movements": [
+    {
+     "ex": "pullups",
+     "reps": 20
+    },
+    {
+     "ex": "pushups",
+     "reps": 30
+    },
+    {
+     "ex": "sit-up",
+     "reps": 40
+    },
+    {
+     "ex": "air-squat",
+     "reps": 50
+    }
+   ],
+   "rounds": 5,
+   "noteHe": "3 דקות מנוחה בין הסבבים. התוצאה היא הזמן הכולל.",
+   "noteEn": "Rest 3 minutes between rounds. The score is the total time."
+  },
+  {
+   "id": "chelsea",
+   "name": "Chelsea",
+   "kind": "girl",
+   "format": "emom",
+   "score": "rounds",
+   "movements": [
+    {
+     "ex": "pullups",
+     "reps": 5
+    },
+    {
+     "ex": "pushups",
+     "reps": 10
+    },
+    {
+     "ex": "air-squat",
+     "reps": 15
+    }
+   ],
+   "minutes": 30,
+   "noteHe": "בתחילת כל דקה עושים סבב אחד. אם לא סיימת סבב בתוך הדקה, האימון נגמר. התוצאה היא מספר הסבבים.",
+   "noteEn": "Do one round at the start of every minute. If you cannot finish a round inside its minute, the workout ends. The score is the number of rounds."
+  },
+  {
+   "id": "cindy",
+   "name": "Cindy",
+   "kind": "girl",
+   "format": "amrap",
+   "score": "rounds",
+   "movements": [
+    {
+     "ex": "pullups",
+     "reps": 5
+    },
+    {
+     "ex": "pushups",
+     "reps": 10
+    },
+    {
+     "ex": "air-squat",
+     "reps": 15
+    }
+   ],
+   "minutes": 20
+  },
+  {
+   "id": "diane",
+   "name": "Diane",
+   "kind": "girl",
+   "format": "fortime",
+   "score": "time",
+   "movements": [
+    {
+     "ex": "barbell-deadlift",
+     "reps": [
+      21,
+      15,
+      9
+     ],
+     "load": {
+      "m": 102,
+      "f": 70
+     }
+    },
+    {
+     "ex": "handstand-push-up",
+     "reps": [
+      21,
+      15,
+      9
+     ]
+    }
+   ]
+  },
+  {
+   "id": "elizabeth",
+   "name": "Elizabeth",
+   "kind": "girl",
+   "format": "fortime",
+   "score": "time",
+   "movements": [
+    {
+     "ex": "squat-clean",
+     "reps": [
+      21,
+      15,
+      9
+     ],
+     "load": {
+      "m": 61,
+      "f": 43
+     }
+    },
+    {
+     "ex": "ring-dip",
+     "reps": [
+      21,
+      15,
+      9
+     ]
+    }
+   ]
+  },
+  {
+   "id": "fran",
+   "name": "Fran",
+   "kind": "girl",
+   "format": "fortime",
+   "score": "time",
+   "movements": [
+    {
+     "ex": "thruster",
+     "reps": [
+      21,
+      15,
+      9
+     ],
+     "load": {
+      "m": 43,
+      "f": 29
+     }
+    },
+    {
+     "ex": "pullups",
+     "reps": [
+      21,
+      15,
+      9
+     ]
+    }
+   ]
+  },
+  {
+   "id": "grace",
+   "name": "Grace",
+   "kind": "girl",
+   "format": "fortime",
+   "score": "time",
+   "movements": [
+    {
+     "ex": "clean-and-jerk",
+     "reps": 30,
+     "load": {
+      "m": 61,
+      "f": 43
+     }
+    }
+   ]
+  },
+  {
+   "id": "helen",
+   "name": "Helen",
+   "kind": "girl",
+   "format": "fortime",
+   "score": "time",
+   "movements": [
+    {
+     "ex": "run",
+     "dist": 400
+    },
+    {
+     "ex": "kettlebell-swing",
+     "reps": 21,
+     "load": {
+      "m": 24,
+      "f": 16
+     }
+    },
+    {
+     "ex": "pullups",
+     "reps": 12
+    }
+   ],
+   "rounds": 3
+  },
+  {
+   "id": "isabel",
+   "name": "Isabel",
+   "kind": "girl",
+   "format": "fortime",
+   "score": "time",
+   "movements": [
+    {
+     "ex": "squat-snatch",
+     "reps": 30,
+     "load": {
+      "m": 61,
+      "f": 43
+     }
+    }
+   ],
+   "noteHe": "כל סגנון סנאץ' מותר.",
+   "noteEn": "Any style of snatch counts."
+  },
+  {
+   "id": "jackie",
+   "name": "Jackie",
+   "kind": "girl",
+   "format": "fortime",
+   "score": "time",
+   "movements": [
+    {
+     "ex": "rowing-stationary",
+     "dist": 1000
+    },
+    {
+     "ex": "thruster",
+     "reps": 50,
+     "load": {
+      "m": 20,
+      "f": 15
+     }
+    },
+    {
+     "ex": "pullups",
+     "reps": 30
+    }
+   ]
+  },
+  {
+   "id": "karen",
+   "name": "Karen",
+   "kind": "girl",
+   "format": "fortime",
+   "score": "time",
+   "movements": [
+    {
+     "ex": "wall-ball",
+     "reps": 150,
+     "load": {
+      "m": 9,
+      "f": 6
+     }
+    }
+   ]
+  },
+  {
+   "id": "linda",
+   "name": "Linda",
+   "kind": "girl",
+   "format": "fortime",
+   "score": "time",
+   "movements": [
+    {
+     "ex": "barbell-deadlift",
+     "reps": [
+      10,
+      9,
+      8,
+      7,
+      6,
+      5,
+      4,
+      3,
+      2,
+      1
+     ],
+     "bw": 1.5
+    },
+    {
+     "ex": "barbell-bench-press-medium-grip",
+     "reps": [
+      10,
+      9,
+      8,
+      7,
+      6,
+      5,
+      4,
+      3,
+      2,
+      1
+     ],
+     "bw": 1
+    },
+    {
+     "ex": "power-clean",
+     "reps": [
+      10,
+      9,
+      8,
+      7,
+      6,
+      5,
+      4,
+      3,
+      2,
+      1
+     ],
+     "bw": 0.75
+    }
+   ],
+   "noteHe": "המשקלים לפי משקל הגוף שלך.",
+   "noteEn": "Loads are relative to your bodyweight."
+  },
+  {
+   "id": "mary",
+   "name": "Mary",
+   "kind": "girl",
+   "format": "amrap",
+   "score": "rounds",
+   "movements": [
+    {
+     "ex": "handstand-push-up",
+     "reps": 5
+    },
+    {
+     "ex": "pistol-squat",
+     "reps": 10
+    },
+    {
+     "ex": "pullups",
+     "reps": 15
+    }
+   ],
+   "minutes": 20,
+   "noteHe": "10 פיסטולים: 5 לכל רגל, לסירוגין.",
+   "noteEn": "10 pistols: 5 per leg, alternating."
+  },
+  {
+   "id": "nancy",
+   "name": "Nancy",
+   "kind": "girl",
+   "format": "fortime",
+   "score": "time",
+   "movements": [
+    {
+     "ex": "run",
+     "dist": 400
+    },
+    {
+     "ex": "overhead-squat",
+     "reps": 15,
+     "load": {
+      "m": 43,
+      "f": 29
+     }
+    }
+   ],
+   "rounds": 5
+  },
+  {
+   "id": "annie",
+   "name": "Annie",
+   "kind": "girl",
+   "format": "fortime",
+   "score": "time",
+   "movements": [
+    {
+     "ex": "double-under",
+     "reps": [
+      50,
+      40,
+      30,
+      20,
+      10
+     ]
+    },
+    {
+     "ex": "sit-up",
+     "reps": [
+      50,
+      40,
+      30,
+      20,
+      10
+     ]
+    }
+   ]
+  },
+  {
+   "id": "eva",
+   "name": "Eva",
+   "kind": "girl",
+   "format": "fortime",
+   "score": "time",
+   "movements": [
+    {
+     "ex": "run",
+     "dist": 800
+    },
+    {
+     "ex": "kettlebell-swing",
+     "reps": 30,
+     "load": {
+      "m": 32,
+      "f": 24
+     }
+    },
+    {
+     "ex": "pullups",
+     "reps": 30
+    }
+   ],
+   "rounds": 5
+  },
+  {
+   "id": "kelly",
+   "name": "Kelly",
+   "kind": "girl",
+   "format": "fortime",
+   "score": "time",
+   "movements": [
+    {
+     "ex": "run",
+     "dist": 400
+    },
+    {
+     "ex": "box-jump",
+     "reps": 30
+    },
+    {
+     "ex": "wall-ball",
+     "reps": 30,
+     "load": {
+      "m": 9,
+      "f": 6
+     }
+    }
+   ],
+   "rounds": 5
+  },
+  {
+   "id": "lynne",
+   "name": "Lynne",
+   "kind": "girl",
+   "format": "rounds",
+   "score": "reps",
+   "movements": [
+    {
+     "ex": "barbell-bench-press-medium-grip",
+     "max": true,
+     "bw": 1
+    },
+    {
+     "ex": "pullups",
+     "max": true
+    }
+   ],
+   "rounds": 5,
+   "noteHe": "בכל סבב: כמה שיותר לחיצות חזה במשקל הגוף, ואז כמה שיותר מתח. בלי זמן. התוצאה היא סך החזרות.",
+   "noteEn": "Each round: max reps of bench press at bodyweight, then max pull-ups. No clock. The score is total reps."
+  },
+  {
+   "id": "nicole",
+   "name": "Nicole",
+   "kind": "girl",
+   "format": "amrap",
+   "score": "reps",
+   "movements": [
+    {
+     "ex": "run",
+     "dist": 400
+    },
+    {
+     "ex": "pullups",
+     "max": true
+    }
+   ],
+   "minutes": 20,
+   "noteHe": "רצים 400 מטר ואז כמה שיותר מתח ברצף, וחוזר חלילה. התוצאה היא סך המתחים.",
+   "noteEn": "Run 400 m, then max pull-ups in one set, and repeat. The score is total pull-ups."
+  },
+  {
+   "id": "amanda",
+   "name": "Amanda",
+   "kind": "girl",
+   "format": "fortime",
+   "score": "time",
+   "movements": [
+    {
+     "ex": "muscle-up",
+     "reps": [
+      9,
+      7,
+      5
+     ]
+    },
+    {
+     "ex": "squat-snatch",
+     "reps": [
+      9,
+      7,
+      5
+     ],
+     "load": {
+      "m": 61,
+      "f": 43
+     }
+    }
+   ]
+  },
+  {
+   "id": "murph",
+   "name": "Murph",
+   "kind": "hero",
+   "format": "fortime",
+   "score": "time",
+   "movements": [
+    {
+     "ex": "run",
+     "dist": 1600
+    },
+    {
+     "ex": "pullups",
+     "reps": 100
+    },
+    {
+     "ex": "pushups",
+     "reps": 200
+    },
+    {
+     "ex": "air-squat",
+     "reps": 300
+    },
+    {
+     "ex": "run",
+     "dist": 1600
+    }
+   ],
+   "noteHe": "עם אפוד של 9 ק״ג (נשים 6) אם יש. אפשר לחלק את המתח, השכיבות והסקוואטים איך שרוצים. נקרא לזכרו של סגן מייקל מרפי מהצי האמריקאי.",
+   "noteEn": "With a 9 kg vest (women 6) if you have one. You may split the pull-ups, push-ups and squats any way you like. Named in memory of US Navy Lt. Michael Murphy."
+  },
+  {
+   "id": "dt",
+   "name": "DT",
+   "kind": "hero",
+   "format": "fortime",
+   "score": "time",
+   "movements": [
+    {
+     "ex": "barbell-deadlift",
+     "reps": 12,
+     "load": {
+      "m": 70,
+      "f": 47
+     }
+    },
+    {
+     "ex": "hang-clean",
+     "reps": 9,
+     "load": {
+      "m": 70,
+      "f": 47
+     }
+    },
+    {
+     "ex": "push-jerk",
+     "reps": 6,
+     "load": {
+      "m": 70,
+      "f": 47
+     }
+    }
+   ],
+   "rounds": 5,
+   "noteHe": "מוט אחד לכל התרגילים. הקלין הוא האנג פאוור קלין.",
+   "noteEn": "One bar for all movements. The clean is a hang power clean."
+  },
+  {
+   "id": "jt",
+   "name": "JT",
+   "kind": "hero",
+   "format": "fortime",
+   "score": "time",
+   "movements": [
+    {
+     "ex": "handstand-push-up",
+     "reps": [
+      21,
+      15,
+      9
+     ]
+    },
+    {
+     "ex": "ring-dip",
+     "reps": [
+      21,
+      15,
+      9
+     ]
+    },
+    {
+     "ex": "pushups",
+     "reps": [
+      21,
+      15,
+      9
+     ]
+    }
+   ]
+  },
+  {
+   "id": "michael",
+   "name": "Michael",
+   "kind": "hero",
+   "format": "fortime",
+   "score": "time",
+   "movements": [
+    {
+     "ex": "run",
+     "dist": 800
+    },
+    {
+     "ex": "hyperextensions-back-extensions",
+     "reps": 50
+    },
+    {
+     "ex": "sit-up",
+     "reps": 50
+    }
+   ],
+   "rounds": 3
+  },
+  {
+   "id": "nate",
+   "name": "Nate",
+   "kind": "hero",
+   "format": "amrap",
+   "score": "rounds",
+   "movements": [
+    {
+     "ex": "muscle-up",
+     "reps": 2
+    },
+    {
+     "ex": "handstand-push-up",
+     "reps": 4
+    },
+    {
+     "ex": "kettlebell-swing",
+     "reps": 8,
+     "load": {
+      "m": 32,
+      "f": 24
+     }
+    }
+   ],
+   "minutes": 20
+  },
+  {
+   "id": "randy",
+   "name": "Randy",
+   "kind": "hero",
+   "format": "fortime",
+   "score": "time",
+   "movements": [
+    {
+     "ex": "power-snatch",
+     "reps": 75,
+     "load": {
+      "m": 34,
+      "f": 25
+     }
+    }
+   ]
+  },
+  {
+   "id": "the-seven",
+   "name": "The Seven",
+   "kind": "hero",
+   "format": "fortime",
+   "score": "time",
+   "movements": [
+    {
+     "ex": "handstand-push-up",
+     "reps": 7
+    },
+    {
+     "ex": "thruster",
+     "reps": 7,
+     "load": {
+      "m": 61,
+      "f": 43
+     }
+    },
+    {
+     "ex": "knees-to-elbows",
+     "reps": 7
+    },
+    {
+     "ex": "barbell-deadlift",
+     "reps": 7,
+     "load": {
+      "m": 111,
+      "f": 75
+     }
+    },
+    {
+     "ex": "burpee",
+     "reps": 7
+    },
+    {
+     "ex": "kettlebell-swing",
+     "reps": 7,
+     "load": {
+      "m": 32,
+      "f": 24
+     }
+    },
+    {
+     "ex": "pullups",
+     "reps": 7
+    }
+   ],
+   "rounds": 7
+  },
+  {
+   "id": "ryan",
+   "name": "Ryan",
+   "kind": "hero",
+   "format": "fortime",
+   "score": "time",
+   "movements": [
+    {
+     "ex": "muscle-up",
+     "reps": 7
+    },
+    {
+     "ex": "burpee",
+     "reps": 21
+    }
+   ],
+   "rounds": 5,
+   "noteHe": "בברפי נוגעים במטרה בגובה כ-30 ס״מ מעל קצות האצבעות.",
+   "noteEn": "On each burpee, touch a target about 30 cm above your reach."
+  }
+ ]
+}

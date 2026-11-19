@@ -183,6 +183,7 @@ export function workoutsScreen() {
     }
     kids.push(h('div', { class: 'section-label', text: t('wk.more') }),
       list([
+        listRow({ title: t('wods.title'), sub: t('wods.row.sub'), icon: 'flame', end: h('span', { class: 'num', text: String(data().wods?.wods?.length ?? 0) }), onClick: () => go('#/wods') }),
         listRow({ title: t('home.sched.plan'), sub: t('home.sched.row.sub'), icon: 'history', onClick: () => go('#/schedule') }),
         listRow({ title: t('plans.title'), sub: t('plans.sub'), icon: 'bolt', end: h('span', { class: 'num', text: String(store.plans.length) }), onClick: () => go('#/plans') }),
         listRow({ title: t('wk.library'), sub: t('wk.library.sub'), icon: 'exercises', end: h('span', { class: 'num', text: String(data().exercises.length) }), onClick: () => go('#/exercises') }),

@@ -16,7 +16,8 @@ export function unlockAudio() {
     if (audio.state === 'suspended') audio.resume();
   } catch { /* no audio */ }
 }
-function beep() {
+/** The equipped timer sound (+ a short vibration), for the WOD timer too. */
+export function beep() {
   if (!audio) return;
   const id = data().shop.cosmetics.find((c) => c.id === store.game.inventory.equipped.sound)?.sound ?? 'beep';
   playSound(audio, id);

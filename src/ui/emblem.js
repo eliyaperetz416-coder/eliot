@@ -49,7 +49,7 @@ function glyph(tier, c, light) {
 
 /** emblem({tier, divisionIndex (0=V..4=I), size}) -> element. tier 'unranked' is a dim outline. */
 export function emblem({ tier = 'unranked', divisionIndex = 0, size = 96, label }) {
-  const id = ++uid;
+  const id = ++uid; // gradient ids (g, p, GG) carry it: ids must be unique when several emblems share a screen
   const gg = tier === 'greekgod';
   const base = tier === 'unranked' ? '#59607d' : TIER_COLORS[tier];
   const light = shade(base, 0.5), dark = shade(base, -0.55), mid = shade(base, -0.25);
@@ -61,17 +61,17 @@ export function emblem({ tier = 'unranked', divisionIndex = 0, size = 96, label 
   const pips = !gg && tier !== 'unranked'
     ? [52, 66, 80, 94, 108].map((x, i) => `<circle cx="${x}" cy="158" r="4" fill="${i <= divisionIndex ? base : 'none'}" stroke="${base}" stroke-width="1.500" opacity="${i <= divisionIndex ? 1 : 0.5}"/>`).join('')
     : '';
-  const wingSvg = wings ? `<g fill="${gg ? 'url(#GG)' : base}" opacity=".85"><path d="${WING}"/><path d="${WING}" transform="translate(160 0) scale(-1 1)"/></g>` : '';
+  const wingSvg = wings ? `<g fill="${gg ? `url(#GG${id})` : base}" opacity=".85"><path d="${WING}"/><path d="${WING}" transform="translate(160 0) scale(-1 1)"/></g>` : '';
   const body = `
     <defs>
       <linearGradient id="g${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${light}"/><stop offset=".5" stop-color="${base}"/><stop offset="1" stop-color="${mid}"/></linearGradient>
-      <linearGradient id="GG" x1="0" y1="0" x2="1" y2="1">${ggStops}</linearGradient>
+      <linearGradient id="GG${id}" x1="0" y1="0" x2="1" y2="1">${ggStops}</linearGradient>
       <radialGradient id="p${id}" cx=".5" cy=".3" r=".8"><stop offset="0" stop-color="${shade(base, -0.7)}"/><stop offset="1" stop-color="#0b0c14"/></radialGradient>
     </defs>
     ${wingSvg}
-    <path d="${SHIELD}" fill="${tier === 'unranked' ? 'none' : `url(#g${id})`}" stroke="${gg ? 'url(#GG)' : light}" stroke-width="${tier === 'unranked' ? 3 : 2}" stroke-linejoin="round" ${tier === 'unranked' ? 'stroke-dasharray="6 6"' : ''}/>
+    <path d="${SHIELD}" fill="${tier === 'unranked' ? 'none' : `url(#g${id})`}" stroke="${gg ? `url(#GG${id})` : light}" stroke-width="${tier === 'unranked' ? 3 : 2}" stroke-linejoin="round" ${tier === 'unranked' ? 'stroke-dasharray="6 6"' : ''}/>
     ${tier === 'unranked' ? '' : `<path d="${PLATE}" fill="url(#p${id})" stroke="${dark}" stroke-width="2"/>`}
-    ${glyph(tier, base, light).replace(/url\(#GG\)/g, 'url(#GG)')}
+    ${glyph(tier, base, light).replace(/url\(#GG\)/g, `url(#GG${id})`)}
     ${pips}`;
   const wrap = document.createElement('span');
   wrap.className = `emblem emblem-${tier}`;

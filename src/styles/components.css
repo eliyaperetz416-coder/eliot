@@ -750,3 +750,26 @@ button.chip:active, .seg button:active, .tab:active { opacity: .65; }
 .req-status { justify-self: start; margin-block-start: 4px; }
 .req-added { background: rgb(79 227 160 / .14); border-color: rgb(79 227 160 / .5); color: var(--ok); }
 .req-rejected { background: rgb(255 138 61 / .14); border-color: rgb(255 138 61 / .5); color: #ffb685; }
+
+/* ---------- benchmark workouts (WODs) — OUR DESIGN ---------- */
+.wod-card { display: grid; gap: var(--s-2); }
+.wod-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-3); }
+.wod-card-title { display: grid; gap: 2px; min-width: 0; }
+.wod-card-title h2 { font-size: 24px; margin: 0; }
+.wod-best { flex: none; font-variant-numeric: tabular-nums; }
+.wod-card-moves { overflow-wrap: anywhere; }
+.wod-format { font-weight: 700; color: var(--accent); }
+.wod-info-btn { justify-self: start; padding-inline: var(--s-3); }
+.wod-moves { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-2); }
+.wod-move { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2); padding: var(--s-2) var(--s-3); background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-md); }
+.wod-move a { color: var(--text); font-weight: 600; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; display: inline-flex; align-items: center; min-height: 44px; } /* a full-size tap target */
+.wod-reps { min-width: 3.5ch; color: var(--accent); }
+.wod-note { padding: var(--s-3); border-radius: var(--r-md); background: var(--accent-soft); }
+.wod-tips { margin: 0; padding-inline-start: 1.2em; color: var(--text-dim); display: grid; gap: 4px; }
+.wod-clock-card { display: grid; justify-items: center; gap: var(--s-1); padding-block: var(--s-5); margin-block: var(--s-3); }
+.wod-clock { font-size: 64px; line-height: 1; letter-spacing: -.01em; }
+.wod-sub { color: var(--text-dim); min-height: 1.5em; }
+.wod-nums { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); }
+.wod-num { display: grid; gap: 4px; }
+.wod-result { justify-items: center; text-align: center; }
+.wod-result .btn { justify-self: stretch; }

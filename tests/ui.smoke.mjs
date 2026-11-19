@@ -11,7 +11,7 @@ mkdirSync(shots, { recursive: true });
 const server = await serve(0);
 const base = `http://localhost:${server.address().port}/`;
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-const ROUTES = ['weakest', 'workout', 'workouts', 'exercises', 'exercise/barbell-bench-press-medium-grip', 'exercise/plank', 'ranks', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'requests', 'calendar', 'crew', 'profile', 'history', 'kit', 'ranks-preview'];
+const ROUTES = ['wods', 'wod/fran', 'weakest', 'workout', 'workouts', 'exercises', 'exercise/barbell-bench-press-medium-grip', 'exercise/plank', 'ranks', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'requests', 'calendar', 'crew', 'profile', 'history', 'kit', 'ranks-preview'];
 const errors = [];
 let failed = 0;
 const ONLY = process.env.ONLY;
@@ -127,10 +127,10 @@ for (const lang of ['he', 'en']) {
     await page.screenshot({ path: `${shots}${lang}-${r.replace(/\//g, '_')}.png`, fullPage: r.includes('preview') });
   }
 
-  await check(`${lang}: exercise library lists 302 and searches (incl. gym slang)`, async () => {
+  await check(`${lang}: exercise library lists 320 and searches (incl. gym slang)`, async () => {
     await page.goto(`${base}#/exercises`);
     await page.waitForSelector('.ex-row');
-    assert.equal(await page.locator('.ex-row').count(), 302);
+    assert.equal(await page.locator('.ex-row').count(), 320);
     await page.fill('.search-input', L(lang, 'דדליפט רומני', 'romanian'));
     await page.waitForTimeout(400);
     const n = await page.locator('.ex-row').count();
@@ -643,6 +643,54 @@ for (const lang of ['he', 'en']) {
     await page.screenshot({ path: `${shots}${lang}-requests.png`, fullPage: true });
     await page.reload();
     await page.waitForSelector('.req-card');
+  });
+
+  await check(`${lang}: benchmark workouts (WODs): list, info, timer survives a reload, score, personal best, history, rank bonus`, async () => {
+    const T = (he, en) => L(lang, he, en);
+    await page.goto(`${base}#/wods`);
+    await page.waitForSelector('.wod-card');
+    assert.equal(await page.locator('.wod-card').count(), 29);
+    await page.locator('.wod-card', { hasText: 'Fran' }).getByRole('button', { name: T('מידע', 'Info') }).click();
+    await page.waitForSelector('.sheet .wod-info');
+    const info = await page.textContent('.sheet .wod-info');
+    assert.ok(info.includes('21-15-9') && /43 \/ 29/.test(info), 'scheme and loads for men / women');
+    await page.screenshot({ path: `${shots}${lang}-wod-info.png` });
+    await page.keyboard.press('Escape');
+    await page.goto(`${base}#/wod/cindy`);
+    await page.waitForSelector('.wod-clock');
+    assert.equal(await page.textContent('.wod-clock'), '20:00');
+    await page.getByRole('button', { name: T('התחל טיימר', 'Start the timer') }).click();
+    await page.waitForFunction(() => /^19:/.test(document.querySelector('.wod-clock')?.textContent ?? ''), null, { timeout: 8000 });
+    await page.getByRole('button', { name: T('הוספת סבב', 'Add a round') }).click();
+    await page.getByRole('button', { name: T('הוספת סבב', 'Add a round') }).click();
+    await page.reload(); // the clock lives on timestamps: a reload (or a locked phone) keeps it
+    await page.waitForFunction(() => /^19:/.test(document.querySelector('.wod-clock')?.textContent ?? ''));
+    await page.getByRole('button', { name: T('סיום', 'Finish'), exact: true }).click();
+    await page.waitForSelector('#wod-rounds');
+    assert.equal(await page.inputValue('#wod-rounds'), '2', 'rounds counted on the clock screen');
+    await page.fill('#wod-rounds', '');
+    await page.getByRole('button', { name: T('שמירת התוצאה', 'Save the score') }).click();
+    await page.waitForSelector('.sheet .field-error:not([hidden])'); // an empty score is refused
+    await page.fill('#wod-rounds', '17'); await page.fill('#wod-reps', '12');
+    await page.getByRole('button', { name: T('שמירת התוצאה', 'Save the score') }).click();
+    await page.waitForSelector('.wod-result');
+    assert.ok((await page.textContent('.wod-result')).includes(T('שיא אישי', 'Personal best')));
+    await page.locator('.wod-result .btn').click(); // done: back to the list
+    await page.waitForFunction(() => location.hash === '#/wods' && !document.querySelector('.sheet'));
+    assert.match(await page.locator('.wod-card', { hasText: 'Cindy' }).textContent(), /17/);
+    await page.goto(`${base}#/history`);
+    await page.waitForSelector('.hist-row');
+    assert.match(await page.locator('.hist-row').first().textContent(), /Cindy/);
+    await page.locator('.hist-row').first().click();
+    await page.waitForSelector('.wod-clock-card');
+    await page.goto(`${base}#/ranks`);
+    await page.waitForSelector('.bonus-card');
+    assert.match(await page.locator('.bonus-row', { hasText: T('WOD', 'Benchmark') }).textContent(), /\+10\/40/);
+    // clean up so later checks see the same history as before
+    await page.goto(`${base}#/history`); await page.locator('.hist-row').first().click();
+    await page.getByRole('button', { name: T('מחיקת התוצאה', 'Delete the score') }).click();
+    await page.locator('.sheet').last().getByRole('button', { name: T('מחיקת התוצאה', 'Delete the score') }).click();
+    await page.waitForFunction(() => location.hash === '#/history');
   });
 
   await check(`${lang}: saved workout with a planned weight starts with that weight`, async () => {
@@ -1298,8 +1346,9 @@ for (const lang of ['he', 'en']) {
     if (await page.locator('.rankup').count()) await page.click('.rankup button');
     await page.goto(`${base}#/model`);
     await page.locator('.screen .btn-danger').click();
+    await page.waitForFunction(() => location.hash === '#/profile'); // removing goes to Profile by itself (after the save): wait, or it would jump there later
     await page.goto(`${base}#/workout`);
-    await page.waitForSelector('.hero');
+    await page.waitForSelector('.hero').catch(async (e) => { console.log('DEBUG (role model): hash', await page.evaluate(() => location.hash), '| app:', (await page.evaluate(() => document.getElementById('app').innerText)).replace(/\s+/g, ' ').slice(0, 300), '| overlays:', await page.evaluate(() => document.getElementById('overlay-root').innerText.slice(0, 200)), '| draft:', await page.evaluate(() => !!localStorage.getItem('dg.draft'))); throw e; });
     assert.equal(await page.locator('.model-card').count(), 0);
     await page.evaluate(async () => { const db = await import('./src/ui/db.js'); for (const r of await db.dbAll('routines')) if (/Push day/.test(r.name)) await db.dbDelete('routines', r.id); });
     await page.reload();
@@ -1456,7 +1505,7 @@ for (const lang of ['he', 'en']) {
   });
 
   await check(`${lang}: every sub-screen has a back link`, async () => {
-    const subs = ['ladder', 'exercises', 'exercise/plank', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'requests', 'calendar', 'crew', 'history', 'history/nope', 'routine/nope', 'plan/nope', 'exercise/nope', 'ranks-preview', 'model', 'schedule', 'ladder'];
+    const subs = ['wods', 'wod/fran', 'wod/nope', 'ladder', 'exercises', 'exercise/plank', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'requests', 'calendar', 'crew', 'history', 'history/nope', 'routine/nope', 'plan/nope', 'exercise/nope', 'ranks-preview', 'model', 'schedule', 'ladder'];
     for (const r of subs) {
       await page.goto(`${base}#/${r}`);
       await page.waitForSelector('main');

@@ -49,7 +49,7 @@ test('weekly goal: 5 points for each of the last 5 Monday-to-Sunday weeks with e
 test('the total is the sum of the parts and never passes the maximum', () => {
   const r = rankBonus({ workouts: [], byId, ratings: {}, now });
   assert.equal(r.total, 0);
-  assert.equal(MAX_BONUS, BONUS.MAX + 38 + 25 + 13 + 38 + 25 + 100);
+  assert.equal(MAX_BONUS, BONUS.MAX + 38 + 25 + 13 + 38 + 25 + 100 + 40);
   const daily = Array.from({ length: 250 }, (_, i) => w(i, 1000 + (i === 1 ? 9000 : 0), MAIN_GROUPS, `d${i}`));
   const even = Object.fromEntries(MAIN_GROUPS.map((g) => [`ex-${g}`, 500]));
   const full = rankBonus({ workouts: daily, byId, ratings: even, now, weeklyGoal: 3 });

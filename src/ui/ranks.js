@@ -62,6 +62,7 @@ function bonusCard() {
     row('bonus.cover', { n: p.balance.cover }, p.balance.coverPoints, PARTS.COVER_MAX),
     row('bonus.balance', {}, p.balance.balancePoints, PARTS.BALANCE_MAX),
     row('bonus.quests', { n: p.quests.claimed }, p.quests.points, PARTS.QUEST_MAX),
+    row('bonus.wods', { n: p.wods.done, prs: p.wods.prs }, p.wods.points, PARTS.WOD_MAX),
     row('bonus.goal', { weeks: p.goal.weeks, goal: p.goal.goal }, p.goal.points, PARTS.GOAL_MAX),
     row(p.milestones.next ? 'bonus.milestone.next' : 'bonus.milestone', { n: p.milestones.workouts, next: p.milestones.next?.count, pts: p.milestones.next?.pts }, p.milestones.points, PARTS.MILESTONES[PARTS.MILESTONES.length - 1][1]),
     h('p', { class: 'row-sub bonus-note', text: t('bonus.note') }));

@@ -142,6 +142,22 @@ export async function commitPost(result, game = null) {
   emit();
 }
 
+/** Saves a benchmark-workout (WOD) result. It never touches the live draft. Returns { before, after } overall ratings. */
+export async function saveWodResult(w) {
+  const before = store.overall?.rating ?? 0;
+  store.workouts = [...store.workouts.filter((x) => x.id !== w.id), w].sort((a, b) => a.startedMs - b.startedMs);
+  recompute();
+  await dbPut('workouts', w);
+  emit();
+  return { before, after: store.overall?.rating ?? 0 };
+}
+export async function deleteWodResult(id) {
+  store.workouts = store.workouts.filter((x) => x.id !== id);
+  recompute();
+  await dbDelete('workouts', id);
+  emit();
+}
+
 /** After editing or deleting history: recalculates everything and persists changed/removed records. */
 export async function commitHistory(workouts, removedIds = []) {
   const r = afterEdit(workouts, data().byId);

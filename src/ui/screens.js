@@ -6,6 +6,7 @@ import { exercisesScreen, exerciseDetailScreen } from './exercises.js';
 import { profileScreen } from './profile.js';
 import { startScreen } from './workout.js';
 import { liveScreen } from './live.js';
+import { wodsScreen, wodScreen } from './wods.js';
 import { resultScreen } from './post-ui.js';
 import { historyScreen, historyDetailScreen } from './history.js';
 import { ranksScreen } from './ranks.js';
@@ -81,6 +82,8 @@ export function buildScreens(ctx) {
     progress: (id) => progressScreen(id),
     routines: workoutsScreen,
     workouts: workoutsScreen,
+    wods: wodsScreen,
+    wod: (id) => wodScreen(id),
     routine: (id) => routineEditScreen(id),
     plans: plansScreen,
     plan: (id) => planScreen(id),

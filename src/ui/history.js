@@ -3,6 +3,7 @@ import { h } from './dom.js';
 import { icon } from './icons.js';
 import { t, getLanguage } from '../core/i18n.mjs';
 import * as W from '../core/workout.mjs';
+import { wodHistoryDetail, wodHistoryLine } from './wods.js';
 import { tierFor } from '../core/ranks.mjs';
 import { button, emptyState, openSheet, showToast } from './components.js';
 import { data } from './data.js';
@@ -20,14 +21,15 @@ export function historyScreen() {
     h('div', { class: 'list', style: 'margin-block-start:12px' }, list.map((w) => h('a', { class: 'row hist-row', href: `#/history/${w.id}` },
       h('span', { class: 'row-main' },
         h('span', { class: 'row-title', text: w.name || formatDate(w.startedMs) }),
-        h('span', { class: 'row-sub', text: w.entries.slice(0, 3).map((e) => nameOf(byId[e.exerciseId])).join(' · ') }),
-        h('span', { class: 'row-sub num', text: `${w.name ? formatDate(w.startedMs) + ' · ' : ''}${t('common.sets', { n: w.stats?.workingSets ?? 0 })} · ${formatNum(w.stats?.volume ?? 0, 0)} ${t('unit.kg')}` })),
+        h('span', { class: 'row-sub', text: w.wod ? wodHistoryLine(w) : w.entries.slice(0, 3).map((e) => nameOf(byId[e.exerciseId])).join(' · ') }),
+        h('span', { class: 'row-sub num', text: w.wod ? formatDate(w.startedMs) : `${w.name ? formatDate(w.startedMs) + ' · ' : ''}${t('common.sets', { n: w.stats?.workingSets ?? 0 })} · ${formatNum(w.stats?.volume ?? 0, 0)} ${t('unit.kg')}` })),
       (w.stats?.prs ?? 0) ? h('span', { class: 'pr-badge pr-all', text: t('hist.pr', { n: w.stats.prs }) }) : null,
       icon('chevron', 'chev')))));
 }
 
 export function historyDetailScreen(id) {
   const orig = store.workouts.find((x) => x.id === id);
+  if (orig?.wod) return wodHistoryDetail(orig);
   const byId = data().byId;
   if (!orig) return h('main', { class: 'screen' }, emptyState({ icon: 'history', title: t('hist.notfound'), body: '' }), h('a', { class: 'btn btn-secondary btn-block', href: '#/history' }, t('hist.title')));
   const w = structuredClone(orig);

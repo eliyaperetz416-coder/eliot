@@ -18,6 +18,10 @@ export const PARTS = Object.freeze({
   QUEST_WEEKLY_LP: 20,     // ... and the weekly one for 20, for 28 days after you claim it
   QUEST_WINDOW_DAYS: 28,
   QUEST_MAX: 100,
+  WOD_LP: 5,               // v1.45: each benchmark workout (Cindy, Fran, Murph...) done in the last 28 days ...
+  WOD_PR_LP: 5,            // ... and 5 more when it was a personal best
+  WOD_WINDOW_DAYS: 28,
+  WOD_MAX: 40,
 });
 export const MAIN_GROUPS = Object.freeze(['chest', 'back', 'shoulders', 'biceps', 'triceps', 'quads', 'hamstrings', 'glutes', 'calves', 'abs']);
 
@@ -79,6 +83,13 @@ export function questBonus(claims, now) {
   return { points: Math.min(PARTS.QUEST_MAX, sum), claimed: count };
 }
 
+/** Benchmark workouts (WODs) in the last 28 days: 5 each, 5 more for a personal best (OUR DESIGN, v1.45). */
+export function wodBonus(workouts, now) {
+  const recent = workouts.filter((w) => w.wod && w.endedMs && w.endedMs <= now && now - w.endedMs < PARTS.WOD_WINDOW_DAYS * DAY);
+  const prs = recent.filter((w) => w.wod.pr).length;
+  return { points: Math.min(PARTS.WOD_MAX, recent.length * PARTS.WOD_LP + prs * PARTS.WOD_PR_LP), done: recent.length, prs };
+}
+
 /** Weeks (Monday to Sunday, the current one and the 4 before) with at least `goal` training days. */
 export function goalBonus(workouts, now, goal = defaultGoal) {
   const days = new Set(workouts.filter((w) => w.endedMs && w.endedMs <= now).map((w) => dayStart(w.endedMs)));
@@ -104,8 +115,9 @@ export function rankBonus({ workouts, byId, ratings, now = Date.now(), weeklyGoa
   const milestones = milestoneBonus(workouts);
   const goal = goalBonus(workouts, now, weeklyGoal ?? defaultGoal);
   const quests = questBonus(claims ?? questClaims, now);
-  const parts = { consistency: { ...consistency, points: consistency.total }, volume, balance, milestones, goal, quests };
+  const wods = wodBonus(workouts, now);
+  const parts = { consistency: { ...consistency, points: consistency.total }, volume, balance, milestones, goal, quests, wods };
   const total = Object.values(parts).reduce((n, p) => n + p.points, 0);
   return { total, max: MAX_BONUS, parts };
 }
-export const MAX_BONUS = BONUS.MAX + PARTS.VOLUME_MAX + PARTS.COVER_MAX + PARTS.BALANCE_MAX + PARTS.MILESTONES[PARTS.MILESTONES.length - 1][1] + PARTS.GOAL_MAX + PARTS.QUEST_MAX;
+export const MAX_BONUS = BONUS.MAX + PARTS.VOLUME_MAX + PARTS.COVER_MAX + PARTS.BALANCE_MAX + PARTS.MILESTONES[PARTS.MILESTONES.length - 1][1] + PARTS.GOAL_MAX + PARTS.QUEST_MAX + PARTS.WOD_MAX;
