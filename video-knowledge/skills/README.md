@@ -9,7 +9,7 @@ Per-video notes: `../videos/ALL-VIDEOS.md`.
 | `security-hardening` | Before going live, after every change, AI agents in an app |
 | `israeli-legal-compliance` | Privacy, accessibility, spam, copyright, reviews |
 | `launch-readiness` | SEO, speed, mobile, load, maintainability, first users |
-| `claude-workflow` | Starting a project, verification, CLAUDE.md/MEMORY.md, plugins and tools, video editing |
+| `build-workflow` | Starting a project, verification, CLAUDE.md/MEMORY.md, plugins and tools, video editing |
 
 Only items rated 6+ in `../RATINGS.md` were kept.
 

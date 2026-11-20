@@ -18,7 +18,7 @@
 | 2 | [אבטחה](topics/02-security.md) | מפתחות ו-.env, RLS ובדיקת A/B, מחיר בשרת, SQL injection, rate limiting, סוכני AI, חסימת .env | `security-hardening` |
 | 3 | [משפטי (ישראל)](topics/03-legal.md) | ספאם, נגישות, מדיניות פרטיות אמיתית, צ'קבוקס, זכויות יוצרים, ביטול מנוי, מה ש-Claude ממציא | `israeli-legal-compliance` |
 | 4 | [לפני עלייה לאוויר](topics/04-launch-readiness.md) | בדיקת עומס, גיבויים, SEO ו-OG, מהירות, מובייל, state machines, משתמשים ראשונים | `launch-readiness` |
-| 5 | [שיטת עבודה](topics/05-claude-workflow.md) | לולאות אימות, 4 השורות, תכנון לפני ביצוע, CLAUDE.md ו-MEMORY.md, פלאגינים, כלים, עריכת וידאו | `claude-workflow` |
+| 5 | [שיטת עבודה](topics/05-build-workflow.md) | לולאות אימות, 4 השורות, תכנון לפני ביצוע, CLAUDE.md ו-MEMORY.md, פלאגינים, כלים, עריכת וידאו | `build-workflow` |
 
 ## התקנת הסקילים
 - **Claude Code, בפרויקט אחד:** מעתיקים את התיקיות מ-`skills/` אל `.claude/skills/` בפרויקט

@@ -1,9 +1,9 @@
 ---
-name: claude-workflow
-description: Use at the start of any non-trivial build with Claude Code (new product, feature, app), or when results are poor, long tasks drift, or the user asks how to work with agents. Covers product validation before building, asking clarifying questions and mapping edge cases, plan-first execution, verification loops and a verify skill, when (not) to use multiple agents, project memory (CLAUDE.md/MEMORY.md), the recommended plugins and tools, and a Claude video-editing pipeline. Triggers - "start a project", "build me an app", "agents", "Claude keeps making mistakes", "long task", איך לעבוד עם קלוד, סוכנים, פרויקט חדש.
+name: build-workflow
+description: Use at the start of any non-trivial build with Claude Code (new product, feature, app), or when results are poor, long tasks drift, or the user asks how to work with agents. Covers product validation before building, asking clarifying questions and mapping edge cases, plan-first execution, verification loops and a verify skill, when (not) to use multiple agents, project memory (CLAUDE.md/MEMORY.md), the recommended plugins and tools, and a Claude video-editing pipeline. Triggers - "start a project", "build me an app", "agents", "Claude keeps making mistakes", "long task", איך לעבוד עם קלוד, סוכנים, פרויקט חדש. Use it proactively at the start of any multi-step build, even if the user just says "build me X".
 ---
 
-# Working method for Claude Code
+# Build workflow (working method with Claude Code)
 
 Distilled from ~15 videos. Main idea: **results come from process and connected tools, not from a magic prompt.**
 

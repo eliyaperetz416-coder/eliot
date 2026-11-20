@@ -1,6 +1,6 @@
 # 5. שיטת עבודה עם Claude (כולל כלים ווידאו)
 
-**סקיל:** [`claude-workflow`](../skills/claude-workflow/SKILL.md) · (ציון) = הדירוג מ-[`RATINGS.md`](../RATINGS.md)
+**סקיל:** [`build-workflow`](../skills/build-workflow/SKILL.md) · (ציון) = הדירוג מ-[`RATINGS.md`](../RATINGS.md)
 
 ## מה נשאר בנושא
 

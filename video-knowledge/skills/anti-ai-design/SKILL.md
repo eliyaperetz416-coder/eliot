@@ -1,6 +1,6 @@
 ---
 name: anti-ai-design
-description: Use whenever building or redesigning a website, landing page or app UI, so the result does not look "AI-generated / vibe-coded". Covers giving the model a design direction, the banned AI-look patterns, concrete UI rules (spacing, contrast, type, buttons), offering multiple design directions, motion done right (GSAP, Lenis, React Bits, UX/animation principles), and verifying the result in a real browser. Triggers - "design", "landing page", "website", "make it look premium", "it looks like AI", "animation", "smooth scroll", עיצוב, דף נחיתה, אתר, אנימציה, "נראה כמו AI".
+description: Use whenever building or redesigning a website, landing page or app UI, so the result does not look "AI-generated / vibe-coded". Covers giving the model a design direction, the banned AI-look patterns, concrete UI rules (spacing, contrast, type, buttons), offering multiple design directions, motion done right (GSAP, Lenis, React Bits, UX/animation principles), and verifying the result in a real browser. Triggers - "design", "landing page", "website", "make it look premium", "it looks like AI", "animation", "smooth scroll", עיצוב, דף נחיתה, אתר, אנימציה, "נראה כמו AI". Use it proactively for any UI work, even when the user only says "build me a site" and never mentions design quality.
 ---
 
 # Anti-AI design

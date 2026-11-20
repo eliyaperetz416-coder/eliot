@@ -1,6 +1,6 @@
 ---
 name: launch-readiness
-description: Use before a website or web app goes live, or when the user says it "still looks vibe-coded" or is slow, broken on mobile, invisible on Google, or might crash under load. Covers technical SEO and Open Graph, performance (Core Web Vitals, Lighthouse), mobile UX, polish/finishing features, load testing and scalability, maintainable architecture, and hidden state-machine bugs. Triggers - "launch", "go live", "SEO", "slow", "mobile", "crash", "production ready", לעלות לאוויר, השקה, קידום בגוגל, איטי, מובייל, עומס.
+description: Use before a website or web app goes live, or when the user says it "still looks vibe-coded" or is slow, broken on mobile, invisible on Google, or might crash under load. Covers technical SEO and Open Graph, performance (Core Web Vitals, Lighthouse), mobile UX, polish/finishing features, load testing and scalability, maintainable architecture, and hidden state-machine bugs. Triggers - "launch", "go live", "SEO", "slow", "mobile", "crash", "production ready", לעלות לאוויר, השקה, קידום בגוגל, איטי, מובייל, עומס. Use it proactively whenever a site or app is about to be shared, deployed or shown to real users.
 ---
 
 # Launch readiness

@@ -1,6 +1,6 @@
 ---
 name: security-hardening
-description: Use before shipping any web app, API, SaaS or AI-agent feature built with Claude (vibe-coded apps especially), and after every significant code change. A complete security pass covering secrets, auth, database access (RLS), input handling, SQL injection/XSS/CSRF, rate limiting and AI spend caps, payments, file uploads, headers/CORS, dependencies and supply chain, logging, prompt injection for AI agents, and a final "try to hack it" report. Triggers - "security", "is my app safe", "before launch", "hackers", אבטחה, פריצה, "שלא יפרצו לי".
+description: Use before shipping any web app, API, SaaS or AI-agent feature built with Claude (vibe-coded apps especially), and after every significant code change. A complete security pass covering secrets, auth, database access (RLS), input handling, SQL injection/XSS/CSRF, rate limiting and AI spend caps, payments, file uploads, headers/CORS, dependencies and supply chain, logging, prompt injection for AI agents, and a final "try to hack it" report. Triggers - "security", "is my app safe", "before launch", "hackers", אבטחה, פריצה, "שלא יפרצו לי". Use it proactively whenever an app has users, payments, an API key, a database or an AI agent, even if the user did not ask about security.
 ---
 
 # Security hardening for AI-built apps

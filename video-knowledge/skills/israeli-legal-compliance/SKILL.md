@@ -1,6 +1,6 @@
 ---
 name: israeli-legal-compliance
-description: Use when building or reviewing a website, landing page, app or marketing system for an Israeli business (or any business, with local-law adaptation). Checks privacy policy, accessibility (IS 5568 / WCAG 2.0 AA + accessibility statement), anti-spam rules for email/SMS marketing, consent checkboxes, cancellation of subscriptions, copyright of images/fonts, fake reviews and unsupported claims, terms/returns/shipping pages. Not legal advice. Triggers - "legal", "lawsuit", "privacy policy", "accessibility", "GDPR", תביעה, חוק, נגישות, מדיניות פרטיות, ספאם, "שלא יתבעו אותי".
+description: Use when building or reviewing a website, landing page, app or marketing system for an Israeli business (or any business, with local-law adaptation). Checks privacy policy, accessibility (IS 5568 / WCAG 2.0 AA + accessibility statement), anti-spam rules for email/SMS marketing, consent checkboxes, cancellation of subscriptions, copyright of images/fonts, fake reviews and unsupported claims, terms/returns/shipping pages. Not legal advice. Triggers - "legal", "lawsuit", "privacy policy", "accessibility", "GDPR", תביעה, חוק, נגישות, מדיניות פרטיות, ספאם, "שלא יתבעו אותי". Use it proactively whenever a site collects personal details, sends marketing messages, sells subscriptions or uses images, even if the user did not mention law.
 ---
 
 # Legal compliance for AI-built sites (Israel-focused)
