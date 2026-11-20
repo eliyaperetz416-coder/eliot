@@ -15,7 +15,7 @@ Run this as a **full-project review, not just the latest diff**. Produce a findi
 - Scan the **git history** for leaked secrets, not just the current tree.
 - A leaked key must be **revoked and rotated first**. Deleting the commit is not enough.
 - If the repo is public, check GitHub secret-scanning alerts.
-- Protect `.env` from the agent itself: add a Claude Code `PreToolUse` hook (e.g. `.claude/hooks/block-env.js` registered in `.claude/settings.json`) that blocks Read/Grep/Bash access to `.env*` files, so secrets don't end up in local session transcripts.
+- Protect `.env` from the agent itself, so secrets don't end up in local session transcripts: the simplest way is `permissions.deny` in `.claude/settings.json` (e.g. `"Read(./.env*)"`). To also block Bash/Grep access, add a `PreToolUse` hook (e.g. `.claude/hooks/block-env.js`).
 
 ## 2. Authentication and authorization
 - Use a **ready-made auth service**. Don't hand-roll auth.
@@ -55,8 +55,8 @@ Run this as a **full-project review, not just the latest diff**. Produce a findi
 - HTTPS only (HSTS). Restrictive **CORS**. **Security headers** (CSP, X-Frame-Options, etc.).
 - Check for exposed files (`.git/`, backups, env files) on the deployed site.
 - Update packages with known vulnerabilities; **remove unused packages**.
-- **Supply chain**: scan the open-source dependencies you install regularly (daily for active projects).
-- Keep the runtime patched (e.g. update **PHP** itself when RCE advisories land; updating WordPress plugins alone isn't enough).
+- **Supply chain**: keep automated dependency alerts on (Dependabot or similar) and review new packages before installing.
+- Keep the runtime and server software patched, not just the app's packages.
 
 ## 7. AI agents inside the app (prompt injection)
 An agent is not safe because it's smart. It's safe because **it has nothing worth stealing and can't do damage**.
@@ -72,7 +72,7 @@ An agent is not safe because it's smart. It's safe because **it has nothing wort
 
 ## 9. Process
 - On **every code change**, start a fresh Claude Code session and ask: "Is there a security hole here? Anything about permissions I missed?" Use a strong model.
-- Consider an automated AI PR reviewer (e.g. Greptile, Claude Code review) before merging.
+- Consider an automated AI PR reviewer before merging.
 - Go through the **OWASP Top 10** once.
 - Read every file that touches money, auth or user data yourself.
 - Finish with: **"Now try to hack the app yourself and report what you found and what you fixed."** Then verify that the protections actually work.

@@ -1,25 +1,24 @@
 # Video Knowledge: מה למדנו מ-105 סרטונים על בנייה עם Claude
 
 105 סרטוני טיקטוק ורילס (100 ייחודיים). כל אחד תומלל ונבדק פריים אחרי פריים, ואחרי זה עבר בדיקה חוזרת עם OCR.
+כל סעיף **דורג מ-1 עד 10** ([`RATINGS.md`](RATINGS.md)), ונשאר כאן **רק מה שקיבל 6 ומעלה**.
 
 ## מבנה התיקייה
 | תיקייה | מה יש בה |
 |---|---|
-| [`topics/`](topics/) | **הידע מחולק ל-8 נושאים**, ובכל נושא מה הוא כולל ומאילו סרטונים |
-| [`skills/`](skills/) | 8 סקילים מוכנים להתקנה ב-Claude, וספריית פרומפטים ([`PROMPTS.md`](skills/PROMPTS.md)) |
-| [`videos/ALL-VIDEOS.md`](videos/ALL-VIDEOS.md) | סיכום מפורט של כל סרטון לפי הסדר |
+| [`topics/`](topics/) | 5 נושאים, ובכל אחד מה נשאר (עם ציון) ומה נמחק |
+| [`skills/`](skills/) | 5 סקילים מוכנים להתקנה, וספריית פרומפטים ([`PROMPTS.md`](skills/PROMPTS.md)) |
+| [`RATINGS.md`](RATINGS.md) | הדירוג המלא של כל הסעיפים, כולל אלה שנמחקו ולמה |
+| [`videos/ALL-VIDEOS.md`](videos/ALL-VIDEOS.md) | ארכיון: סיכום של כל 105 הסרטונים, כולל אלה שלא נכנסו |
 
-## 8 הנושאים
+## 5 הנושאים
 | # | נושא | מה בפנים | סקיל |
 |---|---|---|---|
-| 1 | [עיצוב שלא נראה כמו AI](topics/01-design.md) | איך נותנים כיוון, 5 כיווני עיצוב, רשימת "סימני AI" אסורים, 20 חוקי UI, Impeccable, Taste, Apple Design, UI UX Pro Max | `anti-ai-design` |
-| 2 | [אנימציות וספריות](topics/02-motion-and-libraries.md) | GSAP, Lenis, React Bits, 21st.dev, ScrollCraft, סוגי אנימציות "יקרות", מילון סגנונות, 20 עקרונות UX | `motion-and-ui-libraries` |
-| 3 | [אבטחה](topics/03-security.md) | מפתחות ו-.env, הרשאות, RLS, SQL injection, rate limiting, prompt injection, hook שחוסם .env, פרצות PHP | `security-hardening` |
-| 4 | [משפטי (ישראל)](topics/04-legal.md) | טבלת חשיפה לתביעות, פרטיות, נגישות (ת"י 5568), חוק הספאם, זכויות יוצרים, ביקורות מזויפות | `israeli-legal-compliance` |
-| 5 | [לפני עלייה לאוויר](topics/05-launch-readiness.md) | SEO ו-Open Graph, מהירות (20 חוקים), מובייל, ליטוש, עומס (קריסה ב-150 משתמשים), ארכיטקטורה, state machines | `launch-readiness` |
-| 6 | [שיטת עבודה וסוכנים](topics/06-claude-workflow.md) | 4 השורות, תכנון לפני ביצוע, לולאות אימות, אורקסטרטור ו-Arena, Cowork OS, פלאגינים | `claude-workflow` |
-| 7 | [וידאו, תוכן ושיווק](topics/07-video-content-marketing.md) | עריכת וידאו ב-5 שלבים, קודים לפרומפטים, prompt-motion, מכונת מודעות, 100 המשתמשים הראשונים | `video-and-content` |
-| 8 | [כלים ו-MCPs](topics/08-tools-and-mcps.md) | Perplexity, Firecrawl, PostHog, Playwright, Composio, REA, Expo, VoiceMode, 9 חלופות קוד פתוח | `tool-stack-reference` |
+| 1 | [עיצוב (כולל אנימציות)](topics/01-design.md) | כיוון עיצובי, תמונות אמיתיות, DESIGN.md, 20 חוקי UI, רשימת סימני AI, 5 כיוונים, GSAP/Lenis/React Bits, עקרונות UX, Playwright | `anti-ai-design` |
+| 2 | [אבטחה](topics/02-security.md) | מפתחות ו-.env, RLS ובדיקת A/B, מחיר בשרת, SQL injection, rate limiting, סוכני AI, חסימת .env | `security-hardening` |
+| 3 | [משפטי (ישראל)](topics/03-legal.md) | ספאם, נגישות, מדיניות פרטיות אמיתית, צ'קבוקס, זכויות יוצרים, ביטול מנוי, מה ש-Claude ממציא | `israeli-legal-compliance` |
+| 4 | [לפני עלייה לאוויר](topics/04-launch-readiness.md) | בדיקת עומס, גיבויים, SEO ו-OG, מהירות, מובייל, state machines, משתמשים ראשונים | `launch-readiness` |
+| 5 | [שיטת עבודה](topics/05-claude-workflow.md) | לולאות אימות, 4 השורות, תכנון לפני ביצוע, CLAUDE.md ו-MEMORY.md, פלאגינים, כלים, עריכת וידאו | `claude-workflow` |
 
 ## התקנת הסקילים
 - **Claude Code, בפרויקט אחד:** מעתיקים את התיקיות מ-`skills/` אל `.claude/skills/` בפרויקט
@@ -27,5 +26,5 @@
 - **אפליקציית Claude:** מעלים ZIP של כל תיקיית סקיל בהגדרות, תחת Skills
 
 ## הערות
-- מספרים כמו כוכבים, מחירים וגובה קנסות מובאים כפי שנאמרו בסרטונים, ושווה לאמת אותם. הנושא המשפטי **אינו ייעוץ משפטי**.
+- מספרים כמו קנסות וכוכבים מובאים כפי שנאמרו בסרטונים. הנושא המשפטי **אינו ייעוץ משפטי**.
 - התמלולים המלאים ושמות היוצרים לא נשמרו כאן בכוונה, כי הריפו ציבורי.

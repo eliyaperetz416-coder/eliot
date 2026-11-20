@@ -3,16 +3,15 @@
 The source: 105 TikTok/Reels videos (100 unique), transcribed with Whisper plus a frame-by-frame look at each one.
 Per-video notes: `../videos/ALL-VIDEOS.md`.
 
-| Skill | When it triggers | Videos it's based on |
-|---|---|---|
-| `anti-ai-design` | Building or redesigning a site or app so it doesn't look like AI | ~25 |
-| `motion-and-ui-libraries` | Animation, smooth scroll, 3D, premium components | ~15 |
-| `security-hardening` | Before going live, after every change, AI agents in an app | ~17 |
-| `israeli-legal-compliance` | Privacy, accessibility, spam, copyright, reviews | ~10 |
-| `launch-readiness` | SEO, speed, mobile, load, maintainability | ~20 |
-| `claude-workflow` | Starting a project, agents, verification, CLAUDE.md/MEMORY.md | ~15 |
-| `video-and-content` | Editing video, motion graphics, ads, marketing, first users | ~12 |
-| `tool-stack-reference` | Which tool or MCP to connect, open-source alternatives | ~15 |
+| Skill | When it triggers |
+|---|---|
+| `anti-ai-design` | Building or redesigning a site or app so it doesn't look like AI, including animation (GSAP/Lenis/React Bits) |
+| `security-hardening` | Before going live, after every change, AI agents in an app |
+| `israeli-legal-compliance` | Privacy, accessibility, spam, copyright, reviews |
+| `launch-readiness` | SEO, speed, mobile, load, maintainability, first users |
+| `claude-workflow` | Starting a project, verification, CLAUDE.md/MEMORY.md, plugins and tools, video editing |
+
+Only items rated 6+ in `../RATINGS.md` were kept.
 
 Plus `PROMPTS.md`: a library of ready-to-copy prompts from the videos (Hebrew/English).
 

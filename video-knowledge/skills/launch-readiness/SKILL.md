@@ -13,10 +13,9 @@ Security (→ `security-hardening`) · accessibility + legal (→ `israeli-legal
 ## 2. Technical SEO + sharing
 - Unique `<title>` and meta description per page; **one clear H1 per page**; canonical tags.
 - **Open Graph + Twitter meta with a preview image**, so a link shared on WhatsApp shows an image and title instead of a grey link. Prompt: "Embed Meta SEO tags and Open Graph tags, including preview images."
-- `sitemap.xml`, `robots.txt`, **`llms.txt`**, favicon, custom 404.
+- `sitemap.xml`, `robots.txt`, favicon, custom 404.
 - Internal links, breadcrumbs, structured data (JSON-LD), **LocalBusiness schema** for local businesses; Google Business Profile.
 - Proper alt text; custom domain; the browser tab must not say "Vite"/"React"; no placeholder content.
-- Workflow tools: Search Console (what already works) → Keyword Planner → Google Trends → AnswerThePublic → Ubersuggest (easy wins) → Screaming Frog (broken things) → PageSpeed Insights → Rich Results Test → Yoast (WordPress).
 
 ## 3. Performance
 - Compress images and convert them to modern formats (WebP/AVIF); lazy-load below the fold.
@@ -35,7 +34,7 @@ Security (→ `security-hardening`) · accessibility + legal (→ `israeli-legal
 No horizontal scroll or text overflow; tap targets ≥ 44pt; buttons within thumb reach; simple forms with the right input types; clickable `tel:` and `mailto:`; no popups covering the screen; test portrait and landscape at several widths; mobile menu; every page mobile-optimised.
 
 ## 5. Polish (things AI-built sites usually miss)
-Favicon · page titles · broken links/buttons · footer links · copyright year · success **and** error states on forms · loading states · empty states · confirmation modals for destructive actions · password visibility toggle · skip-to-content link · sticky header · back-to-top · search · expandable FAQ · dark-mode toggle (if fitting) · cookie banner · print stylesheet · UTM tracking · floating contact/WhatsApp button · last-updated dates · clickable logo · remove unused navigation.
+Favicon · page titles · broken links/buttons · footer links · copyright year · success **and** error states on forms · loading states · empty states · confirmation modals for destructive actions · password visibility toggle · skip-to-content link · clickable logo · `tel:`/`mailto:` links · remove unused navigation and placeholder text. Add extras (FAQ, back-to-top, WhatsApp button, dark mode) only where they fit the site.
 
 ## 6. Load and resilience
 A real example: a Claude-built chat app **crashed at ~150 concurrent users** (OOM on a 2 vCPU/4 GB server), long lists took 7.5s, and messages took 10s under load. "The server matters, but most problems happen because nobody told Claude exactly what to check."
@@ -53,3 +52,8 @@ Also: API timeouts and failed-request handling, retries with backoff, uptime mon
 
 ## 8. Verify
 Open the deployed site in a real browser (Playwright / Chrome DevTools MCP), check the console and network for errors/404s, screenshot it at 1440/768/390, and re-run Lighthouse.
+
+## 9. After launch: the first users (no budget)
+- **Product Hunt**: a concentrated launch to people who like discovering new products.
+- **Reddit**: thousands of precise communities (teachers, runners, founders). Reach exactly the people with the problem, but **be part of the community first**: give value, follow each subreddit's rules, no drive-by promotion.
+- Use both, each at the right time. Measure with analytics (e.g. PostHog) where users drop off.

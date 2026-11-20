@@ -1,6 +1,6 @@
 ---
 name: anti-ai-design
-description: Use whenever building or redesigning a website, landing page or app UI, so the result does not look "AI-generated / vibe-coded". Covers giving the model a design direction, the banned AI-look patterns, concrete UI rules (spacing, contrast, type, buttons), offering multiple design directions, and verifying the result in a real browser. Triggers - "design", "landing page", "website", "make it look premium", "it looks like AI", עיצוב, דף נחיתה, אתר, "נראה כמו AI".
+description: Use whenever building or redesigning a website, landing page or app UI, so the result does not look "AI-generated / vibe-coded". Covers giving the model a design direction, the banned AI-look patterns, concrete UI rules (spacing, contrast, type, buttons), offering multiple design directions, motion done right (GSAP, Lenis, React Bits, UX/animation principles), and verifying the result in a real browser. Triggers - "design", "landing page", "website", "make it look premium", "it looks like AI", "animation", "smooth scroll", עיצוב, דף נחיתה, אתר, אנימציה, "נראה כמו AI".
 ---
 
 # Anti-AI design
@@ -83,14 +83,29 @@ After building, run an explicit **"AI-look audit"**: list every element that mat
 | Taste skill | Picks a style, uses real photos, opens the site and checks it. |
 | Emil Kowalski design skill / **Apple Design** skill | Motion and interaction craft; Apple-style restraint, typography, interruptible animation; also critiques ("CTA hard to notice", "too many elements compete"). |
 | **UI UX Pro Max** skill | Design intelligence and styles database. |
-| Vercel **Web Design Guidelines** / `ui-sdk` | "review my UI" returns issues with file:line (missing alt, missing labels); accessible behaviour components. |
+| Vercel **Web Design Guidelines** | "review my UI" returns issues with file:line (missing alt, missing labels). |
 | **21st.dev** MCP | Generate component variations and pick one. |
 | Figma MCP | Design-to-code from real designs. |
 | Image to Code | Start from a design image. |
 
 Tip: design skills work well as a **retrofit**. Open an existing site/app and ask Claude to improve it with the skill, rather than only using them on new projects.
 
-## 6. Verify visually: never ship blind
+## 6. Motion: premium, not decorative
+
+**Core stack**: name it explicitly in the prompt, otherwise Claude hand-rolls weak CSS:
+| Need | Library |
+|---|---|
+| Timeline and scroll animation | **GSAP** + ScrollTrigger |
+| Smooth scroll | **Lenis** (`npm i lenis`, wrap the app) |
+| Copy-paste animated components and backgrounds | **React Bits** |
+| Component variations | **21st.dev** |
+Pick one or two more only if needed (Motion, Magic UI, Smooth UI…); they overlap. **prompt-motion.com** is a useful library of ready motion-graphics prompts.
+
+**Principles** (UX + classic animation): anticipation (a small wind-up), follow-through, easing (slow in/out), move in arcs, snappy timing, exaggerated feedback for important moments (e.g. a wrong-password shake), Fitts's law (big, close targets), Hick's law (fewer choices), Miller's law (chunk information, e.g. card numbers in groups of 4), Doherty threshold (respond in under 400ms), Jakob's law (familiar patterns), and **the more often something is used, the less it should animate**.
+
+**Rules**: respect `prefers-reduced-motion`; animate `transform`/`opacity` only; animation explains a state change, it doesn't decorate everything; scroll through the whole page in a browser and look for stuck ("dead") scroll and jank.
+
+## 7. Verify visually: never ship blind
 
 Open the site in a real browser (Playwright / Chrome DevTools MCP / `playwright-cli open localhost:3000`) and **screenshot it at 1440px, 768px and 390px**. Check the hierarchy, overflow, contrast and the AI-look list. Fix, then re-screenshot. Repeat until clean.
 

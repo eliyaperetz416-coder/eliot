@@ -1,6 +1,6 @@
 ---
 name: claude-workflow
-description: Use at the start of any non-trivial build with Claude Code (new product, feature, app), or when results are poor, long tasks drift, or the user asks how to work with agents. Covers product validation before building, asking clarifying questions and mapping edge cases, plan-first execution, verification loops and a verify skill, multi-agent patterns (orchestrator, council, arena tournament), prompt-writing, project memory (CLAUDE.md/MEMORY.md), and the recommended plugin setup. Triggers - "start a project", "build me an app", "agents", "Claude keeps making mistakes", "long task", איך לעבוד עם קלוד, סוכנים, פרויקט חדש.
+description: Use at the start of any non-trivial build with Claude Code (new product, feature, app), or when results are poor, long tasks drift, or the user asks how to work with agents. Covers product validation before building, asking clarifying questions and mapping edge cases, plan-first execution, verification loops and a verify skill, when (not) to use multiple agents, project memory (CLAUDE.md/MEMORY.md), the recommended plugins and tools, and a Claude video-editing pipeline. Triggers - "start a project", "build me an app", "agents", "Claude keeps making mistakes", "long task", איך לעבוד עם קלוד, סוכנים, פרויקט חדש.
 ---
 
 # Working method for Claude Code
@@ -12,7 +12,6 @@ Distilled from ~15 videos. Main idea: **results come from process and connected 
 2. **Define the real pain**: without a real problem, a beautiful product won't help.
 3. **Set a timeline** for V1.
 4. **Scope V1**: the smallest shippable thing; everything else is "later".
-Optional: run a **council** of 4 agents on the idea: *Believer* (the strongest case for it, who buys), *Skeptic* (why customers won't pay, weaknesses), *Investor* (can it make money), *Judge* (reads all three, gives a verdict).
 
 ## 2. The "4 lines" that close Claude's holes
 Without them, Claude builds immediately with zero questions. A real example: a promo sender that messaged non-consenting customers. Add to every substantial request:
@@ -37,15 +36,14 @@ The task states what "done" looks like · no "think hard" filler lines · design
 
 Quick-capture trick (desktop app): double-tap **Option** (Mac) to open a Claude overlay on any screen, drag to select a region, and ask about the screenshot (charts, data, text). This is faster than describing what you see.
 
-## 6. Multi-agent patterns
-- **Orchestrator / manager**: talk to 1–3 lead agents that delegate to specialists (PM → architect → dev ⇄ QA → integration) and **check every step before moving on**. Don't juggle 20 agents yourself. (Libraries: agency-agents with an Agents Orchestrator; oh-my-claudecode `/team`.)
-- **Arena / tournament**: when an answer is weak, run many agents with different strategies on the same task, judge them pairwise, and keep the winner.
-- **Council**: several perspectives + a judge for decisions.
+## 6. Agents: keep it lean
+- For big tasks, talk to **one lead agent** that delegates to a few specialists (e.g. plan → build → QA) and **checks every step before moving on**. `oh-my-claudecode`'s `/team` does this inside Claude Code.
+- Avoid agent sprawl: hundreds of pre-made role agents or 100-agent "tournaments" mostly burn tokens without better results.
 
 ## 7. Prompting
-- Ask Claude to **write the prompt first** (prompt-master style): `<role>`, `<context>` (audience, platform, length), `<task>`, `<constraints>`, `<output>`.
 - Name the tools and libraries explicitly ("build this with GSAP", "use Supabase").
 - Say what to avoid, not only what to do.
+- State what "done" looks like (see section 2).
 
 ## 8. Memory and environment
 - `CLAUDE.md` = standing instructions; `MEMORY.md` = learned facts and corrections. **Every correction goes into a lessons file** so each run improves.
@@ -53,9 +51,30 @@ Quick-capture trick (desktop app): double-tap **Option** (Mac) to open a Claude 
 - Model choice: save the most capable (most expensive) model for multi-step, interdependent tasks; use a lighter model for simple work so you hit usage limits less.
 - Connect the tools: what's connected matters more than the prompt (e.g. with Blender/Unreal MCPs a game gets real 3D models instead of code-drawn shapes).
 - Recommended Claude Code plugins for app work: **Supabase** (real DB, migrations, security advisors), **Vercel** (deploy), **oh-my-claudecode** (`/team`, 19 specialist agents), **Chrome DevTools MCP** (real browser: console, network, screenshots, performance). Add **Playwright** for UI verification.
-- Use a **`PreToolUse` hook** to enforce rules the model might forget (e.g. block `.env` access).
+- Enforce rules the model might forget: `permissions.deny` in `.claude/settings.json` for simple blocks (e.g. `Read(./.env*)`), or a **`PreToolUse` hook** when Bash commands must be blocked too.
 
-## 9. Useful prompts
+## 9. Tools worth connecting
+| Tool | Why |
+|---|---|
+| **Playwright** / **Chrome DevTools MCP** | Claude sees and tests what it built: console, network, screenshots, performance |
+| **Supabase** plugin | Real DB, migrations, security advisors |
+| **Vercel** plugin | Deploy from the terminal |
+| **Firecrawl** | Scrape sites into clean data (research, competitor analysis) |
+| **PostHog** | Product analytics: funnels, where users get stuck, A/B tests |
+| **Composio** | One hub for app integrations (Gmail, Slack, Notion), if no built-in connector exists |
+| **Expo skills** (`claude plugin install expo@claude-plugins-official`) | Official skills for iOS/Android apps, including store submission |
+
+Mature open-source replacements for paid SaaS, if cost matters: AppFlowy (Notion), Cal.com (Calendly), Chatwoot (Intercom), Cap (Loom), OpenProject (Asana).
+
+## 10. Video editing with Claude (pipeline)
+1. Transcribe locally with Whisper (Hebrew works) with word timestamps.
+2. Claude fixes the transcript and splits captions **by meaning**, not word count.
+3. Edit plan: what's on screen for each sentence, timed to the word.
+4. Render scenes as HTML pages to video (HyperFrames).
+5. Claude screenshots frames, finds what looks bad, fixes it, and exports for the platform.
+6. **Lessons file**: every correction is saved, so each video is better than the last (this works for any repeated task).
+
+## 11. Useful prompts
 - "Find all of the implicit state machines in my app" (hidden state bugs).
 - "Is there a security hole in these changes? Anything about permissions I missed?" (after every change).
 - "Open the app in the browser, use it like a user, screenshot it, and fix what's broken."
