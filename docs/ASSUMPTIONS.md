@@ -291,3 +291,6 @@ Following the apple-design guide (OUR DESIGN, after Apple's WWDC talks; no Apple
   - invite codes come from a cryptographic random source;
   - the old versions of the leader functions, which the app no longer calls, are closed.
 - The Supabase project `demigod` also holds the tables of two other apps (prefixes `hc_` and `agenda_`); their functions were reviewed and are protected by their own secrets.
+
+## v1.47.1: privacy contact
+- The privacy page shows where to send privacy requests (see, correct or delete your data): an email link under "Your rights".
