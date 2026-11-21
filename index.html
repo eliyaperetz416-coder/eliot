@@ -2,8 +2,19 @@
 <html lang="en" dir="ltr">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Demigod</title>
+  <meta name="description" content="Free gym-lifting app: every set you log turns into ranks, XP and rewards. Works offline.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Demigod">
+  <meta property="og:title" content="Demigod - Lift. Rank. Ascend.">
+  <meta property="og:description" content="Free gym-lifting app: every set you log turns into ranks, XP and rewards. Works offline.">
+  <meta property="og:url" content="https://eliot-three.vercel.app/">
+  <meta property="og:image" content="https://eliot-three.vercel.app/assets/og/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Demigod app icon with the line Lift. Rank. Ascend.">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="theme-color" content="#0a0b12">
   <meta name="color-scheme" content="dark">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -18,6 +29,120 @@
   <link rel="stylesheet" href="src/styles/base.css">
   <link rel="stylesheet" href="src/styles/components.css">
   <link rel="stylesheet" href="src/vendor/zip/zip.css">
+  <!--PRELOAD_START-->
+  <link rel="preload" href="src/data/achievements.json" as="fetch" crossorigin>
+  <link rel="preload" href="src/data/calibration.json" as="fetch" crossorigin>
+  <link rel="preload" href="src/data/exercises.json" as="fetch" crossorigin>
+  <link rel="preload" href="src/data/extra-exercises.json" as="fetch" crossorigin>
+  <link rel="preload" href="src/data/i18n/en.json" as="fetch" crossorigin>
+  <link rel="preload" href="src/data/i18n/he.json" as="fetch" crossorigin>
+  <link rel="preload" href="src/data/muscles.json" as="fetch" crossorigin>
+  <link rel="preload" href="src/data/numbers.json" as="fetch" crossorigin>
+  <link rel="preload" href="src/data/quests.json" as="fetch" crossorigin>
+  <link rel="preload" href="src/data/shop.json" as="fetch" crossorigin>
+  <link rel="preload" href="src/data/wods.json" as="fetch" crossorigin>
+  <link rel="modulepreload" href="src/core/achievements.mjs">
+  <link rel="modulepreload" href="src/core/backup.mjs">
+  <link rel="modulepreload" href="src/core/bonus.mjs">
+  <link rel="modulepreload" href="src/core/calendar.mjs">
+  <link rel="modulepreload" href="src/core/card.mjs">
+  <link rel="modulepreload" href="src/core/charts.mjs">
+  <link rel="modulepreload" href="src/core/compare.mjs">
+  <link rel="modulepreload" href="src/core/consistency.mjs">
+  <link rel="modulepreload" href="src/core/crew.mjs">
+  <link rel="modulepreload" href="src/core/custom.mjs">
+  <link rel="modulepreload" href="src/core/draft.mjs">
+  <link rel="modulepreload" href="src/core/game.mjs">
+  <link rel="modulepreload" href="src/core/gamestate.mjs">
+  <link rel="modulepreload" href="src/core/generator.mjs">
+  <link rel="modulepreload" href="src/core/i18n.mjs">
+  <link rel="modulepreload" href="src/core/importwork.mjs">
+  <link rel="modulepreload" href="src/core/link.mjs">
+  <link rel="modulepreload" href="src/core/live.mjs">
+  <link rel="modulepreload" href="src/core/load.mjs">
+  <link rel="modulepreload" href="src/core/model.mjs">
+  <link rel="modulepreload" href="src/core/muscles.mjs">
+  <link rel="modulepreload" href="src/core/post.mjs">
+  <link rel="modulepreload" href="src/core/profile.mjs">
+  <link rel="modulepreload" href="src/core/progression.mjs">
+  <link rel="modulepreload" href="src/core/prs.mjs">
+  <link rel="modulepreload" href="src/core/quests.mjs">
+  <link rel="modulepreload" href="src/core/ranks.mjs">
+  <link rel="modulepreload" href="src/core/recovery.mjs">
+  <link rel="modulepreload" href="src/core/requests.mjs">
+  <link rel="modulepreload" href="src/core/routines.mjs">
+  <link rel="modulepreload" href="src/core/schedule.mjs">
+  <link rel="modulepreload" href="src/core/search.mjs">
+  <link rel="modulepreload" href="src/core/settings.mjs">
+  <link rel="modulepreload" href="src/core/shop.mjs">
+  <link rel="modulepreload" href="src/core/streak.mjs">
+  <link rel="modulepreload" href="src/core/timer.mjs">
+  <link rel="modulepreload" href="src/core/views.mjs">
+  <link rel="modulepreload" href="src/core/weakest.mjs">
+  <link rel="modulepreload" href="src/core/wods.mjs">
+  <link rel="modulepreload" href="src/core/workout.mjs">
+  <link rel="modulepreload" href="src/ui/backup.js">
+  <link rel="modulepreload" href="src/ui/calendar.js">
+  <link rel="modulepreload" href="src/ui/card-export.js">
+  <link rel="modulepreload" href="src/ui/charts.js">
+  <link rel="modulepreload" href="src/ui/components.js">
+  <link rel="modulepreload" href="src/ui/cosmetics.js">
+  <link rel="modulepreload" href="src/ui/crew-api.js">
+  <link rel="modulepreload" href="src/ui/crew-state.js">
+  <link rel="modulepreload" href="src/ui/crew.js">
+  <link rel="modulepreload" href="src/ui/custom.js">
+  <link rel="modulepreload" href="src/ui/data.js">
+  <link rel="modulepreload" href="src/ui/db.js">
+  <link rel="modulepreload" href="src/ui/dom.js">
+  <link rel="modulepreload" href="src/ui/emblem.js">
+  <link rel="modulepreload" href="src/ui/exercises.js">
+  <link rel="modulepreload" href="src/ui/format.js">
+  <link rel="modulepreload" href="src/ui/game-ui.js">
+  <link rel="modulepreload" href="src/ui/history.js">
+  <link rel="modulepreload" href="src/ui/icons.js">
+  <link rel="modulepreload" href="src/ui/ladder.js">
+  <link rel="modulepreload" href="src/ui/link-state.js">
+  <link rel="modulepreload" href="src/ui/link-ui.js">
+  <link rel="modulepreload" href="src/ui/live.js">
+  <link rel="modulepreload" href="src/ui/lock.js">
+  <link rel="modulepreload" href="src/ui/mascot.js">
+  <link rel="modulepreload" href="src/ui/missing.js">
+  <link rel="modulepreload" href="src/ui/model.js">
+  <link rel="modulepreload" href="src/ui/muscle-map.js">
+  <link rel="modulepreload" href="src/ui/need.js">
+  <link rel="modulepreload" href="src/ui/numbers.js">
+  <link rel="modulepreload" href="src/ui/onboarding.js">
+  <link rel="modulepreload" href="src/ui/picker.js">
+  <link rel="modulepreload" href="src/ui/plan-names.js">
+  <link rel="modulepreload" href="src/ui/plans.js">
+  <link rel="modulepreload" href="src/ui/post-ui.js">
+  <link rel="modulepreload" href="src/ui/privacy.js">
+  <link rel="modulepreload" href="src/ui/profile.js">
+  <link rel="modulepreload" href="src/ui/progress.js">
+  <link rel="modulepreload" href="src/ui/rank-card.js">
+  <link rel="modulepreload" href="src/ui/ranks-preview.js">
+  <link rel="modulepreload" href="src/ui/ranks.js">
+  <link rel="modulepreload" href="src/ui/rename.js">
+  <link rel="modulepreload" href="src/ui/request-state.js">
+  <link rel="modulepreload" href="src/ui/requests.js">
+  <link rel="modulepreload" href="src/ui/rest-timer.js">
+  <link rel="modulepreload" href="src/ui/routines.js">
+  <link rel="modulepreload" href="src/ui/schedule.js">
+  <link rel="modulepreload" href="src/ui/screens.js">
+  <link rel="modulepreload" href="src/ui/settings.js">
+  <link rel="modulepreload" href="src/ui/share.js">
+  <link rel="modulepreload" href="src/ui/shop.js">
+  <link rel="modulepreload" href="src/ui/sounds.js">
+  <link rel="modulepreload" href="src/ui/storage.js">
+  <link rel="modulepreload" href="src/ui/store.js">
+  <link rel="modulepreload" href="src/ui/wakelock.js">
+  <link rel="modulepreload" href="src/ui/weakest.js">
+  <link rel="modulepreload" href="src/ui/weight-info.js">
+  <link rel="modulepreload" href="src/ui/wods.js">
+  <link rel="modulepreload" href="src/ui/workout.js">
+  <link rel="modulepreload" href="src/vendor/zip/zip.js">
+  <link rel="modulepreload" href="src/version.js">
+  <!--PRELOAD_END-->
 </head>
 <body>
   <div id="app"></div>

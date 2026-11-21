@@ -80,7 +80,7 @@ function render() {
   }
   dispose = el._dispose ?? null;
   app.replaceChildren(el);
-  const tab = { exercises: 'workouts', exercise: 'workouts', custom: 'workouts', requests: 'workouts', routines: 'workouts', routine: 'workouts', plans: 'workouts', plan: 'workouts', schedule: 'workouts', wods: 'workouts', wod: 'workouts', history: 'profile', achievements: 'profile', crew: 'profile', settings: 'profile', calendar: 'profile', numbers: 'profile', result: 'workout', progress: 'ranks', ladder: 'ranks', weakest: 'ranks', card: 'ranks', shop: 'profile', model: 'profile' }[id] ?? id;
+  const tab = { exercises: 'workouts', exercise: 'workouts', custom: 'workouts', requests: 'workouts', routines: 'workouts', routine: 'workouts', plans: 'workouts', plan: 'workouts', schedule: 'workouts', wods: 'workouts', wod: 'workouts', history: 'profile', achievements: 'profile', crew: 'profile', settings: 'profile', calendar: 'profile', numbers: 'profile', privacy: 'profile', result: 'workout', progress: 'ranks', ladder: 'ranks', weakest: 'ranks', card: 'ranks', shop: 'profile', model: 'profile' }[id] ?? id;
   currentTab = tab;
   showMascot(id === 'profile');
   // Safety net: every sub-screen (any screen that is not a tab root) has a way back, even in empty/error states.
@@ -163,9 +163,8 @@ function registerServiceWorker() {
   });
 }
 
-// No pinch or double-tap zoom: a zoomed-in screen is hard to get out of on a phone (a trade-off against accessibility zoom, chosen by Elia).
-for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, (e) => e.preventDefault(), { passive: false });
-document.addEventListener('touchmove', (e) => { if (e.touches.length > 1 || (e.scale && e.scale !== 1)) e.preventDefault(); }, { passive: false });
+// Zoom: two-finger pinch stays on (accessibility, IS 5568 / WCAG 1.4.4); accidental double-tap zoom is off through
+// `touch-action: manipulation` in base.css (chosen by Elia, v1.47).
 
 /** A failed first request (bad network, a busy server) must never leave a black page: try again a few times, then say so (OUR DESIGN). */
 async function start() {

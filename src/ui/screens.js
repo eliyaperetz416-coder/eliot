@@ -23,6 +23,7 @@ import { shopScreen } from './shop.js';
 import { achievementsScreen } from './game-ui.js';
 import { settingsScreen } from './settings.js';
 import { numbersScreen } from './numbers.js';
+import { privacyScreen } from './privacy.js';
 import { requestsScreen } from './requests.js';
 import { calendarScreen } from './calendar.js';
 import { crewScreen } from './crew.js';
@@ -94,6 +95,7 @@ export function buildScreens(ctx) {
     profile: () => profileScreen(ctx),
     settings: () => settingsScreen(ctx),
     numbers: numbersScreen,
+    privacy: privacyScreen,
     requests: requestsScreen,
     calendar: calendarScreen,
     crew: crewScreen,
