@@ -38,6 +38,9 @@ export function createFakeCrew() {
     },
     update_stats({ p_token, p_stats }) {
       const m = me(p_token).member; const { recent, ...rest } = p_stats ?? {};
+      // like the server (migration 012): a number outside its believable range is dropped
+      const MAX = { rating: 3000, level: 1000, streak: 3660, weekVolume: 500000, monthWorkouts: 93, workouts: 50000, tierIndex: 20 };
+      for (const [k, max] of Object.entries(MAX)) if (k in rest && !(typeof rest[k] === 'number' && rest[k] >= 0 && rest[k] <= max)) delete rest[k];
       m.stats = rest; if (Array.isArray(recent)) m.recent = recent.slice(0, 8);
       m.history ??= []; const day = new Date().toISOString().slice(0, 10); m.history = m.history.filter((r) => r.day !== day);
       m.history.push({ day, rating: rest.rating ?? null, week: rest.weekVolume ?? null, month: rest.monthWorkouts ?? null, workouts: rest.workouts ?? null, streak: rest.streak ?? null, level: rest.level ?? null });

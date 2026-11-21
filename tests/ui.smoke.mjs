@@ -11,7 +11,7 @@ mkdirSync(shots, { recursive: true });
 const server = await serve(0);
 const base = `http://localhost:${server.address().port}/`;
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-const ROUTES = ['wods', 'wod/fran', 'weakest', 'workout', 'workouts', 'exercises', 'exercise/barbell-bench-press-medium-grip', 'exercise/plank', 'ranks', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'requests', 'calendar', 'crew', 'profile', 'history', 'kit', 'ranks-preview'];
+const ROUTES = ['wods', 'wod/fran', 'weakest', 'workout', 'workouts', 'exercises', 'exercise/barbell-bench-press-medium-grip', 'exercise/plank', 'ranks', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'privacy', 'requests', 'calendar', 'crew', 'profile', 'history', 'kit', 'ranks-preview'];
 const errors = [];
 let failed = 0;
 const ONLY = process.env.ONLY;
@@ -1517,7 +1517,7 @@ for (const lang of ['he', 'en']) {
   });
 
   await check(`${lang}: every sub-screen has a back link`, async () => {
-    const subs = ['wods', 'wod/fran', 'wod/nope', 'ladder', 'exercises', 'exercise/plank', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'requests', 'calendar', 'crew', 'history', 'history/nope', 'routine/nope', 'plan/nope', 'exercise/nope', 'ranks-preview', 'model', 'schedule', 'ladder'];
+    const subs = ['wods', 'wod/fran', 'wod/nope', 'ladder', 'exercises', 'exercise/plank', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'privacy', 'requests', 'calendar', 'crew', 'history', 'history/nope', 'routine/nope', 'plan/nope', 'exercise/nope', 'ranks-preview', 'model', 'schedule', 'ladder'];
     for (const r of subs) {
       await page.goto(`${base}#/${r}`);
       await page.waitForSelector('main');

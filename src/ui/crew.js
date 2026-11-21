@@ -266,7 +266,8 @@ export function crewScreen() {
       h('h2', { text: t('crew.share.plan.title') }),
       h('p', { text: t('crew.share.plan.body') }),
       segmented({ label: t('crew.share.plan.title'), value: on ? 'on' : 'off', onChange: async (v) => { await updateSettings({ sharePlan: v === 'on' }); await syncPlan(); again(); }, options: [{ value: 'off', label: t('crew.share.plan.off') }, { value: 'on', label: t('crew.share.plan.on') }] }),
-      h('p', { class: 'row-sub', text: t('crew.privacy.note') }));
+      h('p', { class: 'row-sub', text: t('crew.privacy.note') }),
+      h('a', { class: 'row-sub', href: '#/privacy', text: t('privacy.link') }));
   }
 
   const hoursText = (h24) => (h24 >= PERMANENT_HOURS / 2 ? t('crew.permanent') : h24 % 24 === 0 ? t('crew.days', { n: h24 / 24 }) : t('crew.hours', { n: h24 }));

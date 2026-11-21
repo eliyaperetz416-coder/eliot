@@ -112,6 +112,7 @@ export function settingsScreen({ onLanguage }) {
       h('div', { class: 'section-label', text: t('set.about') }),
       list([
         listRow({ title: t('set.numbers'), sub: t('set.numbers.sub'), icon: 'info', onClick: () => { location.hash = '#/numbers'; } }),
+        listRow({ title: t('privacy.link'), sub: t('privacy.link.sub'), icon: 'shield', onClick: () => { location.hash = '#/privacy'; } }),
         listRow({ title: t('app.name'), sub: t('app.tagline'), icon: 'bolt', end: h('span', { class: 'num', dir: 'ltr', text: `${t('profile.version')} ${APP_VERSION}` }) }),
       ]),
       h('section', { class: 'card', style: 'margin-block-start:12px' }, h('h2', { text: t('set.credits') }), h('p', { text: t('set.credits.body') })),
