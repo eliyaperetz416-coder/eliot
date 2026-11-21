@@ -6,6 +6,8 @@ import { t } from '../core/i18n.mjs';
 /** The privacy page (#/privacy). Texts live in the dictionaries as privacy.sN.t (title) and privacy.sN.b (body);
  *  a body line that starts with "- " becomes a list item. It describes what the server really stores (supabase/migrations). */
 const SECTIONS = ['s1', 's2', 's3', 's4', 's5', 's6'];
+/** Where privacy requests go (shown under "Your rights"; approved by Elia, v1.47.1). */
+export const PRIVACY_CONTACT = 'eliyaperetz416@gmail.com';
 
 function body(text) {
   const out = [];
@@ -27,5 +29,6 @@ export function privacyScreen() {
     backLink('#/settings', t('set.title')),
     h('header', { class: 'screen-head' }, icon('shield', 'mark'), h('h1', { text: t('privacy.title') })),
     h('p', { class: 'row-sub', text: t('privacy.updated') }),
-    ...SECTIONS.map((s, i) => h('details', { class: 'card', open: i === 0 }, h('summary', { text: t(`privacy.${s}.t`) }), ...body(t(`privacy.${s}.b`)))));
+    ...SECTIONS.map((s, i) => h('details', { class: 'card', open: i === 0 }, h('summary', { text: t(`privacy.${s}.t`) }), ...body(t(`privacy.${s}.b`)),
+      s === 's5' ? h('p', {}, `${t('privacy.contact')} `, h('a', { href: `mailto:${PRIVACY_CONTACT}`, dir: 'ltr', text: PRIVACY_CONTACT })) : null)));
 }
