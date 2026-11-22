@@ -17,7 +17,7 @@ export function checksum(str) {
   return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16).padStart(14, '0');
 }
 
-export const EMPTY_DATA = Object.freeze({ profile: null, bodyweight: [], workouts: [], routines: [], folders: [], plans: [], custom: [], blobs: {}, game: null, settings: {}, renames: {}, requests: [], bases: {}, model: null, schedule: null });
+export const EMPTY_DATA = Object.freeze({ profile: null, bodyweight: [], workouts: [], routines: [], folders: [], plans: [], custom: [], blobs: {}, game: null, settings: {}, renames: {}, requests: [], bases: {}, model: null, schedule: null, crew: null });
 const ARRAYS = ['bodyweight', 'workouts', 'routines', 'folders', 'plans', 'custom', 'requests'];
 
 export function buildBackup({ data, appVersion, now }) {
@@ -74,6 +74,7 @@ export function mergeData(cur, inc) {
     bases: { ...i.bases, ...c.bases },
     requests: union(c.requests, i.requests, (x) => x.id),
     model: c.model ?? i.model ?? null, // the one on this phone wins
+    crew: c.crew ?? i.crew ?? null, // the crew spot on this phone wins
     schedule: Object.keys(c.schedule?.days ?? {}).length ? c.schedule : (i.schedule ?? c.schedule ?? null),
   };
   if (fresh || !c.profile) out.profile = i.profile ?? c.profile;
