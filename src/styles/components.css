@@ -790,3 +790,15 @@ button.chip:active, .seg button:active, .tab:active { opacity: .65; }
 @keyframes rest-done-in { from { opacity: 0; } to { opacity: 1; } }
 [data-motion="reduce"] .rest-done { animation: none; }
 @media (prefers-reduced-motion: reduce) { .rest-done { animation: none; } }
+
+/* First run (accounts): consent row, progress bar while moving data, the big goal number, language switch (OUR DESIGN). */
+.ob-lang { justify-self: end; min-height: 44px; }
+.ob-consent { display: flex; gap: 12px; align-items: flex-start; font-size: 14px; color: var(--text-dim); line-height: 1.5; cursor: pointer; }
+.ob-consent input { width: 22px; height: 22px; margin: 1px 0 0; flex-shrink: 0; accent-color: var(--accent); }
+.ob-bar { height: 4px; border-radius: 2px; background: var(--surface-3); overflow: hidden; }
+.ob-bar span { display: block; height: 100%; width: 35%; background: var(--accent); }
+.ob-bar span.run { animation: ob-bar 1.2s ease-in-out infinite; }
+@keyframes ob-bar { from { transform: translateX(-120%); } to { transform: translateX(320%); } }
+[dir="rtl"] .ob-bar span.run { animation-direction: reverse; }
+.ob-goal { text-align: center; font-size: 96px; line-height: 1; color: var(--accent); margin: 0; }
+[data-motion="reduce"] .ob-bar span.run { animation: none; }

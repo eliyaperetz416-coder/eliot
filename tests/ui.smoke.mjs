@@ -5,6 +5,7 @@ import { mkdirSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import sharp from 'sharp';
 import { createFakeCrew } from './fake-crew.mjs';
+import { installFakeSupabase } from './fake-supabase.mjs';
 
 const shots = new URL(`../docs/stage-${process.env.STAGE ?? 3}/`, import.meta.url).pathname;
 mkdirSync(shots, { recursive: true });
@@ -19,29 +20,47 @@ const check = (name, fn) => (ONLY && !name.includes(ONLY) && !name.includes('onb
 const L = (lang, he, en) => (lang === 'he' ? he : en);
 
 async function onboard(page, lang, shotPrefix) {
+  const shot = (n) => (shotPrefix ? page.screenshot({ path: `${shots}${shotPrefix}-onb-${n}.png` }) : null);
+  const head = (he, en) => page.waitForSelector(`.ob-title:text-is("${L(lang, he, en)}")`);
   await page.goto(base);
   await page.waitForSelector('html[data-ready="1"]');
-  await page.waitForSelector('.onboarding');
-  await page.waitForTimeout(500);
-  if (shotPrefix) await page.screenshot({ path: `${shots}${shotPrefix}-onb1.png` });
-  await page.click('.ob-actions .btn-primary');
+  await page.waitForSelector('#google');
+  await page.waitForTimeout(300);
+  await shot('1-signin');
+  assert.ok(await page.locator('#google').isDisabled(), 'Google waits for the consent box');
+  await page.check('#consent');
+  await page.click('#google'); // the fake Auth server sends us back signed in
   await page.waitForSelector('#ob-name');
-  if (shotPrefix) {
-    await page.click('.ob-actions .btn-primary'); // empty -> validation errors
-    await page.waitForSelector('.field-error');
-    await page.waitForTimeout(500);
-    await page.screenshot({ path: `${shots}${shotPrefix}-onb2-errors.png` });
-  }
-  await page.fill('#ob-name', 'Elia');
-  await page.click('.seg button >> nth=0');
-  await page.fill('#ob-weight', '82,5');
-  await page.fill('#ob-age', '30');
-  if (shotPrefix) assert.equal(await page.locator('.field-error:visible').count(), 0, 'errors clear while typing');
-  if (shotPrefix) await page.screenshot({ path: `${shots}${shotPrefix}-onb2.png` });
+  assert.equal(await page.inputValue('#ob-name'), 'Test', 'first name from the Google account');
+  await shot('2-name');
+  await page.fill('#ob-name', '');
   await page.click('.ob-actions .btn-primary');
+  await page.waitForSelector('.field-error:visible');
+  await page.fill('#ob-name', 'Elia');
+  await page.click('.ob-actions .btn-primary');
+  await page.waitForSelector('.seg');
+  await shot('3-curve');
+  await page.click('.seg button >> nth=0');
+  await page.waitForSelector('#ob-weight');
+  await page.fill('#ob-weight', '82,5');
+  await shot('4-weight');
+  await page.click('.ob-actions .btn-primary');
+  await page.waitForSelector('#ob-age');
+  await page.fill('#ob-age', '30');
+  await page.click('.ob-actions .btn-primary');
+  await page.waitForSelector('.ob-goal');
+  await shot('5-goal');
+  await page.click('.seg button >> nth=3');
+  await page.click('.ob-actions .btn-primary');
+  await head('מתקינים את Demigod', 'Install Demigod');
+  await shot('6-install');
+  await page.click('.ob-actions .btn-ghost');
+  await head('להתריע כשהמנוחה נגמרת?', 'Alert you when the rest is over?');
+  await shot('7-notify');
+  await page.click('.ob-actions .btn-ghost');
   await page.waitForSelector('.tour-list');
-  await page.waitForTimeout(500);
-  if (shotPrefix) await page.screenshot({ path: `${shots}${shotPrefix}-onb3.png` });
+  await page.waitForTimeout(400);
+  await shot('8-tour');
   await page.click('.ob-actions .btn-primary');
   await page.waitForSelector('.tabbar');
 }
@@ -93,18 +112,24 @@ async function postThree(page) {
 for (const lang of ['he', 'en']) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: lang === 'he' ? 'he-IL' : 'en-US', hasTouch: true });
   const reqFake = createFakeCrew(); // the exercise-request inbox never reaches the real server in tests
+  const account = await installFakeSupabase(ctx);
   await ctx.route(/supabase\.co\/rest\/v1\/rpc\/(submit_exercise_request|my_exercise_requests)/, reqFake.handle);
   const page = await ctx.newPage();
   page.on('console', (m) => m.type() === 'error' && errors.push(`${lang}: ${m.text()}`));
   page.on('pageerror', (e) => errors.push(`${lang}: ${e.message}`));
 
-  await check(`${lang}: onboarding (3 steps, validation, age optional, profile persists)`, async () => {
+  await check(`${lang}: onboarding (sign-in with consent, one question per screen, profile persists and uploads)`, async () => {
     await page.goto(base);
     await page.waitForSelector('html[data-ready="1"]');
     assert.equal(await page.evaluate(() => document.documentElement.lang), lang);
     assert.equal(await page.evaluate(() => document.documentElement.dir), lang === 'he' ? 'rtl' : 'ltr');
     assert.equal(await page.locator('.tabbar').count(), 0, 'no tab bar during onboarding');
     await onboard(page, lang, lang);
+    assert.equal(await page.evaluate(async () => (await import('./src/ui/storage.js')).getSettings().weeklyGoal), 4, 'the goal from the first run');
+    await page.waitForTimeout(3600); // the debounced first upload
+    assert.ok(account.uploads.length >= 1, 'the profile was uploaded');
+    assert.equal(account.uploads[0].consent_version, '2026-12');
+    assert.equal(account.uploads.at(-1).data.profile.name, 'Elia');
     await page.reload();
     await page.waitForSelector('html[data-ready="1"]');
     await page.waitForSelector('.tabbar');
@@ -850,6 +875,7 @@ for (const lang of ['he', 'en']) {
     // a second friend on another phone
     const ctx2 = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: lang === 'he' ? 'he-IL' : 'en-US', serviceWorkers: 'block' });
     await fake.install(ctx2);
+    await installFakeSupabase(ctx2);
     const p2 = await ctx2.newPage();
     p2.on('pageerror', (e) => errors.push(`crew friend: ${e.message}`));
     await onboard(p2, lang, `crew2-${lang}`);
@@ -990,6 +1016,7 @@ for (const lang of ['he', 'en']) {
       await page.evaluate(async () => { const { saveSchedule, deleteRoutine } = await import('./src/ui/store.js'); await saveSchedule({ days: {}, done: {} }); await deleteRoutine('r-share'); });
       // leader: chip, tools only for the leader, rename, new code, remove a member, hand over and back
       const ctx3 = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: lang === 'he' ? 'he-IL' : 'en-US', serviceWorkers: 'block' });
+      await installFakeSupabase(ctx3);
       try {
         await fake.install(ctx3);
         const p3 = await ctx3.newPage();
@@ -1610,6 +1637,102 @@ for (const lang of ['he', 'en']) {
   });
   await ctx.close();
 }
+
+const phone = (over = {}) => browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'he-IL', serviceWorkers: 'block', ...over });
+const IPHONE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
+/** A phone that already has data from before accounts: profile, 2 workouts, a crew spot. */
+async function seedOldPhone(page) {
+  await page.goto(base); await page.waitForSelector('html[data-ready="1"]');
+  await page.evaluate(async () => {
+    const { dbPut } = await import('./src/ui/db.js');
+    const { bodyweightEntry } = await import('./src/core/profile.mjs');
+    await dbPut('profile', { id: 'me', name: 'Old', sex: 'm', age: 40, lang: 'he', createdAt: new Date().toISOString(), schemaVersion: 1 }, 'me');
+    await dbPut('bodyweight', bodyweightEntry(90));
+    for (const id of ['old-1', 'old-2']) await dbPut('workouts', { id, startedMs: Date.now() - 86400000, finishedMs: Date.now() - 86000000, entries: [], stats: { workingSets: 0 } });
+    await dbPut('kv', { token: 't'.repeat(64), code: 'ABCDEFGH', name: 'Crew', nickname: 'Old', memberId: 'm1', lastSeenId: 0 }, 'crew');
+  });
+  await page.reload(); await page.waitForSelector('#google');
+}
+
+await check('accounts: iPhone in Safari sees the install screen before sign-in', async () => {
+  const c = await phone({ userAgent: IPHONE_UA }); await installFakeSupabase(c);
+  const p = await c.newPage(); await p.goto(base); await p.waitForSelector('.onboarding .tour-list');
+  assert.equal(await p.locator('#google').count(), 0);
+  await p.screenshot({ path: `${shots}he-onb-0-ios-install.png` });
+  await p.click('.ob-actions .btn-ghost'); await p.waitForSelector('#google');
+  await c.close();
+});
+
+await check('accounts: an old phone moves its data (and crew spot) to the account, then opens the app', async () => {
+  const c = await phone(); const acct = await installFakeSupabase(c);
+  const p = await c.newPage(); p.on('pageerror', (e) => errors.push(`old phone: ${e.message}`));
+  await seedOldPhone(p);
+  await p.check('#consent'); await p.click('#google');
+  await p.waitForSelector('.tabbar', { timeout: 10000 });
+  assert.ok(acct.uploads.length >= 1);
+  const up = acct.uploads[0];
+  assert.deepEqual(up.data.workouts.map((w) => w.id).sort(), ['old-1', 'old-2']);
+  assert.equal(up.data.crew.code, 'ABCDEFGH');
+  assert.equal(up.consent_version, '2026-12');
+  await c.close();
+});
+
+await check('accounts: when the upload fails, nothing is lost and the app still opens', async () => {
+  const c = await phone(); await installFakeSupabase(c, { failUploads: true });
+  const p = await c.newPage(); p.on('pageerror', (e) => errors.push(`failing upload: ${e.message}`));
+  await seedOldPhone(p);
+  await p.check('#consent'); await p.click('#google');
+  await p.waitForSelector('.ob-actions .btn-ghost', { timeout: 10000 }); // retry / continue for now
+  await p.screenshot({ path: `${shots}he-onb-migrate-failed.png` });
+  await p.click('.ob-actions .btn-ghost');
+  await p.waitForSelector('.tabbar');
+  await p.goto(`${base}#/history`); await p.waitForSelector('.screen');
+  assert.equal(await p.evaluate(async () => (await (await import('./src/ui/db.js')).dbAll('workouts')).length), 2);
+  await c.close();
+});
+
+await check('accounts: a new phone signs in and gets the account data', async () => {
+  const remote = { updatedAt: Date.now() - 1000, data: { profile: { id: 'me', name: 'Cloud', sex: 'f', age: null, lang: 'he', createdAt: new Date().toISOString(), schemaVersion: 1 }, bodyweight: [{ dateKeyTime: '2026-11-01T00000000000001', dateKey: '2026-11-01', at: new Date().toISOString(), ms: 1, kg: 60 }], workouts: [{ id: 'cloud-1', startedMs: Date.now() - 5e6, finishedMs: Date.now() - 4e6, entries: [], stats: { workingSets: 0 } }], routines: [], folders: [], plans: [], custom: [], blobs: {}, game: null, settings: { weeklyGoal: 5 }, renames: {}, requests: [], bases: {}, model: null, schedule: null, crew: null } };
+  const c = await phone(); await installFakeSupabase(c, { remote });
+  const p = await c.newPage(); await p.goto(base); await p.waitForSelector('#google');
+  await p.check('#consent'); await p.click('#google');
+  await p.waitForSelector('.tabbar', { timeout: 10000 });
+  const got = await p.evaluate(async () => { const { dbGet, dbAll } = await import('./src/ui/db.js'); return { name: (await dbGet('profile', 'me'))?.name, w: (await dbAll('workouts')).length }; });
+  assert.deepEqual(got, { name: 'Cloud', w: 1 });
+  await c.close();
+});
+
+await check('accounts: coming back from Google with no saved key shows "sign-in did not finish"', async () => {
+  const c = await phone(); await installFakeSupabase(c);
+  const p = await c.newPage(); await p.goto(`${base}?code=stray`);
+  await p.waitForSelector('.onboarding .field-error');
+  assert.match(await p.textContent('.onboarding .field-error'), /הכניסה לא הסתיימה/);
+  assert.equal(new URL(p.url()).search, '', 'the code is removed from the address');
+  await c.close();
+});
+
+await check('accounts: the rest reminder is sent to the server, cancelled on skip, and the end flashes the screen', async () => {
+  const c = await phone(); const acct = await installFakeSupabase(c);
+  const p = await c.newPage(); p.on('pageerror', (e) => errors.push(`rest: ${e.message}`));
+  await onboard(p, 'he');
+  await p.evaluate(async () => { const { setDraft } = await import('./src/ui/store.js'); setDraft({ id: 'rest-test', name: '', startedMs: Date.now(), entries: [] }); });
+  const t0 = Date.now();
+  await p.evaluate(async () => (await import('./src/ui/rest-timer.js')).startRestTimer(10, 'לחיצת חזה'));
+  await p.waitForTimeout(500);
+  const post = acct.alarms.find((a) => a.method === 'POST');
+  assert.ok(post, 'reminder posted');
+  assert.ok(Math.abs(Date.parse(post.body.fire_at) - (t0 + 10000)) < 2000, 'fires at the end of the rest');
+  assert.match(post.body.body, /לחיצת חזה/);
+  await p.evaluate(async () => (await import('./src/ui/rest-timer.js')).skipRest());
+  await p.waitForTimeout(300);
+  assert.ok(acct.alarms.some((a) => a.method === 'DELETE'), 'skip cancels it');
+  await p.evaluate(async () => (await import('./src/ui/rest-timer.js')).startRestTimer(10, 'סקוואט'));
+  await p.evaluate(async () => { const { store } = await import('./src/ui/store.js'); store.draft.timer.endAt = Date.now() + 300; });
+  await p.waitForSelector('.rest-done', { timeout: 3000 });
+  assert.match(await p.textContent('.rest-done'), /סקוואט/);
+  await p.screenshot({ path: `${shots}he-rest-done.png` });
+  await c.close();
+});
 
 await check('start-up: a failed first request is retried; if it keeps failing there is a message and a button, not a black page', async () => {
   const c1 = await browser.newContext({ serviceWorkers: 'block' });

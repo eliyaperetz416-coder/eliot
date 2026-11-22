@@ -14,6 +14,9 @@ import { installLock } from './ui/lock.js';
 import { showMascot } from './ui/mascot.js';
 import { exportBackup } from './ui/backup.js';
 import { h } from './ui/dom.js';
+import { completeSignIn, getSession, onAuth } from './ui/auth.js';
+import { startSync } from './ui/sync.js';
+import { dbGet } from './ui/db.js';
 
 const TABS = [
   { id: 'workout', icon: 'workout' }, { id: 'workouts', icon: 'bolt' }, { id: 'ranks', icon: 'ranks' }, { id: 'profile', icon: 'profile' },
@@ -23,6 +26,10 @@ const nav = document.getElementById('nav-root');
 let screens;
 let dispose = null;
 let currentTab = null;
+let session = null, onboarded = false, signInFailed = false;
+/** Android's install prompt, kept for the install step of the first run (OUR DESIGN, spec 4.5). */
+let installPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installPrompt = e; });
 const drawNav = () => nav.replaceChildren(store.profile && TABS.some((x) => x.id === currentTab) ? tabBar({ tabs: TABS, current: currentTab, badges: { profile: crew.unread > 0 } }) : '');
 
 const lang2 = () => document.documentElement.lang;
@@ -62,8 +69,10 @@ function route() {
 
 function render() {
   dispose?.(); dispose = null;
-  if (!store.profile) {
-    app.replaceChildren(onboarding({ onLanguage: changeLanguage, onDone: finishOnboarding }));
+  // Sign-in is needed once (spec 4.1); the privacy page stays readable from the sign-in screen.
+  if ((!session || !store.profile || !onboarded) && route().id !== 'privacy') {
+    app.replaceChildren(onboarding({ onLanguage: changeLanguage, onDone: finishOnboarding, installPrompt: () => installPrompt, signInFailed }));
+    signInFailed = false;
     nav.replaceChildren();
     return;
   }
@@ -99,8 +108,9 @@ async function changeLanguage(lang) {
   updateSettings({ lang });
 }
 
-async function finishOnboarding({ profile, weight }) {
-  await saveProfile(profile, weight);
+async function finishOnboarding(result) {
+  if (result) await saveProfile(result.profile, result.weight);
+  onboarded = true;
   applyAccent();
   location.hash = '#/workout';
   render();
@@ -114,6 +124,10 @@ async function boot() {
   await initStore();
   await initCrew();
   await initLink();
+  signInFailed = (await completeSignIn()) === 'error';
+  session = await getSession();
+  onboarded = !!(await dbGet('kv', 'onboarded').catch(() => null));
+  onAuth((s) => { const was = !!session; session = s; if (was !== !!s) render(); });
   const lang = settings.lang ?? store.profile?.lang ?? detectLanguage(navigator.language);
   setLanguage(lang);
   document.documentElement.lang = lang;
@@ -139,6 +153,7 @@ async function boot() {
   document.documentElement.dataset.ready = '1';
   requestPersistence();
   registerServiceWorker();
+  if (session) startSync();
 }
 
 function registerServiceWorker() {

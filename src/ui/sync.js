@@ -105,3 +105,6 @@ export function startSync() {
   onAuth((s) => { if (s) syncNow(); });
   syncNow();
 }
+
+/** True once this phone has synced with the account at least once. */
+export const syncedOnce = async () => (await getMeta()).syncedRemoteAt != null;
