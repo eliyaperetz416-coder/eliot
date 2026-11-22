@@ -37,7 +37,7 @@ export function onboarding({ onLanguage, onDone, installPrompt = () => null, sig
       platform: platformOf({ ua: navigator.userAgent, standalone: isStandalone() }),
       installed: isStandalone(), installSkipped: !!st.installSkipped, signedIn: !!session,
       localData: !!store.profile || hasData(), migrated: st.migrated,
-      profile: { name: p?.name, sex: p?.sex, weight: store.profile ? bodyweightKg() : Number(st.form.weight) || null, age: p?.age ?? null },
+      profile: { name: p?.name, sex: p?.sex, weight: store.profile ? bodyweightKg() : Number(st.form.weight) || null, age: p?.age === '' ? null : (p?.age ?? null) },
       ageSkipped: !!st.ageSkipped, goalSet: !!st.goalSet, pushAsked: !!st.pushAsked, toured: !!st.toured,
     };
   };
@@ -78,9 +78,9 @@ export function onboarding({ onLanguage, onDone, installPrompt = () => null, sig
 
   function installSteps() {
     return h('ol', { class: 'tour-list' },
-      h('li', {}, icon('share'), h('span', { text: t('ob.install.ios.1') })),
-      h('li', {}, icon('plus'), h('span', { text: t('ob.install.ios.2') })),
-      h('li', {}, icon('check'), h('span', { text: t('ob.install.ios.3') })));
+      h('li', {}, h('span', { class: 'tour-n' }, icon('share')), h('span', { text: t('ob.install.ios.1') })),
+      h('li', {}, h('span', { class: 'tour-n' }, icon('plus')), h('span', { text: t('ob.install.ios.2') })),
+      h('li', {}, h('span', { class: 'tour-n' }, icon('check')), h('span', { text: t('ob.install.ios.3') })));
   }
 
   const screens = {

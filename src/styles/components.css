@@ -802,3 +802,4 @@ button.chip:active, .seg button:active, .tab:active { opacity: .65; }
 [dir="rtl"] .ob-bar span.run { animation-direction: reverse; }
 .ob-goal { text-align: center; font-size: 96px; line-height: 1; color: var(--accent); margin: 0; }
 [data-motion="reduce"] .ob-bar span.run { animation: none; }
+.tour-n .icon, .tour-n svg { width: 18px; height: 18px; }
