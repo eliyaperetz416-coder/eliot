@@ -1221,6 +1221,7 @@ for (const lang of ['he', 'en']) {
     assert.equal(await page.evaluate(() => document.documentElement.dataset.motion), 'reduce');
     await page.getByRole('button', { name: T('לפי המכשיר', 'Follow device') }).click();
     await page.getByRole('button', { name: T('לפי הדרגה שלי', 'Follows my rank') }).click();
+    await page.getByRole('button', { name: T('צבע קבוע', 'Fixed colour') }).click(); // settings now travel with the account: leave it fixed for the shop check
     // rest alert: sound off, then back on
     await page.locator('.seg[aria-label="' + T('צליל', 'Sound') + '"] button', { hasText: T('לא', 'No') }).click();
     assert.equal(await page.evaluate(async () => (await import('./src/ui/storage.js')).getSettings().restSound), false);
