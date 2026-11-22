@@ -294,3 +294,14 @@ Following the apple-design guide (OUR DESIGN, after Apple's WWDC talks; no Apple
 
 ## v1.47.1: privacy contact
 - The privacy page shows where to send privacy requests (see, correct or delete your data): an email link under "Your rights".
+
+## v1.48 (in progress, branch only): accounts
+Plan: `docs/superpowers/plans/2026-11-22-accounts.md`; spec: `docs/superpowers/specs/2026-11-22-redesign-accounts-design.md`. Not released: it ships on launch day together with the redesign.
+- **Sign-in:** Google only (Supabase Auth, PKCE over plain fetch, no SDK: `src/core/pkce.mjs`, `src/ui/auth.js`). Email login is left out: Supabase's built-in mail only reaches the project's team. The session lives in IndexedDB (kv `session`); offline the stored session is used as it is.
+- **Consent:** an unticked box under the Google button; ticking it records the time and `PRIVACY_VERSION` ('2026-12'), sent with the first upload (`user_data.consent_at/consent_version`).
+- **Sync:** one row per user (`public.user_data`, RLS: only your own row) holding the same snapshot as the old backup file plus the crew spot and the person's settings. `decideSync` (`src/core/sync.mjs`) picks push / pull / merge; the last change wins; a change that leaves the snapshot identical is not a change; nothing is pulled during a workout; 8 MB limit.
+- **First run:** one question per screen (`src/core/onboarding-flow.mjs`). On an iPhone in Safari the install screen comes first (an installed iPhone app does not share storage with Safari). A phone that already has data moves it to the account first; a new phone pulls the account.
+- **Rest alarm:** the in-app alert is a full-screen flash with the next set, the sound twice and a long vibration. When the phone is locked, the server sends a push: the phone writes `public.rest_alarms`, `pg_cron` runs `app_private.fire_rest_alarms()` every 5 s, and the edge function `rest-push` sends it (secret header, like `notify`). Sound, vibration and push each have a switch.
+- **Removed:** backup export/import/reminder, the storage section, the reset (replaced by "Delete account and all data": `public.delete_my_account()`, which deletes only the caller and cascades to the account tables; then the phone is wiped). "Download all my data" keeps the file export.
+- **Server (migration 013, additive):** dry-run in a rolled-back transaction (own row only, B sees 0 of A's rows and updates 0, far alarm rejected, delete removes only the caller, anon has no access), then applied. Nothing v1.47.1 uses was changed.
+- **Launch-day checklist:** Supabase Auth Site URL `https://eliot-three.vercel.app` and redirect URLs (production, preview, localhost); Google provider on; cron job `demigod-rest-alarms` running; order: lock screen → deploy → check → unlock.
