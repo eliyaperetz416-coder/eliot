@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended) or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Update 22.11 (Elia):** this plan now runs **on launch day**, after the accounts and redesign plans, for about two hours. Change `BACK_AT` to a time on the launch day (`backAtLabel` shows "today ~22:00": `maint.back` = `חוזרים היום בערך ב־{time}` / `Back today around {time}`). Everything else stands.
+
 **Goal:** Ship v1.48.0, in which every phone (owner included) sees only a "מתעדכנים." screen until a later release turns the lock off.
 
 **Architecture:** A pure module `src/core/maintenance.mjs` holds the flag (`LOCKED`), the return date (`BACK_AT`) and two small helpers. `src/main.js` checks the flag before anything else: when locked it loads only the dictionaries, draws `src/ui/maintenance.js` and keeps the service worker eager, so the unlock release takes over by itself. Data, store, crew and Supabase are never touched while locked. `sw.js` activates the lock release at once (after precaching), so open apps on the old version reload into the lock.
