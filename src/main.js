@@ -12,7 +12,6 @@ import { initCrew, onCrew, crew, startCrewWatcher } from './ui/crew-state.js';
 import { initLink } from './ui/link-state.js';
 import { installLock } from './ui/lock.js';
 import { showMascot } from './ui/mascot.js';
-import { exportBackup } from './ui/backup.js';
 import { h } from './ui/dom.js';
 import { completeSignIn, getSession, onAuth } from './ui/auth.js';
 import { startSync } from './ui/sync.js';
@@ -79,13 +78,12 @@ function render() {
   const { id, param } = route();
   let el;
   try { el = screens[id](param); }
-  catch (err) { // a screen that crashes must never leave a black page: offer a way out and a backup (OUR DESIGN)
+  catch (err) { // a screen that crashes must never leave a black page: offer a way out (OUR DESIGN); the data is safe in the account
     console.error(err);
     el = h('main', { class: 'screen' },
       h('h1', { class: 'display', text: t('crash.title') }), h('p', { class: 'row-sub', text: t('crash.body') }),
       h('div', { class: 'stack' },
-        button({ label: t('crash.home'), block: true, onClick: () => { location.hash = '#/profile'; } }),
-        button({ label: t('crash.backup'), variant: 'secondary', block: true, onClick: () => exportBackup() })));
+        button({ label: t('crash.home'), block: true, onClick: () => { location.hash = '#/profile'; } })));
   }
   dispose = el._dispose ?? null;
   app.replaceChildren(el);

@@ -1207,87 +1207,57 @@ for (const lang of ['he', 'en']) {
     }
   });
 
-  await check(`${lang}: settings, backup export + restore, reminder, numbers page, reset`, async () => {
+  await check(`${lang}: settings: account, rest alert switches, download my data, numbers page, delete account (then sign back in)`, async () => {
     const T = (he, en) => L(lang, he, en);
     if (ONLY) await postThree(page);
     await page.goto(`${base}#/settings`);
     await page.waitForSelector('.screen h1');
+    await page.waitForSelector(`.row:has-text("tester@example.com")`);
     await page.screenshot({ path: `${shots}${lang}-settings.png`, fullPage: true });
+    assert.ok(!/גיבוי|backup/i.test(await page.textContent('main')), 'no backups anywhere in settings');
     // accent + reduced motion
     await page.getByRole('button', { name: T('צבע קבוע', 'Fixed colour') }).click();
     await page.getByRole('button', { name: T('פעיל', 'On'), exact: true }).click();
     assert.equal(await page.evaluate(() => document.documentElement.dataset.motion), 'reduce');
     await page.getByRole('button', { name: T('לפי המכשיר', 'Follow device') }).click();
     await page.getByRole('button', { name: T('לפי הדרגה שלי', 'Follows my rank') }).click();
-    // export
+    // rest alert: sound off, then back on
+    await page.locator('.seg[aria-label="' + T('צליל', 'Sound') + '"] button', { hasText: T('לא', 'No') }).click();
+    assert.equal(await page.evaluate(async () => (await import('./src/ui/storage.js')).getSettings().restSound), false);
+    await page.locator('.seg[aria-label="' + T('צליל', 'Sound') + '"] button', { hasText: T('כן', 'Yes') }).click();
+    // download my data: a file with everything
     const before = await page.evaluate(async () => { const { dbAll } = await import('./src/ui/db.js'); return (await dbAll('workouts')).length; });
     assert.ok(before > 0, 'workouts exist from earlier checks');
-    const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('.row', { hasText: T('ייצוא גיבוי', 'Export backup') }).click()]);
-    assert.match(dl.suggestedFilename(), /^demigod-backup-\d{4}-\d{2}-\d{2}\.json$/);
-    const path = await dl.path();
-    const { readFileSync, writeFileSync } = await import('node:fs');
-    const text = readFileSync(path, 'utf8');
-    const parsed = JSON.parse(text);
-    assert.equal(parsed.format, 'demigod-backup');
+    const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('.row', { hasText: T('הורד את כל הנתונים שלי', 'Download all my data') }).click()]);
+    const { readFileSync } = await import('node:fs');
+    const parsed = JSON.parse(readFileSync(await dl.path(), 'utf8'));
     assert.equal(parsed.data.workouts.length, before);
-    await page.waitForSelector('.toast');
-    assert.ok(await page.evaluate(() => JSON.parse(localStorage.getItem('dg.settings')).lastExportAt > 0), 'export time saved');
-    // damaged file is refused and nothing changes
-    const bad = JSON.parse(text); bad.data.game.xp += 1;
-    const badPath = `${path}.bad.json`; writeFileSync(badPath, JSON.stringify(bad));
-    await page.locator('[data-testid="import-file"]').setInputFiles(badPath);
-    await page.waitForSelector('.toast');
-    assert.equal(await page.locator('.sheet').count(), 0);
-    assert.equal(await page.evaluate(async () => { const { dbAll } = await import('./src/ui/db.js'); return (await dbAll('workouts')).length; }), before);
-    // not a backup at all
-    const junkPath = `${path}.junk.json`; writeFileSync(junkPath, '{"hello":1}');
-    await page.locator('[data-testid="import-file"]').setInputFiles(junkPath);
-    await page.waitForTimeout(400);
-    assert.equal(await page.locator('.sheet').count(), 0);
-    // merge into existing data changes nothing (same ids)
-    await page.locator('[data-testid="import-file"]').setInputFiles(path);
-    await page.waitForSelector('.sheet');
-    await page.screenshot({ path: `${shots}${lang}-import-sheet.png` });
-    await page.locator('.sheet .row', { hasText: T('מיזוג', 'Merge') }).click();
-    await page.waitForLoadState('load');
-    await page.waitForSelector('.tabbar');
-    assert.equal(await page.evaluate(async () => { const { dbAll } = await import('./src/ui/db.js'); return (await dbAll('workouts')).length; }), before);
-    // reminder card: pretend the last backup was 40 days ago
-    await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('dg.settings')); s.lastExportAt = Date.now() - 40 * 86400000; s.reminderSnoozedUntil = null; localStorage.setItem('dg.settings', JSON.stringify(s)); });
-    await page.goto(`${base}#/workout`); await page.reload();
-    await page.waitForSelector('.backup-reminder');
-    await page.screenshot({ path: `${shots}${lang}-backup-reminder.png` });
-    await page.locator('.backup-reminder .btn-secondary').click();
-    assert.equal(await page.locator('.backup-reminder').count(), 0);
-    await page.reload(); await page.waitForSelector('main .btn-primary');
-    assert.equal(await page.locator('.backup-reminder').count(), 0, 'snoozed');
     // numbers page
     await page.goto(`${base}#/numbers`);
     await page.waitForSelector('.numbers .card');
     assert.ok((await page.locator('.numbers .card').count()) >= 6);
     assert.match(await page.textContent('.numbers'), lang === 'he' ? /Liftoff|דרגות/ : /Verified about Liftoff/);
     await page.screenshot({ path: `${shots}${lang}-numbers.png`, fullPage: true });
-    // reset needs the typed word, then restore from the backup on the first screen
+    // the account holds the latest data before it is deleted (kept here to sign back in for the next checks)
+    await page.evaluate(async () => (await import('./src/ui/sync.js')).syncNow());
+    const saved = account.remote;
+    assert.equal(saved.data.workouts.length, before);
+    // delete account: needs the typed word, calls the server, wipes the phone, back to sign-in
     await page.goto(`${base}#/settings`);
-    await page.locator('.row', { hasText: T('איפוס האפליקציה', 'Reset the app') }).click();
+    await page.locator('.row', { hasText: T('מחיקת החשבון וכל הנתונים', 'Delete account and all data') }).click();
     await page.waitForSelector('.sheet input');
     assert.ok(await page.locator('.sheet .btn-danger').isDisabled());
-    await page.fill('.sheet input', T('לא', 'nope'));
-    assert.ok(await page.locator('.sheet .btn-danger').isDisabled());
-    await page.fill('.sheet input', T('איפוס', 'RESET'));
+    await page.fill('.sheet input', T('מחיקה', 'DELETE'));
+    await page.screenshot({ path: `${shots}${lang}-delete-account.png` });
     await page.locator('.sheet .btn-danger').click();
-    await page.waitForSelector('.ob-step', { timeout: 8000 });
+    await page.waitForSelector('#google', { timeout: 8000 });
+    assert.equal(account.deletes, 1, 'the server deleted the account');
     assert.equal(await page.evaluate(async () => { const { dbAll } = await import('./src/ui/db.js'); return (await dbAll('workouts')).length; }), 0);
-    await page.screenshot({ path: `${shots}${lang}-after-reset.png` });
-    const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.getByRole('button', { name: T('יש לי כבר גיבוי', 'I already have a backup') }).click()]);
-    await chooser.setFiles(path);
-    await page.waitForSelector('.sheet');
-    await page.locator('.sheet .row', { hasText: T('מיזוג', 'Merge') }).click();
-    await page.waitForSelector('.tabbar', { timeout: 8000 });
-    const after = await page.evaluate(async () => { const { dbAll, dbGet } = await import('./src/ui/db.js'); return { w: (await dbAll('workouts')).length, p: (await dbGet('profile', 'me'))?.name, g: (await dbGet('game', 'me'))?.xp }; });
-    assert.equal(after.w, before);
-    assert.equal(after.p, parsed.data.profile.name);
-    assert.equal(after.g, parsed.data.game.xp);
+    // sign back in: the (fake) account still has the data, so the next checks keep their workouts
+    account.remote = saved; account.deletes = 0;
+    await page.check('#consent'); await page.click('#google');
+    await page.waitForSelector('.tabbar', { timeout: 10000 });
+    assert.equal(await page.evaluate(async () => { const { dbAll } = await import('./src/ui/db.js'); return (await dbAll('workouts')).length; }), before);
   });
 
   await check(`${lang}: make-up workout for exercises you did not get to (one-time, nothing saved)`, async () => {

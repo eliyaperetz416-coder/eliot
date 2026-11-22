@@ -1,7 +1,6 @@
 import { h } from './dom.js';
 import { getSettings, updateSettings } from './storage.js';
 import { crew, syncPlan } from './crew-state.js';
-import { exportDue, daysSince } from '../core/backup.mjs';
 import { icon } from './icons.js';
 import { t, getLanguage } from '../core/i18n.mjs';
 import * as W from '../core/workout.mjs';
@@ -44,19 +43,6 @@ export function lastWorkoutCard(w) {
     h('div', { class: 'row-sub num', text: `${t('common.sets', { n: w.stats?.workingSets ?? 0 })} · ${formatNum(w.stats?.volume ?? 0, 0)} ${t('unit.kg')}` }));
 }
 
-function backupReminder() {
-  const now = Date.now();
-  const st = getSettings();
-  if (!exportDue({ lastExportAt: st.lastExportAt, workouts: store.workouts, snoozedUntil: st.reminderSnoozedUntil, now })) return null;
-  const days = daysSince(st.lastExportAt, now);
-  const box = h('section', { class: 'card card-accent backup-reminder', role: 'status' },
-    h('h2', { text: t('backup.reminder.title') }),
-    h('p', { text: days == null ? t('backup.reminder.never') : t('backup.reminder.body', { days }) }),
-    h('div', { class: 'stack', style: 'grid-template-columns:repeat(2,minmax(0,1fr));padding-block-start:8px' },
-      button({ label: t('backup.reminder.go'), icon: 'download', onClick: () => { location.hash = '#/settings'; } }),
-      button({ label: t('backup.reminder.later'), variant: 'secondary', onClick: () => { updateSettings({ reminderSnoozedUntil: now + 3 * 86400000 }); box.remove(); } })));
-  return box;
-}
 
 /** What the big card offers: the nearest workout you planned this week, else the next day of the plan, else the saved workout you used last, else a free workout. */
 function nextUp() {
@@ -152,7 +138,6 @@ export function startScreen() {
   const sv = view(store.game.streak, todayKey());
   const kids = [
     h('header', { class: 'screen-head home-head' }, h('div', {}, h('div', { class: 'row-sub', text: today }), h('h1', { text: t('home.title') }))),
-    backupReminder(),
     crew.local && crew.unread ? h('a', { class: 'card card-accent crew-unread', href: '#/crew' }, h('b', { text: t('crew.unread.card', { n: crew.unread }) }), h('span', { class: 'row-sub', text: t('crew.unread.open') })) : null,
     makeupCard(),
     scheduleCard(),
