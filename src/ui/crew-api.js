@@ -1,6 +1,6 @@
 // Talks to the crew database (Supabase REST, no SDK). Every call is a function that needs your secret token.
 let configPromise = null;
-const config = () => (configPromise ??= fetch('src/data/crew-config.json').then((r) => r.json()));
+export const config = () => (configPromise ??= fetch('src/data/crew-config.json').then((r) => r.json()));
 
 export const newToken = () => Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, '0')).join('');
 
