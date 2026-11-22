@@ -779,3 +779,14 @@ button.chip:active, .seg button:active, .tab:active { opacity: .65; }
 .sched-wods > summary::after { content: "▾"; color: var(--accent); font-size: 18px; transition: transform var(--dur-2) var(--ease); }
 .sched-wods[open] > summary::after { transform: rotate(180deg); }
 .sched-wods[open] > summary { margin-block-end: var(--s-2); }
+
+/* End of rest (OUR DESIGN, spec 4.6): the whole screen lights up for a moment with the next set. Tap to close. */
+.rest-done { position: fixed; inset: 0; z-index: 70; display: flex; flex-direction: column; justify-content: center; gap: 12px; padding: 0 28px;
+  background: radial-gradient(120% 70% at 50% 40%, rgb(var(--accent-rgb) / .95), rgb(var(--accent-rgb) / .78)); color: var(--accent-ink);
+  animation: rest-done-in .25s ease-out both; }
+.rest-done .icon { width: 56px; height: 56px; }
+.rest-done-title { margin: 0; font-size: 56px; font-weight: 900; line-height: .95; letter-spacing: -.03em; }
+.rest-done-next { margin: 0; font-size: 18px; font-weight: 600; }
+@keyframes rest-done-in { from { opacity: 0; } to { opacity: 1; } }
+[data-motion="reduce"] .rest-done { animation: none; }
+@media (prefers-reduced-motion: reduce) { .rest-done { animation: none; } }

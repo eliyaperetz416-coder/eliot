@@ -32,3 +32,9 @@ export function formatClock(sec) {
   const m = Math.floor(sec / 60), s = sec % 60;
   return `${m}:${String(s).padStart(2, '0')}`;
 }
+
+/** The end-of-rest alert (OUR DESIGN, spec 4.6): the full-screen flash always, sound / vibration / push by the settings. */
+export const REST_VIBRATE = Object.freeze([200, 100, 200, 100, 400]);
+export function restAlertPlan(s) {
+  return { flash: true, sound: s.restSound !== false, vibrate: s.restVibrate !== false ? [...REST_VIBRATE] : null, push: s.restPush !== false };
+}

@@ -442,6 +442,8 @@
   "rest.label": "מנוחה",
   "rest.skip": "דילוג",
   "rest.done": "המנוחה נגמרה",
+  "rest.done.title": "קדימה. סט הבא.",
+  "rest.done.next": "סט הבא: {name}",
   "rest.minus": "להוריד 15 שניות",
   "rest.plus": "להוסיף 15 שניות",
   "fin.title": "סיום אימון",

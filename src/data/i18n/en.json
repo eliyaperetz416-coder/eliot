@@ -437,6 +437,8 @@
   "rest.label": "Rest",
   "rest.skip": "Skip",
   "rest.done": "Rest is over",
+  "rest.done.title": "Go. Next set.",
+  "rest.done.next": "Next set: {name}",
   "rest.minus": "Subtract 15 seconds",
   "rest.plus": "Add 15 seconds",
   "fin.title": "Finish workout",

@@ -1,10 +1,11 @@
 // The crew on this phone: membership (kept in IndexedDB), unread count, and sending your numbers after workouts.
 import { dbGet, dbPut } from './db.js';
-import { rpc, newToken, vapidKey } from './crew-api.js';
+import { rpc, newToken } from './crew-api.js';
+import { ensureSubscription } from './push.js';
 import { store, todayKey, saveGame } from './store.js';
 import { showToast } from './components.js';
 import { t } from '../core/i18n.mjs';
-import { statsFromState, planPayload, unreadCount, errorKey, base64UrlToBytes } from '../core/crew.mjs';
+import { statsFromState, planPayload, unreadCount, errorKey } from '../core/crew.mjs';
 import { view } from '../core/streak.mjs';
 import { getSettings } from './storage.js';
 import { data } from './data.js';
@@ -170,11 +171,7 @@ export async function pushStatus() {
 export async function enablePush() {
   if (!crew.local) throw new Error('not_member');
   if (await pushStatus() === 'unsupported') throw new Error('unsupported');
-  const perm = await Notification.requestPermission();
-  if (perm !== 'granted') throw new Error('denied');
-  const reg = await navigator.serviceWorker.ready;
-  let sub = await reg.pushManager.getSubscription();
-  sub ??= await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64UrlToBytes(await vapidKey()) });
+  const sub = await ensureSubscription(); // the same subscription serves the account (rest alarm) and the crew
   await rpc('save_push', { p_token: tok(), p_sub: sub.toJSON() });
   crew.local.push = true; await persist(); emit();
 }

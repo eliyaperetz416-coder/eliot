@@ -142,7 +142,11 @@ export function liveScreen() {
     const idx = w.entries.indexOf(entry);
     const next = w.entries[idx + 1];
     const midSuperset = entry.supersetGroup && next?.supersetGroup === entry.supersetGroup;
-    if (!midSuperset) startRestTimer(entry.restSec);
+    if (!midSuperset) {
+      const more = entry.sets.some((x) => !x.done);
+      const nextEx = more ? ex : (next ? byId[next.exerciseId] : null);
+      startRestTimer(entry.restSec, nextEx ? nameOf(nextEx) : '');
+    }
     save(); rerender();
   }
 
