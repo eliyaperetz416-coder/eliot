@@ -31,6 +31,8 @@ async function onboard(page, lang, shotPrefix) {
   await page.waitForTimeout(600);
   await page.waitForSelector('html[data-ready="1"] #google');
   await shot('1-signin');
+  assert.equal(await page.locator('.ob-step .emblem svg').count(), 1, 'the crest on the sign-in screen');
+  assert.equal(await page.locator('.ob-word').textContent(), 'DEMIGOD');
   assert.ok(await page.locator('#google').isDisabled(), 'Google waits for the consent box');
   await page.check('#consent');
   await page.click('#google'); // the fake Auth server sends us back signed in
@@ -85,9 +87,10 @@ async function addExercise(page, query) {
   await page.click('.pick-footer .btn');
   await page.waitForTimeout(150);
 }
-async function logSet(page, cardIndex, weight, reps) {
+async function logSet(page, cardIndex, weight, reps, rowIndex = 0) {
   const card = page.locator('.ent-card').nth(cardIndex);
-  const row = card.locator('.set-row').first();
+  if (!(await card.locator('.set-row').count())) { await card.locator('.ent-row').click(); await card.locator('.set-row').first().waitFor(); } // focus mode: only one exercise is open
+  const row = card.locator('.set-row').nth(rowIndex);
   await row.locator('.set-input').nth(0).fill(String(weight));
   await row.locator('.set-input').nth(1).fill(String(reps));
   await row.locator('.set-v').click();
@@ -249,7 +252,7 @@ for (const lang of ['he', 'en']) {
     await page.click('.live-actions .btn-secondary');
     await addExercise(page, 'barbell deadlift');
     await logSet(page, 2, 180, 5);
-    assert.equal(await page.locator('.set-v.on').count(), 3);
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('dg.draft')).entries.flatMap((e) => e.sets).filter((x) => x.done).length), 3);
     await page.screenshot({ path: `${shots}${lang}-live-3.png` });
 
     await page.click('.live-head .btn');
@@ -261,6 +264,7 @@ for (const lang of ['he', 'en']) {
     await page.screenshot({ path: `${shots}${lang}-rankup.png` });
     await page.click('.rankup button');
     await page.waitForSelector('main .stats-grid');
+    assert.match(await page.textContent('.result-delta'), /\d/, 'the rating change, big, on top');
     await page.screenshot({ path: `${shots}${lang}-result.png`, fullPage: true });
     await page.click('main .btn-primary');
     await page.goto(`${base}#/ranks`);
@@ -288,6 +292,31 @@ for (const lang of ['he', 'en']) {
     await page.goto(`${base}#/ranks`);
     await page.waitForSelector('.pyramid');
     assert.equal(await page.locator('.pyramid li[aria-current="step"]').count(), 0, 'rank pending again after deleting the only workout');
+  });
+
+  await check(`${lang}: live focus mode: a finished exercise folds to one row, the next opens, a record keeps a small trophy`, async () => {
+    await page.goto(`${base}#/workout`);
+    await startEmpty(page);
+    await addExercise(page, 'barbell bench press');
+    await page.click('.live-actions .btn-secondary');
+    await addExercise(page, 'barbell squat');
+    await page.waitForSelector('.live-bar');
+    assert.equal(await page.locator('.col-prev, .set-prev').count(), 0, 'no "previous" column: the last numbers are the placeholders');
+    const sets = await page.evaluate(() => JSON.parse(localStorage.getItem('dg.draft')).entries[0].sets.length);
+    for (let i = 0; i < sets; i++) await logSet(page, 0, 150, 5, i);
+    await page.waitForSelector('.ent-card.entry.done .ent-row');
+    assert.equal(await page.locator('.ent-card.entry.done .set-row').count(), 0, 'the finished exercise is one row');
+    assert.ok(await page.locator('.ent-card').nth(1).locator('.set-row').count() >= 1, 'the next exercise opens');
+    await page.locator('.ent-card.entry.done .ent-row').click(); // tap it to look again
+    await page.waitForSelector('.ent-card.entry.done .set-row');
+    await page.waitForTimeout(1400); // the feedback line shows for a moment, then only the record mark stays
+    assert.equal(await page.locator('.set-fb.flash').count(), 0);
+    assert.ok(await page.locator('.ent-card').first().locator('.pr-mark').count() >= 1, 'a record set keeps a small trophy');
+    await page.screenshot({ path: `${shots}${lang}-live-focus.png` });
+    await page.click('.live-head .btn-finish');
+    await page.waitForSelector('.sheet .btn-danger'); await page.click('.sheet .btn-danger');
+    await page.waitForSelector('.sheet .btn-danger'); await page.click('.sheet .btn-danger');
+    await page.waitForSelector('.live-head', { state: 'detached' });
   });
 
   await check(`${lang}: discard keeps nothing; empty finish cannot post`, async () => {
@@ -1608,6 +1637,20 @@ for (const lang of ['he', 'en']) {
     }
     assert.deepEqual(r.dupes, [], 'unique ids');
     await page.screenshot({ path: `${shots}${lang}-ranks-preview.png`, fullPage: true });
+  });
+
+  await check(`${lang}: inner screens: one big thing on top, no explanation line under a label when the section has items`, async () => {
+    const bad = [];
+    for (const r of ['shop', 'achievements', 'calendar', 'history', 'wods', 'plans', 'schedule', 'exercises']) {
+      await page.goto(`${base}#/${r}`);
+      await page.waitForSelector('main h1');
+      await page.waitForTimeout(250);
+      bad.push(...await page.evaluate((r) => [...document.querySelectorAll('main .section-label + p.row-sub')]
+        .filter((p) => p.nextElementSibling && !p.nextElementSibling.matches('.section-label'))
+        .map((p) => `${r}: ${p.textContent.slice(0, 50)}`), r));
+      if (['shop', 'achievements', 'calendar'].includes(r)) assert.equal(await page.locator('main .screen-hero').count(), 1, `#/${r}: one big number on top`);
+    }
+    assert.deepEqual(bad, []);
   });
 
   await check(`${lang}: accessibility basics (names, labels, language, landmarks)`, async () => {

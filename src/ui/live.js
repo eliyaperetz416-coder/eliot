@@ -28,15 +28,6 @@ function layoutOf(ex) {
 }
 const repsShown = (ex, reps) => (reps == null ? '' : layoutOf(ex).minutes ? String(Math.round((reps / 60) * 10) / 10) : String(reps));
 
-function prevText(ex, p, factor = 1) {
-  if (!p) return '–';
-  const L = layoutOf(ex);
-  const reps = repsShown(ex, p.reps);
-  if (!L.weight) return `${reps}${L.minutes ? t('col.min.short') : t('col.sec.short')}`;
-  const w = Number(p.weight) > 0 ? formatKg(shownKg(p.weight, factor)) : null;
-  return w ? `${w}×${reps}` : `${ex.type === 'bodyweight' ? '' : '0×'}${reps}`;
-}
-
 function numInput({ value, placeholder, integer, label, onInput, onChange }) {
   const el = h('input', { class: 'set-input', type: 'text', inputmode: integer ? 'numeric' : 'decimal', pattern: integer ? '[0-9]*' : '[0-9]*[.,]?[0-9]*', enterkeyhint: 'done', autocomplete: 'off', dir: 'ltr', maxlength: integer ? 5 : 7, value: value ?? '', placeholder: placeholder ?? '', 'aria-label': label });
   el.addEventListener('input', () => onInput(el.value));
@@ -60,7 +51,12 @@ export function liveScreen() {
   const root = h('main', { class: 'screen live' });
   const entriesBox = h('div', { class: 'stack' });
   const elapsed = h('span', { class: 'live-clock display num' });
-  const progress = h('span', { class: 'live-progress row-sub' });
+  const barFill = h('i', {});
+  const progress = h('div', { class: 'live-bar', role: 'progressbar', 'aria-valuemin': 0 }, barFill);
+  // Focus mode (OUR DESIGN, redesign): one exercise is open at a time. openId = the one you tapped (or just added);
+  // null = the first one not finished yet. flash = the set you just ticked: its feedback line shows for 1.2 s.
+  let openId = null, flash = null;
+  const finished = (e) => { const wk = e.sets.filter((x) => x.type !== 'warmup'); return wk.length > 0 && wk.every((x) => x.done); };
   const prevCache = new Map();
   const prevOf = (exId) => { if (!prevCache.has(exId)) prevCache.set(exId, W.previousPerformance(store.workouts, exId)); return prevCache.get(exId); };
 
@@ -115,14 +111,19 @@ export function liveScreen() {
     const done = s.done;
     const typeBtn = h('button', { class: `set-num type-${s.type}`, type: 'button', 'aria-label': `${t('col.set')} ${s.idx + 1}: ${t(`settype.${s.type}`)}`, onclick: () => typeSheet(entry, s) }, s.type === 'normal' ? String(workingNo) : LETTER[s.type]);
     const setNum = (field, v) => { W.setField(w, entry.id, s.idx, field, v); if (field === 'reps' && L.minutes && s.reps != null) s.reps = Math.round(s.reps * 60); save(); };
-    const cells = [typeBtn, h('span', { class: 'set-prev num', text: prevText(ex, p, factor) })];
+    const pr = done && s.type !== 'warmup' ? (s.prAllTime ? 'fb.pr.all' : s.prWeekly ? 'fb.pr.week' : s.prFirst ? 'fb.pr.first' : null) : null; // the same records the feedback line names
+    if (pr) { typeBtn.append(h('span', { class: 'pr-mark', 'aria-hidden': 'true' }, icon('trophy'))); typeBtn.setAttribute('aria-label', `${typeBtn.getAttribute('aria-label')}, ${t(pr)}`); }
+    const cells = [typeBtn];
     const typedNow = shownKg(s.weight, factor);
     if (L.weight) cells.push(numInput({ value: typedNow == null ? '' : String(typedNow), placeholder: p && Number(p.weight) > 0 ? formatKg(shownKg(p.weight, factor)) : '', label: t(L.weightLabel), onInput: (v) => { const n = v === '' ? null : Number(String(v).replace(',', '.')); setNum('weight', n == null || !Number.isFinite(n) ? '' : String(storedKg(n, factor))); drawPlates(); }, onChange: () => s.done && refreshDone() }));
     cells.push(numInput({ value: repsShown(ex, s.reps), placeholder: p?.reps != null ? repsShown(ex, p.reps) : '', integer: !L.minutes, label: t(L.repsLabel), onInput: (v) => setNum('reps', v), onChange: () => s.done && refreshDone() }));
-    if (!L.weight) cells.splice(2, 0, h('span'));
+    if (!L.weight) cells.splice(1, 0, h('span'));
     const vBtn = h('button', { class: `set-v${done ? ' on' : ''}`, type: 'button', 'aria-pressed': String(done), 'aria-label': t('set.done'), onclick: () => toggle(entry, ex, s, p) }, icon('check'));
     const row = h('div', { class: `set-row${done ? ' done' : ''}${L.weight ? '' : ' no-weight'}` }, cells, vBtn);
-    const fb = done && s.type !== 'warmup' ? feedbackLine(ex, s) : (done ? h('div', { class: 'set-fb muted', text: t('fb.warmup') }) : null);
+    const key = `${entry.id}:${s.idx}`;
+    const left = flash?.key === key ? flash.until - Date.now() : 0;
+    const fb = done && left > 0 ? (s.type !== 'warmup' ? feedbackLine(ex, s) : h('div', { class: 'set-fb muted', text: t('fb.warmup') })) : null;
+    if (fb) { fb.classList.add('flash'); setTimeout(() => fb.remove(), left); } // removed in place: a redraw would steal the focus from the next set's input
     return h('div', { class: 'set-wrap' }, row, L.weight && (pb != null || factor === 2) ? platesEl : null, fb);
   }
 
@@ -137,6 +138,8 @@ export function liveScreen() {
     unlockAudio();
     const bw = bodyweightKg();
     completeSet({ workout: w, entryId: entry.id, idx: s.idx, now: Date.now(), bodyweightKg: bw, sex: store.profile.sex, workouts: store.workouts, byId });
+    flash = { key: `${entry.id}:${s.idx}`, until: Date.now() + 1200 };
+    if (finished(entry) && (openId == null || openId === entry.id)) openId = null; // move on to the next exercise
     if (s.type !== 'warmup') floatXp(entry.id, s.idx, 10 + (s.prWeekly || s.prAllTime ? 25 : 0));
     if (entry.target?.find && s.type !== 'warmup' && s.weight > 0) for (const x of entry.sets) if (!x.done && x.weight == null) x.weight = s.weight; // first working set sets the weight for the rest
     const idx = w.entries.indexOf(entry);
@@ -187,7 +190,7 @@ export function liveScreen() {
       entry.target ? h('span', { class: 'chip', text: t('target.reps', { min: entry.target.repsMin, max: entry.target.repsMax }) }) : null,
       entry.target?.action ? h('span', { class: `chip target-${entry.target.action}`, text: t(`target.${entry.target.action}`) }) : null,
       h('button', { class: 'chip chip-select rest-chip', type: 'button', 'aria-label': t('entry.rest'), onclick: () => entryMenu(entry, i) }, `${t('entry.rest')} ${formatClock(entry.restSec)}`));
-    return h('section', { class: `card ent-card${inSS ? ' ss' : ''}${ssFirst ? ' ss-first' : ''}${ssLast ? ' ss-last' : ''}${allDone ? ' all-done' : ''}` },
+    return h('section', { class: `card ent-card entry open${inSS ? ' ss' : ''}${ssFirst ? ' ss-first' : ''}${ssLast ? ' ss-last' : ''}${allDone ? ' all-done done' : ''}` },
       ssFirst ? h('div', { class: 'ss-label', text: t('superset.label') }) : null,
       h('header', { class: 'ent-head' },
         exThumb(ex, 48),
@@ -196,16 +199,34 @@ export function liveScreen() {
       info,
       entry.notes ? h('p', { class: 'ent-notes', text: entry.notes }) : null,
       h('div', { class: `set-head${L.weight ? '' : ' no-weight'}` },
-        h('span', { text: t('col.set') }), h('span', { text: t('col.prev') }), L.weight ? h('span', { text: t(L.weightLabel) }) : h('span'), h('span', { text: t(L.repsLabel) }), h('span')),
+        h('span', { text: t('col.set') }), L.weight ? h('span', { text: t(L.weightLabel) }) : h('span'), h('span', { text: t(L.repsLabel) }), h('span')),
       rows,
       h('button', { class: 'btn btn-ghost btn-block add-set', type: 'button', onclick: () => { W.addSet(w, entry.id); save(); rerender(); } }, icon('check'), t('live.addSet')));
   }
 
+  /** A folded exercise: ✓ (or its place) · name · sets. Tap to open it. */
+  function entryRow(entry, i) {
+    const ex = byId[entry.exerciseId];
+    const done = finished(entry);
+    const n = entry.sets.filter((x) => x.type !== 'warmup').length;
+    const doneSets = entry.sets.filter((x) => x.type !== 'warmup' && x.done).length;
+    return h('section', { class: `card ent-card entry ${done ? 'done' : 'next'}` },
+      h('button', { class: 'ent-row', type: 'button', onclick: () => { openId = entry.id; rerender(); } },
+        h('span', { class: 'ent-row-mark', 'aria-hidden': 'true' }, done ? icon('check') : h('span', { class: 'num', text: String(i + 1) })),
+        h('span', { class: 'ent-row-name', text: nameOf(ex) }),
+        h('span', { class: 'row-sub num', text: done ? t('common.sets', { n }) : `${doneSets}/${n}` })));
+  }
+
   function renderEntries() {
     const y = window.scrollY;
-    const doneN = w.entries.filter((e) => e.sets.some((x) => x.type !== 'warmup') && e.sets.filter((x) => x.type !== 'warmup').every((x) => x.done)).length;
-    progress.textContent = w.entries.length ? t('live.progress', { done: doneN, total: w.entries.length }) : '';
-    entriesBox.replaceChildren(...(w.entries.length ? w.entries.map(entryCard) : [emptyState({ icon: 'workout', title: t('live.empty.title'), body: t('live.empty.body') })]));
+    const doneN = w.entries.filter(finished).length;
+    progress.setAttribute('aria-valuemax', String(w.entries.length)); progress.setAttribute('aria-valuenow', String(doneN));
+    progress.setAttribute('aria-label', w.entries.length ? t('live.progress', { done: doneN, total: w.entries.length }) : '');
+    barFill.style.width = `${w.entries.length ? (doneN / w.entries.length) * 100 : 0}%`;
+    if (openId && !w.entries.some((e) => e.id === openId)) openId = null;
+    const open = w.entries.find((e) => e.id === openId) ?? w.entries.find((e) => !finished(e));
+    const isOpen = (e) => !!open && (e.id === open.id || (!!open.supersetGroup && e.supersetGroup === open.supersetGroup)); // a superset opens together
+    entriesBox.replaceChildren(...(w.entries.length ? w.entries.map((e, i) => (isOpen(e) ? entryCard(e, i) : entryRow(e, i))) : [emptyState({ icon: 'workout', title: t('live.empty.title'), body: t('live.empty.body') })]));
     window.scrollTo(0, y);
   }
 
@@ -217,14 +238,19 @@ export function liveScreen() {
   const notes = h('textarea', { class: 'notes-input', rows: 3, placeholder: t('live.notes'), 'aria-label': t('live.notes') }, w.notes ?? '');
   notes.addEventListener('input', () => { w.notes = notes.value; save(); });
 
+  const moreSheet = () => openSheet({ title: t('live.more'), content: h('div', { class: 'stack' },
+    h('div', { class: 'field' }, h('label', { text: t('live.namePlaceholder') }), h('div', { class: 'field-box' }, nameInput)), notes) });
+  const finishBtn = button({ label: t('live.finish'), onClick: () => openFinishSheet() });
+  finishBtn.classList.add('btn-finish');
   root.append(
     h('header', { class: 'live-head' },
-      h('div', { class: 'live-title' }, nameInput, h('span', { class: 'row-sub' }, t('live.elapsed'), ' ', elapsed, ' · ', progress)),
-      button({ label: t('live.finish'), onClick: () => openFinishSheet() })),
+      h('div', { class: 'live-clockbox', 'aria-label': t('live.elapsed') }, elapsed),
+      h('button', { class: 'icon-btn live-more', type: 'button', 'aria-label': t('live.more'), onclick: moreSheet }, icon('more')),
+      finishBtn,
+      progress),
     entriesBox,
     h('div', { class: 'stack live-actions' },
-      button({ label: t('live.addExercise'), variant: 'secondary', icon: 'workout', block: true, onClick: () => openExercisePicker({ title: t('pick.title'), onPick: (list) => { list.forEach((ex) => W.addEntry(w, ex)); save(); rerender(); } }) }),
-      notes),
+      button({ label: t('live.addExercise'), variant: 'secondary', icon: 'workout', block: true, onClick: () => openExercisePicker({ title: t('pick.title'), onPick: (list) => { list.forEach((ex) => W.addEntry(w, ex)); if (list.length) openId = w.entries[w.entries.length - list.length].id; save(); rerender(); } }) })),
     h('div', { class: 'live-bottom-space' }));
   root._dispose = () => { clearInterval(iv); };
   renderEntries();

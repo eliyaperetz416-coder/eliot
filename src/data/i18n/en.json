@@ -1227,5 +1227,6 @@
     "one": "1 member",
     "other": "{n} members"
   },
-  "crew.board.open": "The top three. Tap for the full board"
+  "crew.board.open": "The top three. Tap for the full board",
+  "live.more": "More"
 }

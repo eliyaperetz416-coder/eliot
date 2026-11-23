@@ -101,8 +101,11 @@ export function onboarding({ onLanguage, onDone, installPrompt = () => null, sig
         await recordConsent(PRIVACY_VERSION);
         await startGoogleSignIn();
       });
-      return h('div', { class: 'ob-step' }, langSwitch(), mark(),
-        h('h1', { class: 'display ob-title', text: t('app.name') }), h('p', { class: 'ob-lead', text: t('app.tagline') }),
+      // OUR DESIGN (artboard D-SignIn): the crest, the wordmark in Cinzel and the motto in the accent; consent and Google below.
+      return h('div', { class: 'ob-step ob-signin' }, langSwitch(),
+        h('div', { class: 'ob-crest' }, emblem({ tier: 'greekgod', size: 96, label: t('app.name') })),
+        h('h1', { class: 'display ob-word', 'aria-label': t('app.name') }, 'DEMIGOD'), h('p', { class: 'ob-motto display', 'aria-hidden': 'true', text: 'LIFT · RANK · ASCEND' }),
+        h('p', { class: 'ob-lead', text: t('app.tagline') }),
         failed ? h('p', { class: 'field-error', role: 'alert', text: t('ob.signin.failed') }) : null,
         offline ? h('p', { class: 'field-error', role: 'alert', text: t('ob.offline') }) : null,
         h('label', { class: 'ob-consent', for: 'consent' }, consent, h('span', {}, `${t('ob.consent')} `, h('a', { href: '#/privacy', text: t('privacy.link') }))),
