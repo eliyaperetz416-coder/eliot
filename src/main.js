@@ -18,7 +18,7 @@ import { startSync } from './ui/sync.js';
 import { dbGet } from './ui/db.js';
 
 const TABS = [
-  { id: 'workout', icon: 'workout' }, { id: 'workouts', icon: 'bolt' }, { id: 'ranks', icon: 'ranks' }, { id: 'profile', icon: 'profile' },
+  { id: 'workout', icon: 'bolt' }, { id: 'workouts', icon: 'workout' }, { id: 'ranks', icon: 'progress' }, { id: 'crew', icon: 'chat' }, { id: 'profile', icon: 'profile' },
 ];
 const app = document.getElementById('app');
 const nav = document.getElementById('nav-root');
@@ -29,7 +29,7 @@ let session = null, onboarded = false, signInFailed = false;
 /** Android's install prompt, kept for the install step of the first run (OUR DESIGN, spec 4.5). */
 let installPrompt = null;
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installPrompt = e; });
-const drawNav = () => nav.replaceChildren(store.profile && TABS.some((x) => x.id === currentTab) ? tabBar({ tabs: TABS, current: currentTab, badges: { profile: crew.unread > 0 } }) : '');
+const drawNav = () => nav.replaceChildren(store.profile && TABS.some((x) => x.id === currentTab) ? tabBar({ tabs: TABS, current: currentTab, badges: { crew: crew.unread > 0 } }) : '');
 
 const lang2 = () => document.documentElement.lang;
 /** Colours (OUR DESIGN, redesign): the chosen theme (dark / marble, src/core/themes.mjs); a colour bought in the shop and
@@ -91,7 +91,7 @@ function render() {
   if (!session) el.prepend(h('div', { class: 'card card-accent signin-banner', role: 'status' },
     h('p', { text: t('sync.banner') }), button({ label: t('sync.banner.go'), icon: 'refresh', onClick: () => startGoogleSignIn() })));
   app.replaceChildren(el);
-  const tab = { exercises: 'workouts', exercise: 'workouts', custom: 'workouts', requests: 'workouts', routines: 'workouts', routine: 'workouts', plans: 'workouts', plan: 'workouts', schedule: 'workouts', wods: 'workouts', wod: 'workouts', history: 'profile', achievements: 'profile', crew: 'profile', settings: 'profile', calendar: 'profile', numbers: 'profile', privacy: 'profile', result: 'workout', progress: 'ranks', ladder: 'ranks', weakest: 'ranks', card: 'ranks', shop: 'profile', model: 'profile' }[id] ?? id;
+  const tab = { exercises: 'workouts', exercise: 'workouts', custom: 'workouts', requests: 'workouts', routines: 'workouts', routine: 'workouts', plans: 'workouts', plan: 'workouts', schedule: 'workouts', wods: 'workouts', wod: 'workouts', history: 'workouts', achievements: 'profile', settings: 'profile', calendar: 'profile', numbers: 'profile', privacy: 'profile', result: 'workout', progress: 'ranks', ladder: 'ranks', weakest: 'ranks', card: 'ranks', shop: 'profile', model: 'profile' }[id] ?? id;
   currentTab = tab;
   showMascot(id === 'profile');
   // Safety net: every sub-screen (any screen that is not a tab root) has a way back, even in empty/error states.

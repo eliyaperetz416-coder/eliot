@@ -933,6 +933,7 @@ for (const lang of ['he', 'en']) {
       await page.waitForSelector('.crew-unread');
       assert.ok((await page.textContent('.crew-unread')).includes('2'));
       assert.equal(await page.locator('.tab-dot').count(), 1);
+      assert.equal(await page.locator('.tab[href="#/crew"] .tab-dot').count(), 1, 'the unread dot sits on the crew tab');
       await page.goto(`${base}#/crew`);
       await page.waitForSelector('#crew-say');
       await page.getByRole('button', { name: T('לידרבורד', 'Leaderboard') }).click();
@@ -1520,13 +1521,13 @@ for (const lang of ['he', 'en']) {
   });
 
   await check(`${lang}: every sub-screen has a back link`, async () => {
-    const subs = ['wods', 'wod/fran', 'wod/nope', 'ladder', 'exercises', 'exercise/plank', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'privacy', 'requests', 'calendar', 'crew', 'history', 'history/nope', 'routine/nope', 'plan/nope', 'exercise/nope', 'ranks-preview', 'model', 'schedule', 'ladder'];
+    const subs = ['wods', 'wod/fran', 'wod/nope', 'ladder', 'exercises', 'exercise/plank', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'privacy', 'requests', 'calendar', 'history', 'history/nope', 'routine/nope', 'plan/nope', 'exercise/nope', 'ranks-preview', 'model', 'schedule', 'ladder'];
     for (const r of subs) {
       await page.goto(`${base}#/${r}`);
       await page.waitForSelector('main');
       assert.ok(await page.locator('main .back-link').count() >= 1, `no back link on #/${r}`);
     }
-    for (const r of ['workout', 'workouts', 'ranks', 'profile']) {
+    for (const r of ['workout', 'workouts', 'ranks', 'crew', 'profile']) {
       await page.goto(`${base}#/${r}`);
       await page.waitForSelector('main');
       assert.equal(await page.locator('main > .back-link').count(), 0, `unexpected back link on tab root #/${r}`);
@@ -1585,8 +1586,25 @@ for (const lang of ['he', 'en']) {
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('.sheet').count(), 0);
     await page.goto(`${base}#/workout`);
+    // the floating glass bar: five icon tabs, each named for screen readers
+    assert.equal(await page.locator('.tabbar a.tab').count(), 5, 'five tabs');
+    assert.equal(await page.locator('.tabbar a.tab:not([aria-label])').count(), 0, 'every tab has an aria-label');
     await page.click('.tab[href="#/ranks"]');
     await page.waitForSelector('.tab[aria-current="page"][href="#/ranks"]', { timeout: 3000 });
+    await page.goto(`${base}#/crew`);
+    await page.waitForSelector('.tab[aria-current="page"][href="#/crew"]', { timeout: 3000 });
+    await page.goto(`${base}#/history`);
+    await page.waitForSelector('.tab[aria-current="page"][href="#/workouts"]', { timeout: 3000 });
+    // nothing hides under the bar: the end of each long screen scrolls clear of it
+    for (const r of ['workouts', 'ranks']) {
+      await page.goto(`${base}#/${r}`);
+      await page.waitForSelector('main');
+      await page.waitForTimeout(200);
+      await page.evaluate(() => scrollTo(0, 1e6));
+      await page.waitForTimeout(150);
+      const { end, top } = await page.evaluate(() => ({ end: document.querySelector('main').lastElementChild.getBoundingClientRect().bottom, top: document.querySelector('.tabbar').getBoundingClientRect().top }));
+      assert.ok(end <= top, `#/${r}: last block ends at ${end}, bar starts at ${top}`);
+    }
     await page.goto(`${base}#/profile`);
     await page.getByRole('button', { name: L(lang, 'English', 'עברית') }).click();
     assert.equal(await page.evaluate(() => document.documentElement.dir), lang === 'he' ? 'ltr' : 'rtl');

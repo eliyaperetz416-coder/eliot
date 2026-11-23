@@ -73,9 +73,10 @@ export function backLink(href, label) {
 
 export function tabBar({ tabs, current, badges = {} }) {
   return h('nav', { class: 'tabbar', 'aria-label': t('nav.label') },
-    tabs.map((tab) => h('a', {
+    tabs.map((tab) => h('a', { // icon only (E5): the name is for screen readers; the open tab has a small dot under it
       class: 'tab', href: `#/${tab.id}`, 'aria-current': tab.id === current ? 'page' : null,
-    }, icon(tab.icon), badges[tab.id] ? h('i', { class: 'tab-dot', 'aria-label': t('crew.unread.label') }) : null, h('span', { text: t(`tab.${tab.id}`) }))));
+      'aria-label': badges[tab.id] ? `${t(`tab.${tab.id}`)}, ${t('crew.unread.label')}` : t(`tab.${tab.id}`),
+    }, icon(tab.icon), badges[tab.id] ? h('i', { class: 'tab-dot', 'aria-hidden': 'true' }) : null, h('i', { class: 'tab-on', 'aria-hidden': 'true' }))));
 }
 
 /* ---------- sheet ---------- */

@@ -1239,5 +1239,6 @@
   "sync.state.other-user": "Account: this phone has another account's data",
   "set.theme": "Colour theme",
   "set.theme.dark": "Dark",
-  "set.theme.marble": "Marble"
+  "set.theme.marble": "Marble",
+  "tab.crew": "Crew"
 }

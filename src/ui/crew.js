@@ -367,7 +367,6 @@ export function crewScreen() {
   function draw() {
     const keep = document.getElementById('crew-say')?.value ?? '';
     root.replaceChildren(
-      h('a', { class: 'back-link', href: '#/profile' }, icon('chevron', 'chev back-chev'), t('tab.profile')),
       h('header', { class: 'screen-head' }, h('h1', { text: crew.local ? crew.local.name : t('crew.title') }), crew.local ? h('button', { class: 'icon-btn crew-gear', type: 'button', 'aria-label': t('crew.settings'), onclick: openGroupSheet }, icon('settings')) : null),
       ...(crew.local ? joinedView() : startView()));
     const say = document.getElementById('crew-say'); if (say && keep) say.value = keep;
