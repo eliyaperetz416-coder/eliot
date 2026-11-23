@@ -1228,5 +1228,7 @@
     "other": "{n} members"
   },
   "crew.board.open": "The top three. Tap for the full board",
-  "live.more": "More"
+  "live.more": "More",
+  "res.delta": "rating",
+  "res.delta.first": "your first rating"
 }

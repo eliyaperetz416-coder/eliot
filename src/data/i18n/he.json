@@ -1242,5 +1242,7 @@
     "other": "{n} חברים"
   },
   "crew.board.open": "שלושת הראשונים. לחיצה לטבלה המלאה",
-  "live.more": "עוד"
+  "live.more": "עוד",
+  "res.delta": "בדירוג",
+  "res.delta.first": "הדירוג הראשון שלך"
 }

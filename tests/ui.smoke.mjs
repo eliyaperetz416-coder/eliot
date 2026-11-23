@@ -507,8 +507,9 @@ for (const lang of ['he', 'en']) {
     await page.screenshot({ path: `${shots}${lang}-plan.png`, fullPage: true });
     await page.locator('.plan-day .btn').first().click();
     await page.waitForSelector('.ent-card');
-    assert.ok(await page.locator('.target-line').count() >= 4);
-    assert.ok(await page.locator('.target-line').count() >= 4);
+    assert.ok(await page.locator('.ent-card').count() >= 4, 'the plan day brings its exercises');
+    assert.equal(await page.locator('.target-line').count(), 1, 'focus mode: the open exercise shows its target');
+    assert.ok(await page.evaluate(() => JSON.parse(localStorage.getItem('dg.draft')).entries.filter((e) => e.target).length >= 4), 'every exercise carries its target');
     await page.screenshot({ path: `${shots}${lang}-plan-day-live.png` });
     const card = page.locator('.ent-card').first();
     await card.locator('.set-row').first().locator('.set-input').nth(0).fill('60');
@@ -1648,9 +1649,9 @@ for (const lang of ['he', 'en']) {
       bad.push(...await page.evaluate((r) => [...document.querySelectorAll('main .section-label + p.row-sub')]
         .filter((p) => p.nextElementSibling && !p.nextElementSibling.matches('.section-label'))
         .map((p) => `${r}: ${p.textContent.slice(0, 50)}`), r));
-      if (['shop', 'achievements', 'calendar'].includes(r)) assert.equal(await page.locator('main .screen-hero').count(), 1, `#/${r}: one big number on top`);
+      if (['shop', 'achievements', 'calendar'].includes(r) && await page.locator('main .screen-hero').count() !== 1) bad.push(`${r}: no big number on top`);
     }
-    assert.deepEqual(bad, []);
+    assert.equal(bad.join(' | '), '', `inner screens: ${bad.join(' | ')}`);
   });
 
   await check(`${lang}: accessibility basics (names, labels, language, landmarks)`, async () => {

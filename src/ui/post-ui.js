@@ -132,6 +132,22 @@ export function compareCard(volume) {
       c.next ? h('div', { class: 'row-sub', text: t('cmp.next', { kg: formatNum(c.remaining, 0), name: t(`cmp.${c.next.id}`) }) }) : null));
 }
 
+/** The rating change, big, on top (OUR DESIGN, redesign): "+12", or your first rating. Nothing while the rank is still pending. */
+function deltaBlock(s) {
+  const b = s.overallBefore, a = s.overallAfter;
+  if (!a || a.pending) return null;
+  const d = !b || b.pending ? null : Math.round(a.rating) - Math.round(b.rating);
+  const n = d == null ? formatNum(a.rating, 0) : `${d >= 0 ? '+' : '−'}${formatNum(Math.abs(d), 0)}`;
+  return h('div', { class: 'result-delta' }, h('span', { class: 'result-delta-n num', dir: 'ltr', text: n }), h('span', { class: 'result-delta-l', text: t(d == null ? 'res.delta.first' : 'res.delta') }));
+}
+
+function prList(s, byId) {
+  if (!s.prs.length) return [];
+  return [h('div', { class: 'section-label', text: t('res.prs') }),
+    h('div', { class: 'list' }, s.prs.map((p) => h('div', { class: 'row' }, h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: nameOf(byId[p.exerciseId]) })),
+      h('span', { class: `pr-badge pr-${p.kind === 'allTime' ? 'all' : p.kind === 'weekly' ? 'week' : 'first'}`, text: t(p.kind === 'allTime' ? 'fb.pr.all' : p.kind === 'weekly' ? 'fb.pr.week' : 'fb.pr.first') }))))];
+}
+
 export function resultScreen() {
   const r = lastResult;
   const byId = data().byId;
@@ -140,6 +156,8 @@ export function resultScreen() {
   const kids = [
     backLink('#/workout', t('workout.title')),
     h('header', { class: 'screen-head' }, icon('check', 'mark'), h('h1', { text: t('res.title') })),
+    deltaBlock(s),
+    ...prList(s, byId),
     compareCard(s.stats.volume),
     h('div', { class: 'stats-grid' },
       statTile(t('fin.duration'), formatDuration(s.stats.durationSec)), statTile(t('fin.sets'), String(s.stats.workingSets)),
@@ -163,11 +181,6 @@ export function resultScreen() {
         return h('div', { class: 'row' }, h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: nameOf(byId[c.exerciseId]) }),
           h('span', { class: 'row-sub' }, h('bdi', { class: 'num', text: `${c.before ? formatNum(c.before, 0) : '–'} → ${formatNum(c.after, 0)} · ${t(`tier.${tr.tier}`)}${tr.division ? ` ${tr.division}` : ''}` }))), icon('bolt', 'up-icon'));
       })));
-  }
-  if (s.prs.length) {
-    kids.push(h('div', { class: 'section-label', text: t('res.prs') }),
-      h('div', { class: 'list' }, s.prs.map((p) => h('div', { class: 'row' }, h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: nameOf(byId[p.exerciseId]) })),
-        h('span', { class: `pr-badge pr-${p.kind === 'allTime' ? 'all' : p.kind === 'weekly' ? 'week' : 'first'}`, text: t(p.kind === 'allTime' ? 'fb.pr.all' : p.kind === 'weekly' ? 'fb.pr.week' : 'fb.pr.first') })))));
   }
   if (crew.local) {
     kids.push(h('div', { class: 'stack', style: 'padding-block-start:16px' }, button({ label: t('crew.share.workout'), icon: 'share', variant: 'secondary', block: true, onClick: async (e) => {

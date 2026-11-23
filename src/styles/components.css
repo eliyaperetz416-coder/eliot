@@ -961,3 +961,13 @@ button.chip:active, .seg button:active, .tab:active { opacity: .65; }
 .ob-crest { display: grid; place-items: center; margin-block-start: var(--s-5); }
 .ob-word { text-align: center; font-size: 38px; font-weight: 700; letter-spacing: .28em; margin-inline-start: .28em; margin-block-start: var(--s-3); }
 .ob-motto { text-align: center; font-size: 12px; letter-spacing: .32em; color: var(--accent); margin-block-start: 4px; }
+
+/* Inner screens (OUR DESIGN, redesign): one big thing on top */
+.screen-hero { padding-block: var(--s-2) var(--s-4); }
+.screen-hero-n { display: block; font-size: 44px; font-weight: 700; line-height: 1.1; color: var(--accent); }
+.wallet.screen-hero .wallet-n { font-size: 40px; }
+.cal-nav.screen-hero .cal-month { font-family: var(--font-display); font-size: 24px; font-weight: 700; }
+.wods-hero-note { padding-block-start: var(--s-3); font-size: 13px; }
+.result-delta { display: grid; justify-items: center; gap: 2px; padding-block: var(--s-4) var(--s-5); text-align: center; }
+.result-delta-n { font-family: var(--font-display); font-size: 64px; font-weight: 700; line-height: 1; color: var(--accent); }
+.result-delta-l { font-size: 14px; color: var(--text-dim); }

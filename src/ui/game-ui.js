@@ -120,7 +120,7 @@ export function achievementsScreen() {
   return h('main', { class: 'screen' },
     h('a', { class: 'back-link', href: '#/profile' }, icon('chevron', 'chev back-chev'), t('tab.profile')),
     h('h1', { class: 'ex-title', text: t('ach.title') }),
-    h('p', { class: 'row-sub', text: t('ach.count', { n: unlocked, total: list.length }) }),
+    h('div', { class: 'screen-hero', 'aria-label': t('ach.count', { n: unlocked, total: list.length }) }, h('span', { class: 'display num screen-hero-n', dir: 'ltr', text: `${unlocked}/${list.length}` })),
     h('div', { class: 'list', style: 'margin-block-start:12px' }, list.map((a) => {
       const when = store.game.achievements.unlocked[a.id];
       return h('div', { class: `row ach-row${when ? ' unlocked' : ''}` },
