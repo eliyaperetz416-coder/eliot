@@ -938,6 +938,9 @@ for (const lang of ['he', 'en']) {
 
   await check(`${lang}: crew (friends): create, join, leaderboard, status + chat, unread dot, errors, leave`, async () => {
     const T = (he, en) => L(lang, he, en);
+    // the chat refreshes every few seconds and redraws the strip: a tap that lands mid-redraw is tried again
+    const closeAll = async (pg) => { for (let i = 0; i < 4 && await pg.locator('.sheet').count(); i++) { await pg.keyboard.press('Escape'); await pg.waitForTimeout(350); } };
+    const openBoard = async (pg) => { for (let i = 0; i < 3; i++) { await pg.click('.crew-top3'); if (await pg.waitForSelector('.sheet .crew-board', { timeout: 3000 }).catch(() => null)) return; } throw new Error('the board sheet did not open'); };
     const fake = createFakeCrew();
     await fake.install(ctx);
     // a second friend on another phone
@@ -963,7 +966,7 @@ for (const lang of ['he', 'en']) {
       await page.fill('#crew-name', 'Gym bros'); await page.fill('#crew-nick', 'Elia');
       await page.getByRole('button', { name: T('צור את הקבוצה', 'Create the crew') }).click();
       await page.waitForSelector('.crew-gear');
-      await page.locator('.crew-gear').click();
+      await closeAll(page); await page.locator('.crew-gear').click();
       await page.waitForSelector('.sheet .crew-code');
       const code = await page.textContent('.sheet .crew-code');
       assert.ok(await page.locator('.sheet .crew-push').count() === 1, 'notifications are in the group settings');
@@ -984,13 +987,15 @@ for (const lang of ['he', 'en']) {
       await p2.fill('#crew-nick', 'Dan');
       await p2.getByRole('button', { name: T('הצטרף', 'Join'), exact: true }).click();
       await p2.waitForSelector('#crew-say'); // chat is the first thing you see
+      await p2.waitForSelector('.crew-top3');
+      assert.ok((await p2.textContent('.crew-head-sub')).match(/2/), 'the member count under the name');
       // the board shows both, I am marked
-      await p2.getByRole('button', { name: T('לידרבורד', 'Leaderboard') }).click();
+      await openBoard(p2);
       await p2.waitForFunction(() => document.querySelectorAll('.crew-row').length === 2);
       // friend posts a status and a chat message
-      await p2.getByRole('button', { name: new RegExp(T("צ'אט", 'Chat')) }).click();
+      await p2.keyboard.press('Escape');
       await p2.waitForSelector('#crew-say');
-      await p2.getByRole('button', { name: T('הולך להתאמן', 'Going to train') }).click();
+      await p2.click('.crew-status-btn'); await p2.getByRole('button', { name: T('הולך להתאמן', 'Going to train') }).click();
       await p2.waitForFunction(() => document.querySelectorAll('.crew-msg').length === 1);
       await p2.fill('#crew-say', 'Legs today, who is in?'); await p2.keyboard.press('Enter');
       await p2.waitForFunction(() => document.querySelectorAll('.crew-msg').length === 2);
@@ -1006,32 +1011,37 @@ for (const lang of ['he', 'en']) {
       assert.equal(await page.locator('.tab[href="#/crew"] .tab-dot').count(), 1, 'the unread dot sits on the crew tab');
       await page.goto(`${base}#/crew`);
       await page.waitForSelector('#crew-say');
-      await page.getByRole('button', { name: T('לידרבורד', 'Leaderboard') }).click();
+      await openBoard(page);
       await page.waitForSelector('.crew-board');
       assert.equal(await page.locator('.crew-row').count(), 2);
       assert.ok(await page.locator('.crew-row.me').count() === 1);
-      await page.getByRole('button', { name: new RegExp(T("צ'אט", 'Chat')) }).click();
+      await page.keyboard.press('Escape');
       await page.waitForFunction(() => document.querySelectorAll('.crew-msg').length === 2);
       await page.screenshot({ path: `${shots}${lang}-crew-feed.png`, fullPage: true });
-      await page.getByRole('button', { name: T('הולך להתאמן', 'Going to train') }).click();
+      await page.click('.crew-status-btn'); await page.getByRole('button', { name: T('הולך להתאמן', 'Going to train') }).click();
       await page.waitForFunction(() => document.querySelectorAll('.crew-msg.mine.status').length >= 1);
       await page.goto(`${base}#/workout`);
       assert.equal(await page.locator('.tab-dot').count(), 0, 'read: no dot');
       // my numbers are on the board, and nothing private is sent
       await page.goto(`${base}#/crew`);
       await page.waitForSelector('#crew-say');
-      await page.getByRole('button', { name: T('לידרבורד', 'Leaderboard') }).click();
-      await page.waitForSelector('.crew-board');
+      await openBoard(page);
+      await page.waitForSelector('.sheet .crew-board');
+      assert.equal(await page.locator('.sheet .crew-podium .crew-pod').count(), 2, 'the podium holds the top three (two of us here)');
       const sent = fake.calls.filter((c) => c.name === 'update_stats').map((c) => Object.keys(c.args.p_stats));
       assert.ok(sent.length >= 1);
       for (const keys of sent) for (const k of keys) assert.ok(['level', 'streak', 'workouts', 'weekVolume', 'monthWorkouts', 'rating', 'tier', 'division', 'recent'].includes(k), `unexpected shared field ${k}`);
-      await page.locator('.crew-gear').click();
+      await page.screenshot({ path: `${shots}${lang}-crew-board.png` });
+      await page.keyboard.press('Escape');
+      await page.waitForFunction(() => !document.querySelector('.sheet'));
+      await closeAll(page); await page.locator('.crew-gear').click();
       await page.waitForSelector('.sheet .crew-push h2');
       await page.keyboard.press('Escape');
       await page.waitForFunction(() => !document.querySelector('.sheet'));
-      await page.screenshot({ path: `${shots}${lang}-crew-board.png`, fullPage: true });
+      await openBoard(page);
+      await page.waitForSelector('.sheet .crew-board');
       // sorting chips work
-      await page.getByRole('button', { name: T('רמה', 'Level'), exact: true }).click();
+      await page.locator('.sheet .crew-board-sheet .seg button').filter({ hasText: new RegExp(`^${T('רמה', 'Level')}$`) }).click();
       await page.waitForSelector('.crew-row');
       // friend profile + plan sharing (off until switched on)
       await page.evaluate(async () => {
@@ -1044,7 +1054,7 @@ for (const lang of ['he', 'en']) {
       });
       await p2.goto(`${base}#/crew`);
       await p2.waitForSelector('#crew-say');
-      await p2.getByRole('button', { name: T('לידרבורד', 'Leaderboard') }).click();
+      await openBoard(p2);
       await p2.locator('.crew-row', { hasText: 'Elia' }).click();
       await p2.waitForSelector('.crew-friend');
       assert.ok((await p2.textContent('.crew-friend')).match(/לא שיתף|not shared/), 'plan is private by default');
@@ -1052,7 +1062,7 @@ for (const lang of ['he', 'en']) {
       await p2.keyboard.press('Escape');
       await page.reload();
       await page.waitForSelector('#crew-say');
-      await page.locator('.crew-gear').click();
+      await closeAll(page); await page.locator('.crew-gear').click();
       await page.locator('.sheet .crew-share .seg button', { hasText: T('פעיל', 'On') }).click();
       await page.waitForTimeout(400);
       assert.ok(fake.calls.some((c) => c.name === 'update_plan' && c.args.p_plan && c.args.p_plan.days), 'plan sent after switching on');
@@ -1060,7 +1070,7 @@ for (const lang of ['he', 'en']) {
       assert.ok(!/weight|sets|exercise|bodyweight/i.test(sentPlan), 'no exercises or weights in the shared plan');
       await p2.reload();
       await p2.waitForSelector('#crew-say');
-      await p2.getByRole('button', { name: T('לידרבורד', 'Leaderboard') }).click();
+      await openBoard(p2);
       await p2.locator('.crew-row', { hasText: 'Elia' }).click();
       await p2.waitForSelector('.crew-plan-row');
       assert.equal(await p2.locator('.crew-plan-row').count(), 7);
@@ -1094,7 +1104,7 @@ for (const lang of ['he', 'en']) {
         const p3 = await ctx3.newPage();
         p3.on('pageerror', (e) => errors.push(`crew third: ${e.message}`));
         await onboard(p3, lang, `crew3-${lang}`);
-        const board = async (pg) => { await pg.reload(); await pg.waitForSelector('#crew-say, .crew-suspended'); await pg.getByRole('button', { name: T('לידרבורד', 'Leaderboard') }).click(); await pg.waitForSelector('.crew-row'); };
+        const board = async (pg) => { await pg.reload(); await pg.waitForSelector('#crew-say, .crew-suspended'); await openBoard(pg); await pg.waitForSelector('.crew-row'); };
         const rowOf = (pg, nick) => pg.locator(`.crew-row[data-nick="${nick}"]`);
         const confirmGo = async (pg) => { await pg.waitForFunction(() => document.querySelectorAll('.sheet').length >= 1); await pg.locator('.sheet').last().locator('.btn-primary, .btn-danger').first().click(); };
         await p3.goto(`${base}#/crew`); await p3.waitForSelector('#crew-code');
@@ -1108,11 +1118,11 @@ for (const lang of ['he', 'en']) {
         await rowOf(p2, 'Elia').click(); await p2.waitForSelector('.crew-friend');
         assert.equal(await p2.locator('.crew-leader-tools').count(), 0, 'members have no leader tools');
         await p2.keyboard.press('Escape');
-        await p2.locator('.crew-gear').click(); await p2.waitForSelector('.sheet .crew-code');
+        await closeAll(p2); await p2.locator('.crew-gear').click(); await p2.waitForSelector('.sheet .crew-code');
         assert.equal(await p2.locator('.sheet .crew-leader-box').count(), 0);
         await p2.keyboard.press('Escape');
         // rename and a new code
-        await page.locator('.crew-gear').click(); await page.waitForSelector('#crew-rename');
+        await closeAll(page); await page.locator('.crew-gear').click(); await page.waitForSelector('#crew-rename');
         await page.screenshot({ path: `${shots}${lang}-crew-leader.png` });
         await page.fill('#crew-rename', 'Gym bros 2');
         await page.locator('.crew-leader-box .btn-secondary').click();
@@ -1198,7 +1208,7 @@ for (const lang of ['he', 'en']) {
         await adjustTool('Dan', async () => { await page.getByRole('button', { name: T('איפוס', 'Reset'), exact: true }).click(); });
         await p2.reload(); await p2.waitForSelector('#crew-say');
         await p2.waitForFunction(async (b) => (await import('./src/ui/store.js')).store.game.drachmas === b + 12345, dracBefore);
-        await p2.getByRole('button', { name: new RegExp(T("צ'אט", 'Chat')) }).click();
+        await p2.keyboard.press('Escape');
         const chatText = await p2.textContent('#crew-feed');
         assert.ok(/הושעה|suspended/i.test(chatText) && /דרכמות|drachmas/i.test(chatText), 'everything is announced in the chat');
         // hand over to Dan: he gets the tools and Elia loses them
@@ -1217,18 +1227,19 @@ for (const lang of ['he', 'en']) {
         await confirmGo(p2);
         await board(page);
         assert.equal(await rowOf(page, 'Elia').locator('.chip-leader').count(), 1);
-        await page.reload(); await page.waitForSelector('#crew-say'); await page.getByRole('button', { name: T('לידרבורד', 'Leaderboard') }).click();
+        await page.reload(); await page.waitForSelector('#crew-say'); await openBoard(page);
       } finally { await ctx3.close(); }
       // leaving
       await p2.goto(`${base}#/crew`);
-      await p2.locator('.crew-gear').click();
+      await closeAll(p2); await p2.locator('.crew-gear').click();
       await p2.getByRole('button', { name: T('עזוב את הקבוצה', 'Leave the crew') }).click();
       await p2.locator('.sheet .btn-danger').click();
       await p2.waitForSelector('#crew-code');
       await page.reload();
       await page.waitForSelector('#crew-say');
-      await page.getByRole('button', { name: T('לידרבורד', 'Leaderboard') }).click();
+      await openBoard(page);
       await page.waitForFunction(() => document.querySelectorAll('.crew-row').length === 1);
+      await closeAll(page);
     } finally {
       await ctx2.close();
       await ctx.unroute(/supabase\.co\/rest\/v1\/rpc\//);

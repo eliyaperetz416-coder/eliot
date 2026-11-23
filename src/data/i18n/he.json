@@ -1275,5 +1275,10 @@
   "prog.tab.rank": "דרגה",
   "prog.tab.body": "גוף",
   "prog.tab.data": "נתונים",
-  "ranks.more.rows": "+{n} נוספים"
+  "ranks.more.rows": "+{n} נוספים",
+  "crew.members": {
+    "one": "חבר אחד",
+    "other": "{n} חברים"
+  },
+  "crew.board.open": "שלושת הראשונים. לחיצה לטבלה המלאה"
 }

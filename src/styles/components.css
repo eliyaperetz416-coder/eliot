@@ -900,3 +900,23 @@ button.chip:active, .seg button:active, .tab:active { opacity: .65; }
 .tier-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .ex-rank-n { font-size: 16px; }
 .more-rows { margin-block-start: 8px; min-height: 44px; border: 0; background: none; padding: 0; color: var(--accent); font: inherit; font-weight: 700; }
+
+/* ---------- Crew, chat first (OUR DESIGN, redesign) ---------- */
+.crew-headbar .crew-title { flex: 1; min-width: 0; }
+.crew-headbar h1 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.crew-head-sub { margin-block-start: 2px; }
+.crew-invite, .crew-gear { flex-shrink: 0; }
+.crew-top3 { display: flex; align-items: center; gap: var(--s-3); width: 100%; min-height: 48px; margin-block-end: var(--s-2); padding: 8px 14px; border-radius: var(--r-pill); border: 1px solid var(--line); background: var(--surface-1); color: var(--text); font: inherit; text-align: start; }
+.crew-top3-item { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1; }
+.crew-top3-item b { font-size: 14px; color: var(--accent); }
+.crew-top3-nick { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.crew-top3 .chev { width: 16px; height: 16px; color: var(--text-mute); flex-shrink: 0; }
+.crew .crew-feed { height: calc(100dvh - var(--tabbar-space) - 250px - var(--safe-t)); max-height: none; min-height: 260px; }
+.crew-podium { display: flex; align-items: flex-end; justify-content: center; gap: var(--s-2); padding-block: var(--s-2); }
+.crew-pod { flex: 1; max-width: 120px; display: grid; justify-items: center; gap: 4px; text-align: center; }
+.crew-pod-nick { font-weight: 700; font-size: 14px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.crew-pod-val { display: flex; align-items: center; gap: 6px; font-size: 15px; }
+.crew-pod-step { width: 100%; display: grid; place-items: center; border-radius: 12px 12px 0 0; background: var(--surface-2); color: var(--text-dim); font-size: 22px; }
+.crew-pod.p1 .crew-pod-step { height: 84px; background: linear-gradient(180deg, rgb(var(--accent-rgb) / .35), var(--surface-2)); color: var(--accent); }
+.crew-pod.p2 .crew-pod-step { height: 62px; }
+.crew-pod.p3 .crew-pod-step { height: 46px; }

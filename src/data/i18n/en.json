@@ -1261,5 +1261,10 @@
   "prog.tab.rank": "Rank",
   "prog.tab.body": "Body",
   "prog.tab.data": "Numbers",
-  "ranks.more.rows": "+{n} more"
+  "ranks.more.rows": "+{n} more",
+  "crew.members": {
+    "one": "1 member",
+    "other": "{n} members"
+  },
+  "crew.board.open": "The top three. Tap for the full board"
 }

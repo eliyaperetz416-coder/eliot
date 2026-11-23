@@ -138,7 +138,7 @@ function giftSheet(m, done) {
 
 export function crewScreen() {
   const root = h('main', { class: 'screen crew' });
-  let tab = 'feed', sort = 'rating';
+  let sort = 'rating', boardRender = null;
   let view = null, messages = [], timer = null, busy = false, formMode = 'join';
   if (!crew.ownerKey) formMode = 'join';
   const off = onCrew(() => { if (!crew.local) draw(); });
@@ -166,9 +166,6 @@ export function crewScreen() {
     const go2 = button({ label: t(formMode === 'join' ? 'crew.join.go' : 'crew.create.go'), block: true, onClick: (e) => go(e.currentTarget) });
     return [
       h('p', { text: t('crew.intro') }),
-      h('section', { class: 'card card-accent', style: 'margin-block:12px' },
-        h('h2', { text: t('crew.share.title') }),
-        h('p', { text: t('crew.share.body') })),
       crew.ownerKey ? segmented({ label: t('crew.title'), value: formMode, onChange: (v) => { formMode = v; draw(); }, options: [{ value: 'join', label: t('crew.join') }, { value: 'create', label: t('crew.create') }] }) : h('p', { class: 'row-sub', text: t('crew.owner.only') }),
       h('div', { class: 'stack', style: 'padding-block-start:12px' },
         formMode === 'join' ? h('div', { class: 'field' }, h('label', { for: 'crew-code', text: t('crew.code') }), h('div', { class: 'field-box' }, code)) : h('div', { class: 'field' }, h('label', { for: 'crew-name', text: t('crew.name') }), h('div', { class: 'field-box' }, name)),
@@ -184,7 +181,7 @@ export function crewScreen() {
   function boardView() {
     const members = sortBoard(view.members.map(applyAdjust), sort);
     return [
-      segmented({ label: t('crew.sort'), value: sort, onChange: (v) => { sort = v; draw(); }, options: SORTS.map((s) => ({ value: s, label: t(`crew.sort.${s}`) })) }),
+      segmented({ label: t('crew.sort'), value: sort, onChange: (v) => { sort = v; boardRender?.(); }, options: SORTS.map((s) => ({ value: s, label: t(`crew.sort.${s}`) })) }),
       h('div', { class: 'list crew-board', style: 'margin-block-start:12px' }, members.map((m, i) => {
         const s = m.stats ?? {};
         const mine = m.id === crew.local.memberId;
@@ -197,6 +194,37 @@ export function crewScreen() {
       })),
       h('p', { class: 'row-sub', style: 'padding-block-start:8px', text: t('crew.board.note') }),
     ];
+  }
+
+  const dotColor = (s) => (s?.tier === 'greekgod' ? '#7df9ff' : TIER_COLORS[s?.tier] ?? 'var(--text-mute)');
+  const byRating = () => sortBoard(view.members.map(applyAdjust), 'rating');
+
+  /** The top three under the header (place, nickname, tier dot). Tap it for the podium and the whole board. */
+  function top3Strip() {
+    return h('button', { class: 'crew-top3', type: 'button', 'aria-label': t('crew.board.open'), onclick: openBoardSheet },
+      byRating().slice(0, 3).map((m, i) => h('span', { class: 'crew-top3-item' },
+        h('b', { class: 'display num', text: String(i + 1) }), h('span', { class: 'tier-dot', style: `background:${dotColor(m.stats)}`, 'aria-hidden': 'true' }),
+        h('span', { class: 'crew-top3-nick', text: m.nickname }))),
+      icon('chevron', 'chev'));
+  }
+
+  function podium() {
+    const top = byRating().slice(0, 3);
+    const order = [top[1], top[0], top[2]].filter(Boolean); // second, first, third: the winner in the middle
+    return h('div', { class: 'crew-podium' }, order.map((m) => {
+      const place = top.indexOf(m) + 1;
+      return h('div', { class: `crew-pod p${place}` },
+        h('span', { class: 'crew-pod-nick', text: m.nickname }),
+        h('span', { class: 'crew-pod-val display num' }, h('span', { class: 'tier-dot', style: `background:${dotColor(m.stats)}`, 'aria-hidden': 'true' }), m.stats?.rating != null ? formatNum(m.stats.rating, 0) : '–'),
+        h('span', { class: 'crew-pod-step display num', text: String(place) }));
+    }));
+  }
+
+  function openBoardSheet() {
+    const body = h('div', { class: 'stack crew-board-sheet' });
+    boardRender = () => { if (body.isConnected || !body.parentNode) body.replaceChildren(podium(), ...boardView()); };
+    openSheet({ title: t('crew.tab.board'), content: body, tall: true });
+    boardRender();
   }
 
   const weekday = (d) => new Intl.DateTimeFormat(getLanguage() === 'he' ? 'he-IL' : 'en-GB', { weekday: 'long', timeZone: 'UTC' }).format(Date.UTC(2026, 9, 11 + d)); // 2026-10-11 is a Sunday
@@ -297,11 +325,15 @@ export function crewScreen() {
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') send(input.value); });
     const suspended = view?.me?.suspended_until;
     if (suspended) return [h('div', { class: 'crew-feed', id: 'crew-feed', 'aria-live': 'polite' }, bubbles), h('p', { class: 'card crew-suspended', role: 'status', text: t('crew.suspended.you', { time: formatDateTime(Date.parse(suspended)) }) })];
-    const quick = ['going', 'done', 'rest'].map((q) => h('button', { class: 'chip chip-select', type: 'button', onclick: () => send(t(`crew.q.${q}`), 'status') }, t(`crew.q.${q}`)));
+    const statusSheet = () => {
+      const sh = openSheet({ title: t('crew.status'), content: h('div', { class: 'stack' }, ['going', 'done', 'rest'].map((q) =>
+        button({ label: t(`crew.q.${q}`), variant: 'secondary', block: true, onClick: () => { sh.close(); send(t(`crew.q.${q}`), 'status'); } }))) });
+    };
     return [
       h('div', { class: 'crew-feed', id: 'crew-feed', 'aria-live': 'polite' }, bubbles),
-      h('div', { class: 'crew-quick' }, quick),
-      h('div', { class: 'crew-compose' }, h('div', { class: 'field-box' }, input), h('button', { class: 'icon-btn send-btn', type: 'button', 'aria-label': t('crew.send'), onclick: () => send(input.value) }, icon('upload'))),
+      h('div', { class: 'crew-compose' },
+        h('button', { class: 'icon-btn crew-status-btn', type: 'button', 'aria-label': t('crew.status'), onclick: statusSheet }, icon('bolt')),
+        h('div', { class: 'field-box' }, input), h('button', { class: 'icon-btn send-btn', type: 'button', 'aria-label': t('crew.send'), onclick: () => send(input.value) }, icon('upload'))),
     ];
   }
 
@@ -357,17 +389,19 @@ export function crewScreen() {
     render();
   }
 
+  /** Chat first (OUR DESIGN, redesign): the top-three strip, then the chat fills the screen. */
   function joinedView() {
-    return [
-      h('div', { class: 'crew-tabs' }, segmented({ label: t('crew.title'), value: tab, onChange: (v) => { tab = v; draw(); if (v === 'feed') markRead(); }, options: [{ value: 'feed', label: `${t('crew.tab.feed')}${crew.unread ? ` (${crew.unread})` : ''}` }, { value: 'board', label: t('crew.tab.board') }] })),
-      !view ? h('p', { class: 'row-sub center', text: t('common.loading') }) : tab === 'board' ? boardView() : feedView(),
-    ];
+    return !view ? [h('p', { class: 'row-sub center', text: t('common.loading') })] : [top3Strip(), ...feedView()];
   }
 
   function draw() {
     const keep = document.getElementById('crew-say')?.value ?? '';
     root.replaceChildren(
-      h('header', { class: 'screen-head' }, h('h1', { text: crew.local ? crew.local.name : t('crew.title') }), crew.local ? h('button', { class: 'icon-btn crew-gear', type: 'button', 'aria-label': t('crew.settings'), onclick: openGroupSheet }, icon('settings')) : null),
+      h('header', { class: 'screen-head crew-headbar' },
+        h('div', { class: 'crew-title' }, h('h1', { text: crew.local ? crew.local.name : t('crew.title') }),
+          crew.local && view ? h('div', { class: 'row-sub crew-head-sub', text: t('crew.members', { n: view.members.length }) }) : null),
+        crew.local ? h('button', { class: 'icon-btn crew-invite', type: 'button', 'aria-label': t('crew.invite'), onclick: invite }, icon('share')) : null,
+        crew.local ? h('button', { class: 'icon-btn crew-gear', type: 'button', 'aria-label': t('crew.settings'), onclick: openGroupSheet }, icon('settings')) : null),
       ...(crew.local ? joinedView() : startView()));
     const say = document.getElementById('crew-say'); if (say && keep) say.value = keep;
     const feed = document.getElementById('crew-feed'); if (feed) feed.scrollTop = feed.scrollHeight;
@@ -384,8 +418,8 @@ export function crewScreen() {
       const changed = fresh.length || JSON.stringify(v.members) !== JSON.stringify(view?.members) || JSON.stringify(v.group) !== JSON.stringify(view?.group) || !!v.me?.leader !== !!view?.me?.leader;
       await syncGroupInfo(v.group);
       view = v; messages = [...messages, ...fresh];
-      if (changed || scroll) draw();
-      if (tab === 'feed') markRead();
+      if (changed || scroll) { draw(); if (changed) boardRender?.(); }
+      markRead();
     } catch (e) {
       if (errorKey(e) === 'not_member') { await leaveCrew().catch(() => {}); showToast({ message: t('crew.removed') }); draw(); }
     } finally { busy = false; }
