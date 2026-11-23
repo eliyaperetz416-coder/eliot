@@ -12,6 +12,6 @@
   > The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
   >
   > THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-- **Cinzel**, **Heebo**: SIL Open Font License 1.1 (`assets/fonts/OFL-*.txt`), from the official @fontsource npm packages.
+- **Cinzel**, **Heebo**: SIL Open Font License 1.1 (`assets/fonts/OFL-*.txt`), from the official @fontsource npm packages (Heebo weights 400, 700, 800, 900 from @fontsource/heebo 5.3.0).
 - **sharp** (dev tool for image conversion): Apache-2.0. Not shipped to users.
 - Logo, icons, rank emblems: original artwork made for this project.

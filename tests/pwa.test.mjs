@@ -56,3 +56,12 @@ test('index.html preloads every start-up module (run npm run stamp after changin
   assert.ok(block, 'preload markers missing');
   assert.equal(block, preloadBlock(), 'modulepreload list is stale: run npm run stamp');
 });
+
+test('every @font-face file exists and is precached (headings use Heebo 800/900)', () => {
+  const css = readFileSync(r('src/styles/tokens.css'), 'utf8');
+  const sw = readFileSync(r('sw.js'), 'utf8');
+  const list = JSON.parse(sw.match(/const PRECACHE = (\[[\s\S]*?\]);/)[1]);
+  const urls = [...css.matchAll(/url\("\.\.\/\.\.\/([^"]+)"\)/g)].map((m) => m[1]);
+  for (const w of [800, 900]) for (const s of ['hebrew', 'latin']) assert.ok(urls.includes(`assets/fonts/heebo-${s}-${w}-normal.woff2`), `${s} ${w}`);
+  for (const f of urls) { assert.ok(existsSync(r(f)), f); assert.ok(list.includes(f), `precache ${f}`); }
+});
