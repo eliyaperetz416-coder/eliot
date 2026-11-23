@@ -619,7 +619,7 @@ for (const lang of ['he', 'en']) {
     await page.waitForSelector('.live-head', { state: 'detached' });
     // profile: level bar, achievements
     await page.goto(`${base}#/profile`);
-    await page.waitForSelector('.level-bar');
+    await page.waitForSelector('.profile-ring');
     await page.screenshot({ path: `${shots}${lang}-profile-game.png`, fullPage: true });
     await page.goto(`${base}#/achievements`);
     await page.waitForSelector('.ach-row');
@@ -1383,38 +1383,11 @@ for (const lang of ['he', 'en']) {
     assert.equal(await page.evaluate(async () => (await (await import('./src/ui/db.js')).dbAll('routines')).length), routinesBefore);
   });
 
-  await check(`${lang}: my role model: form, link check, Today card, remove`, async () => {
+  await check(`${lang}: no role model any more (#/model opens Today); the result still compares the weight with something familiar`, async () => {
     const T = (he, en) => L(lang, he, en);
-    await page.goto(`${base}#/profile`);
-    await page.locator('.row', { hasText: T('המודל שלי', 'My role model') }).click();
-    await page.waitForSelector('#model-name');
-    await page.locator('.screen button.btn-primary').click();
-    await page.waitForFunction(() => [...document.querySelectorAll('.field-error')].some((e) => !e.hidden));
-    await page.fill('#model-name', 'Harley Alexander');
-    await page.fill('#model-note', 'Train like him');
-    await page.fill('#model-youtube', 'https://youtube.com/@harleyalexanderr?si=abc');
-    await page.fill('#model-tiktok', 'https://example.com/x');
-    await page.locator('.screen button.btn-primary').click();
-    await page.waitForTimeout(200);
-    assert.ok(await page.locator('#model-tiktok').isVisible(), 'a bad link keeps you on the form');
-    await page.fill('#model-tiktok', 'tiktok.com/@harleyalexander.fit?_r=1');
-    await page.fill('#model-tips', 'Sleep 8 hours\nDrink water\nSleep 8 hours');
-    // a workout from pasted text: known exercises are saved, unknown ones are listed
-    await page.fill('#model-import', 'Name: Push day\n1. Barbell bench press - 4 x 6-8\n2. Holobody curls 3x12');
-    await page.locator('.screen .btn-secondary', { hasText: T('יצירת אימון', 'Create workout') }).click();
-    await page.waitForSelector('a[href^="#/routine/"]');
-    assert.ok((await page.textContent('.screen')).match(/Harley Alexander: Push day|Push day/));
-    assert.ok((await page.textContent('.screen')).includes('Holobody curls'));
-    const imported = await page.evaluate(async () => (await (await import('./src/ui/db.js')).dbAll('routines')).filter((r) => /Push day/.test(r.name)).map((r) => [r.entries.length, r.entries[0].sets, r.entries[0].repsMin, r.entries[0].repsMax]));
-    assert.deepEqual(imported, [[1, 4, 6, 8]]);
-    await page.locator('.screen .chips-wrap .chip-select', { hasText: /^4$/ }).click();
-    await page.screenshot({ path: `${shots}${lang}-model-form.png`, fullPage: true });
-    await page.locator('.screen button.btn-primary').click();
-    await page.waitForFunction(() => location.hash === '#/workout'); // the Today card is gone (redesign: Today keeps only the essentials)
+    await page.goto(`${base}#/model`);
     await page.waitForSelector('.today-start');
-    assert.equal(await page.locator('.model-card').count(), 0);
-    // the result screen quotes your model after a workout
-    await page.goto(`${base}#/workout`);
+    assert.equal(await page.locator('.model-card, .model-quote').count(), 0);
     await startEmpty(page);
     await addExercise(page, 'barbell bench press');
     await logSet(page, 0, 60, 8);
@@ -1422,19 +1395,11 @@ for (const lang of ['he', 'en']) {
     await page.waitForSelector('.sheet .btn-primary');
     await page.click('.sheet .btn-primary');
     await page.waitForSelector('main .stats-grid');
-    assert.ok((await page.textContent('.model-quote')).includes('Harley Alexander'));
+    assert.equal(await page.locator('.model-quote').count(), 0);
     // 60 kg x 8 = 480 kg: the weight of a horse
     assert.ok((await page.textContent('.compare-card')).includes(T('סוס', 'horse')));
     await page.screenshot({ path: `${shots}${lang}-result-compare.png` });
     if (await page.locator('.rankup').count()) await page.click('.rankup button');
-    await page.goto(`${base}#/model`);
-    await page.locator('.screen .btn-danger').click();
-    await page.waitForFunction(() => location.hash === '#/profile'); // removing goes to Profile by itself (after the save): wait, or it would jump there later
-    await page.goto(`${base}#/workout`);
-    await page.waitForSelector('.today-start').catch(async (e) => { console.log('DEBUG (role model): hash', await page.evaluate(() => location.hash), '| app:', (await page.evaluate(() => document.getElementById('app').innerText)).replace(/\s+/g, ' ').slice(0, 300), '| overlays:', await page.evaluate(() => document.getElementById('overlay-root').innerText.slice(0, 200)), '| draft:', await page.evaluate(() => !!localStorage.getItem('dg.draft'))); throw e; });
-    assert.equal(await page.locator('.model-card').count(), 0);
-    await page.evaluate(async () => { const db = await import('./src/ui/db.js'); for (const r of await db.dbAll('routines')) if (/Push day/.test(r.name)) await db.dbDelete('routines', r.id); });
-    await page.reload();
   });
 
   await check(`${lang}: plan my week: several items a day (basketball + a saved workout), rest, done marks`, async () => {
@@ -1607,7 +1572,7 @@ for (const lang of ['he', 'en']) {
   });
 
   await check(`${lang}: every sub-screen has a back link`, async () => {
-    const subs = ['wods', 'wod/fran', 'wod/nope', 'ladder', 'exercises', 'exercise/plank', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'privacy', 'requests', 'calendar', 'history', 'history/nope', 'routine/nope', 'plan/nope', 'exercise/nope', 'ranks-preview', 'model', 'schedule', 'ladder'];
+    const subs = ['wods', 'wod/fran', 'wod/nope', 'ladder', 'exercises', 'exercise/plank', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'privacy', 'requests', 'calendar', 'history', 'history/nope', 'routine/nope', 'plan/nope', 'exercise/nope', 'ranks-preview', 'schedule', 'ladder'];
     for (const r of subs) {
       await page.goto(`${base}#/${r}`);
       await page.waitForSelector('main');
@@ -1691,7 +1656,7 @@ for (const lang of ['he', 'en']) {
       const { end, top } = await page.evaluate(() => ({ end: document.querySelector('main').lastElementChild.getBoundingClientRect().bottom, top: document.querySelector('.tabbar').getBoundingClientRect().top }));
       assert.ok(end <= top, `#/${r}: last block ends at ${end}, bar starts at ${top}`);
     }
-    await page.goto(`${base}#/profile`);
+    await page.goto(`${base}#/settings`);
     await page.getByRole('button', { name: L(lang, 'English', 'עברית') }).click();
     assert.equal(await page.evaluate(() => document.documentElement.dir), lang === 'he' ? 'ltr' : 'rtl');
     await page.getByRole('button', { name: L(lang, 'עברית', 'English') }).click();
@@ -1699,31 +1664,25 @@ for (const lang of ['he', 'en']) {
 
   await check(`${lang}: profile edit saves, bodyweight history grows`, async () => {
     await page.goto(`${base}#/profile`);
-    await page.waitForSelector('.profile-head, .screen-head');
+    await page.waitForSelector('.profile-head');
+    // three tiles (achievements, shop, calendar); no role model and no Zip
+    assert.equal(await page.locator('.profile-tiles a').count(), 3);
+    assert.equal(await page.getByText(L(lang, 'המודל שלי', 'My role model')).count(), 0);
+    assert.equal(await page.locator('.zip-host, .zip').count(), 0, 'Zip is gone');
+    await page.screenshot({ path: `${shots}${lang}-profile.png`, fullPage: true });
     await page.getByRole('button', { name: L(lang, 'עריכת פרופיל', 'Edit profile') }).click();
     await page.waitForSelector('.sheet #pe-weight');
     await page.fill('#pe-weight', '84');
     await page.click('.sheet .btn-primary');
     await page.waitForSelector('.toast');
-    await page.waitForSelector('.list .row .num');
-    await page.screenshot({ path: `${shots}${lang}-profile-edited.png`, fullPage: true });
-  });
-
-  await check(`${lang}: Zip the mascot lives only on Profile, above the tab bar, and his bubble stays on screen`, async () => {
-    await page.goto(`${base}#/profile`);
-    await page.waitForSelector('.zip-host:not([hidden])');
-    const host = await page.locator('.zip-host').boundingBox();
-    const nav = await page.locator('#nav-root > *').first().boundingBox();
-    assert.ok(host.y + host.height <= nav.y + 1, 'Zip stands above the tab bar');
-    assert.ok(host.x >= 0 && host.x + host.width <= 390, 'inside the screen');
-    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.zip-host')).direction), lang === 'he' ? 'rtl' : 'ltr');
-    await page.mouse.click(host.x + host.width / 2, host.y + host.height / 2);
-    await page.waitForSelector('.zip-bubble:not([hidden])');
-    const b = await page.locator('.zip-bubble').boundingBox();
-    assert.ok(b.x >= 0 && b.x + b.width <= 390 && b.y >= 0, 'the bubble stays on screen');
-    await page.screenshot({ path: `${shots}${lang}-zip.png` });
-    await page.goto(`${base}#/workout`);
-    await page.waitForFunction(() => document.querySelector('.zip-host')?.hidden === true);
+    await page.waitForFunction(() => !document.querySelector('.sheet'));
+    // the body-weight history lives in the edit sheet
+    await page.getByRole('button', { name: L(lang, 'עריכת פרופיל', 'Edit profile') }).click();
+    await page.waitForSelector('.sheet .bw-hist .row .num');
+    assert.ok(await page.locator('.sheet .bw-hist .row').count() >= 2, 'bodyweight history grows');
+    await page.screenshot({ path: `${shots}${lang}-profile-edited.png` });
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !document.querySelector('.sheet'));
   });
 
   await check(`${lang}: manifest + service worker + works offline after first load`, async () => {

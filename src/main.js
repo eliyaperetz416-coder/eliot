@@ -11,7 +11,6 @@ import { keepAwake } from './ui/wakelock.js';
 import { initCrew, onCrew, crew, startCrewWatcher } from './ui/crew-state.js';
 import { initLink } from './ui/link-state.js';
 import { installLock } from './ui/lock.js';
-import { showMascot } from './ui/mascot.js';
 import { h } from './ui/dom.js';
 import { completeSignIn, getSession, onAuth, startGoogleSignIn } from './ui/auth.js';
 import { startSync } from './ui/sync.js';
@@ -91,9 +90,8 @@ function render() {
   if (!session) el.prepend(h('div', { class: 'card card-accent signin-banner', role: 'status' },
     h('p', { text: t('sync.banner') }), button({ label: t('sync.banner.go'), icon: 'refresh', onClick: () => startGoogleSignIn() })));
   app.replaceChildren(el);
-  const tab = { exercises: 'workouts', exercise: 'workouts', custom: 'workouts', requests: 'workouts', routines: 'workouts', routine: 'workouts', plans: 'workouts', plan: 'workouts', schedule: 'workouts', wods: 'workouts', wod: 'workouts', history: 'workouts', achievements: 'profile', settings: 'profile', calendar: 'profile', numbers: 'profile', privacy: 'profile', result: 'workout', progress: 'ranks', ladder: 'ranks', weakest: 'ranks', card: 'ranks', shop: 'profile', model: 'profile' }[id] ?? id;
+  const tab = { exercises: 'workouts', exercise: 'workouts', custom: 'workouts', requests: 'workouts', routines: 'workouts', routine: 'workouts', plans: 'workouts', plan: 'workouts', schedule: 'workouts', wods: 'workouts', wod: 'workouts', history: 'workouts', achievements: 'profile', settings: 'profile', calendar: 'profile', numbers: 'profile', privacy: 'profile', result: 'workout', progress: 'ranks', ladder: 'ranks', weakest: 'ranks', card: 'ranks', shop: 'profile', }[id] ?? id;
   currentTab = tab;
-  showMascot(id === 'profile');
   // Safety net: every sub-screen (any screen that is not a tab root) has a way back, even in empty/error states.
   if (id !== tab && !el.querySelector('.back-link')) el.prepend(backLink(`#/${tab}`, t(`tab.${tab}`)));
   drawNav();

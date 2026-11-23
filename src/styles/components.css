@@ -706,8 +706,6 @@ a.btn { text-decoration: none; }
 .weak-main { display: grid; gap: 2px; flex: 1; min-width: 0; }
 .weak-next { color: var(--text-dim); font-size: 14px; }
 
-/* Zip the mascot: above the tab bar (20), below sheets and toasts (40+) */
-:root { --zip-z: 30; }
 
 /* Apple-style craft (OUR DESIGN): pressable things answer the finger at once, without changing their size (a shrinking button can drop a tap at its edge);
    translucent chrome gets a solid fallback. */
@@ -920,3 +918,19 @@ button.chip:active, .seg button:active, .tab:active { opacity: .65; }
 .crew-pod.p1 .crew-pod-step { height: 84px; background: linear-gradient(180deg, rgb(var(--accent-rgb) / .35), var(--surface-2)); color: var(--accent); }
 .crew-pod.p2 .crew-pod-step { height: 62px; }
 .crew-pod.p3 .crew-pod-step { height: 46px; }
+
+/* ---------- Profile (OUR DESIGN, redesign): avatar in an XP ring, three tiles, one edit row ---------- */
+.profile-head { display: flex; align-items: center; gap: var(--s-3); padding-block: var(--s-4) var(--s-4); }
+.profile-ring { width: 68px; height: 68px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(var(--accent) 0 var(--p), var(--surface-3) var(--p) 100%); }
+.profile-ring b { width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); font-size: 26px; color: var(--text); }
+.profile-who { flex: 1; min-width: 0; }
+.profile-who h1 { font-size: 26px; font-weight: 800; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.profile-stats { display: flex; align-items: center; gap: var(--s-3); margin-block-start: 4px; }
+.profile-stat { display: inline-flex; align-items: center; gap: 4px; }
+.profile-stat svg { width: 15px; height: 15px; color: var(--accent); }
+.profile-gear { flex-shrink: 0; }
+.profile-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-2); padding-block-end: var(--s-4); }
+.profile-tile { display: grid; justify-items: center; gap: 4px; padding: 14px 6px; border-radius: var(--r-md); background: var(--surface-1); border: 1px solid var(--line); color: var(--text); text-decoration: none; text-align: center; }
+.profile-tile svg { width: 22px; height: 22px; color: var(--accent); }
+.profile-tile-v { font-size: 20px; font-weight: 700; }
+.profile-tile-l { font-size: 12.5px; color: var(--text-dim); }

@@ -20,7 +20,6 @@ import { skipRest } from './rest-timer.js';
 import { keepAwake } from './wakelock.js';
 import { emblem } from './emblem.js';
 import { rankCard } from './rank-card.js';
-import { modelQuote } from './model.js';
 import { compareVolume } from '../core/compare.mjs';
 import { formatDuration, formatNum, formatKg } from './format.js';
 
@@ -141,7 +140,6 @@ export function resultScreen() {
   const kids = [
     backLink('#/workout', t('workout.title')),
     h('header', { class: 'screen-head' }, icon('check', 'mark'), h('h1', { text: t('res.title') })),
-    modelQuote(),
     compareCard(s.stats.volume),
     h('div', { class: 'stats-grid' },
       statTile(t('fin.duration'), formatDuration(s.stats.durationSec)), statTile(t('fin.sets'), String(s.stats.workingSets)),
