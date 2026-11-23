@@ -1240,5 +1240,17 @@
   "set.theme": "Colour theme",
   "set.theme.dark": "Dark",
   "set.theme.marble": "Marble",
-  "tab.crew": "Crew"
+  "tab.crew": "Crew",
+  "today.level": "Level",
+  "today.level.aria": "Level {n}, {into} of {need} XP",
+  "today.streak.aria": "Streak: {days}",
+  "today.drachmas.aria": "{n} drachmas",
+  "today.bell": "Updates",
+  "today.bell.n": "Updates, {n} waiting for you",
+  "today.bell.empty": "Nothing new right now",
+  "today.today": "Today",
+  "today.week.aria": "This week: {n} training days. Open the calendar",
+  "today.minutes": "≈ {n} min",
+  "today.next.aria": "{when}: {title}, {meta}. Choose another workout",
+  "today.quests.ready": "Quests, {n} ready to claim"
 }

@@ -106,3 +106,11 @@ export function nextScheduledWorkout(schedule, todayKey, { doneToday = () => fal
   }
   return null;
 }
+
+/** The size of a workout for the "next workout" row (OUR DESIGN, redesign Today): exercises, sets, and about how long
+ *  (2.5 min a set with its rest, rounded to 5, never under 10). Entries hold `sets` as a count or as an array. */
+export function workoutSize(entries) {
+  if (!entries?.length) return null;
+  const sets = entries.reduce((n, e) => n + (Array.isArray(e.sets) ? e.sets.length : Number(e.sets) || 0), 0);
+  return { exercises: entries.length, sets, minutes: Math.max(10, Math.round((sets * 2.5) / 5) * 5) };
+}

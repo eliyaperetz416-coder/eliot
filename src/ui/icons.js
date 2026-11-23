@@ -27,6 +27,7 @@ const P = {
   chevron: '<path d="M9 5l7 7-7 7"/>',
   refresh: '<path d="M20 11a8 8 0 0 0-14.500-4M4 5v3.500h3.500M4 13a8 8 0 0 0 14.500 4M20 19v-3.500h-3.500"/>',
   lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  bell: '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>',
   chat: '<path d="M4.5 5h15v11H9.5l-5 4z"/>',
   progress: '<path d="M3 20h18M6 20v-4h12v4M8 16v-4h8v4M10 12V8h4v4"/>',
   shield: '<path d="M12 3l7 2.600v6c0 4.400-3 7.600-7 9.400-4-1.800-7-5-7-9.400v-6z"/>',

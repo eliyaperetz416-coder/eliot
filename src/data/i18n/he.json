@@ -1254,5 +1254,17 @@
   "set.theme": "ערכת צבע",
   "set.theme.dark": "כהה",
   "set.theme.marble": "שיש",
-  "tab.crew": "קבוצה"
+  "tab.crew": "קבוצה",
+  "today.level": "רמה",
+  "today.level.aria": "רמה {n}, {into} מתוך {need} נקודות ניסיון",
+  "today.streak.aria": "רצף: {days}",
+  "today.drachmas.aria": "{n} דרכמות",
+  "today.bell": "עדכונים",
+  "today.bell.n": "עדכונים, {n} מחכים לך",
+  "today.bell.empty": "אין עדכונים כרגע",
+  "today.today": "היום",
+  "today.week.aria": "השבוע: {n} ימי אימון. לפתיחת לוח השנה",
+  "today.minutes": "≈ {n} דק׳",
+  "today.next.aria": "{when}: {title}, {meta}. לבחירת אימון אחר",
+  "today.quests.ready": "משימות, {n} מוכנות לאיסוף"
 }

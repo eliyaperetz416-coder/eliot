@@ -137,6 +137,36 @@ for (const lang of ['he', 'en']) {
     assert.equal(await page.locator('.onboarding').count(), 0);
   });
 
+  await check(`${lang}: Today (crest, week, next workout row, bell, quests, still under reduced motion)`, async () => {
+    await page.goto(`${base}#/workout`);
+    await page.waitForSelector('.today-crest .emblem svg');
+    assert.equal(await page.locator('.today-week .day').count(), 7);
+    assert.equal(await page.locator('.today-week .day.today').count(), 1);
+    assert.equal(await page.locator('.today-next').count(), 0, 'nothing planned yet: no next-workout row');
+    assert.equal(await page.locator('.today-bell .bell-dot').count(), 0, 'nothing new: no dot on the bell');
+    assert.ok(await page.locator('.today-start.choose-other').count() === 1, 'start opens the chooser while nothing is planned');
+    await page.click('.today-bell');
+    await page.waitForSelector('.sheet .bell-list');
+    await page.keyboard.press('Escape');
+    await page.click('.today-quests');
+    await page.waitForSelector('.sheet .quests');
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: `${shots}${lang}-today-dark.png` });
+    await page.evaluate(async () => { const s = await import('./src/ui/storage.js'); await s.updateSettings({ theme: 'marble' }); });
+    await page.reload(); await page.waitForSelector('.today-crest');
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'marble');
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: `${shots}${lang}-today-marble.png` });
+    await page.evaluate(async () => { const s = await import('./src/ui/storage.js'); await s.updateSettings({ theme: 'dark', reducedMotion: true }); });
+    await page.reload(); await page.waitForSelector('.today-crest');
+    await page.waitForTimeout(300);
+    const moving = await page.evaluate(() => document.getAnimations().filter((a) => a.playState === "running").map((a) => `${a.animationName ?? a.transitionProperty} on ${a.effect?.target?.className?.baseVal ?? a.effect?.target?.className}`));
+    assert.equal(moving.join(', '), '', `nothing moves with reduced motion: ${moving.join(', ')}`);
+    await page.evaluate(async () => { const s = await import('./src/ui/storage.js'); await s.updateSettings({ reducedMotion: false }); });
+    await page.reload(); await page.waitForSelector('.today-crest');
+  });
+
   for (const r of ROUTES) {
     await page.goto(`${base}#/${r}`);
     await page.waitForSelector('.screen');
@@ -432,9 +462,9 @@ for (const lang of ['he', 'en']) {
     await page.click('.sheet .btn-primary');
     await page.waitForSelector('main .stats-grid');
     await page.goto(`${base}#/workout`);
-    await page.waitForSelector('.plan-next');
+    await page.waitForSelector('.today-next.plan-next');
     await page.screenshot({ path: `${shots}${lang}-workout-plan-next.png`, fullPage: true });
-    assert.match(await page.textContent('.plan-next'), /2/);
+    assert.match(await page.textContent('.today-next.plan-next'), /2/);
     await page.goto(`${base}#/plans`);
     await page.locator('.plan-card').first().click();
     await page.waitForSelector('.plan-day.done');
@@ -535,15 +565,17 @@ for (const lang of ['he', 'en']) {
     await page.screenshot({ path: `${shots}${lang}-rewards.png`, fullPage: true });
     // quests and streak on the Workout tab
     await page.goto(`${base}#/workout`);
-    await page.waitForSelector('.home-more');
-    if (!(await page.locator('.home-more[open]').count())) await page.locator('.home-more > summary').click(); // quests are folded unless there is something to claim
-    await page.waitForSelector('.quests');
+    await page.waitForSelector('.today-quests');
+    assert.ok(await page.locator('.today-top .today-ring').count() === 1 && await page.locator('.today-top .today-stat').count() === 2, 'level, streak and drachmas on top');
+    await page.click('.today-quests');
+    await page.waitForSelector('.sheet .quests');
     assert.equal(await page.locator('.quest').count(), 4, '3 daily quests and 1 weekly');
-    assert.ok(await page.locator('.game-strip .game-chip').count() === 3);
     assert.ok(await page.locator('.streak-card').count() === 1);
     const claim = page.locator('.quest .btn-primary');
     if (await claim.count()) { await claim.first().click(); await page.waitForSelector('.toast'); assert.ok(await page.locator('.quest.claimed').count() >= 1); }
     await page.screenshot({ path: `${shots}${lang}-workout-game.png`, fullPage: true });
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !document.querySelector('.sheet'));
     // floating +XP on V
     await startEmpty(page);
     await addExercise(page, 'barbell curl');
@@ -602,12 +634,16 @@ for (const lang of ['he', 'en']) {
     });
     await page.goto(`${base}#/workout`);
     await page.reload();
-    await page.waitForSelector('.streak-broken');
+    await page.waitForSelector('.today-quests .quest-dot');
+    await page.click('.today-quests');
+    await page.waitForSelector('.sheet .streak-broken');
     await page.screenshot({ path: `${shots}${lang}-streak-broken.png`, fullPage: true });
     await page.locator('.streak-broken .btn-primary').click();
     await page.waitForSelector('.streak-card');
     assert.match(await page.textContent('.streak-card'), /12/);
     assert.equal(await page.locator('.streak-broken').count(), 0);
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !document.querySelector('.sheet'));
   });
 
   await check(`${lang}: finish with unticked sets, rename exercise, missing-exercise request`, async () => {
@@ -930,8 +966,11 @@ for (const lang of ['he', 'en']) {
       // my phone: unread appears on the workout home and the profile tab, then clears when I open the feed
       await page.evaluate(async () => { const m = await import('./src/ui/crew-state.js'); await m.refreshUnread(); });
       await page.goto(`${base}#/workout`);
-      await page.waitForSelector('.crew-unread');
-      assert.ok((await page.textContent('.crew-unread')).includes('2'));
+      await page.waitForSelector('.today-bell .bell-dot');
+      await page.click('.today-bell');
+      await page.waitForSelector('.sheet .crew-unread');
+      assert.ok((await page.textContent('.sheet .crew-unread')).includes('2'));
+      await page.keyboard.press('Escape');
       assert.equal(await page.locator('.tab-dot').count(), 1);
       assert.equal(await page.locator('.tab[href="#/crew"] .tab-dot').count(), 1, 'the unread dot sits on the crew tab');
       await page.goto(`${base}#/crew`);
@@ -1283,7 +1322,9 @@ for (const lang of ['he', 'en']) {
     await page.waitForSelector('main .stats-grid');
     if (await page.locator('.rankup').count()) await page.click('.rankup button');
     await page.goto(`${base}#/workout`);
-    await page.waitForSelector('.makeup-card');
+    await page.waitForSelector('.today-bell .bell-dot');
+    await page.click('.today-bell');
+    await page.waitForSelector('.sheet .makeup-card');
     assert.ok((await page.textContent('.makeup-card')).includes(T('סקוואט', 'Squat')));
     await page.screenshot({ path: `${shots}${lang}-makeup.png` });
     await page.locator('.makeup-card .btn-primary').click();
@@ -1295,8 +1336,8 @@ for (const lang of ['he', 'en']) {
     await page.locator('.sheet .btn-danger').click();
     await page.locator('.sheet .btn-danger').last().click();
     await page.goto(`${base}#/workout`);
-    await page.waitForSelector('.hero');
-    assert.equal(await page.locator('.makeup-card').count(), 0);
+    await page.waitForSelector('.today-start');
+    assert.equal(await page.locator('.today-bell .bell-dot').count(), 0, 'the make-up workout is gone from the bell');
     assert.equal(await page.evaluate(async () => (await (await import('./src/ui/db.js')).dbAll('routines')).length), routinesBefore);
   });
 
@@ -1327,13 +1368,9 @@ for (const lang of ['he', 'en']) {
     await page.locator('.screen .chips-wrap .chip-select', { hasText: /^4$/ }).click();
     await page.screenshot({ path: `${shots}${lang}-model-form.png`, fullPage: true });
     await page.locator('.screen button.btn-primary').click();
-    await page.waitForSelector('.model-card');
-    assert.ok((await page.textContent('.model-card')).includes('Harley Alexander'));
-    assert.equal(await page.locator('.model-link').first().getAttribute('href'), 'https://youtube.com/@harleyalexanderr');
-    assert.equal(await page.locator('.model-link').count(), 2);
-    assert.match(await page.textContent('.model-tip'), /Sleep 8 hours|Drink water/);
-    assert.match(await page.textContent('.model-goal'), /\/ 4/);
-    await page.screenshot({ path: `${shots}${lang}-model-card.png` });
+    await page.waitForFunction(() => location.hash === '#/workout'); // the Today card is gone (redesign: Today keeps only the essentials)
+    await page.waitForSelector('.today-start');
+    assert.equal(await page.locator('.model-card').count(), 0);
     // the result screen quotes your model after a workout
     await page.goto(`${base}#/workout`);
     await startEmpty(page);
@@ -1352,7 +1389,7 @@ for (const lang of ['he', 'en']) {
     await page.locator('.screen .btn-danger').click();
     await page.waitForFunction(() => location.hash === '#/profile'); // removing goes to Profile by itself (after the save): wait, or it would jump there later
     await page.goto(`${base}#/workout`);
-    await page.waitForSelector('.hero').catch(async (e) => { console.log('DEBUG (role model): hash', await page.evaluate(() => location.hash), '| app:', (await page.evaluate(() => document.getElementById('app').innerText)).replace(/\s+/g, ' ').slice(0, 300), '| overlays:', await page.evaluate(() => document.getElementById('overlay-root').innerText.slice(0, 200)), '| draft:', await page.evaluate(() => !!localStorage.getItem('dg.draft'))); throw e; });
+    await page.waitForSelector('.today-start').catch(async (e) => { console.log('DEBUG (role model): hash', await page.evaluate(() => location.hash), '| app:', (await page.evaluate(() => document.getElementById('app').innerText)).replace(/\s+/g, ' ').slice(0, 300), '| overlays:', await page.evaluate(() => document.getElementById('overlay-root').innerText.slice(0, 200)), '| draft:', await page.evaluate(() => !!localStorage.getItem('dg.draft'))); throw e; });
     assert.equal(await page.locator('.model-card').count(), 0);
     await page.evaluate(async () => { const db = await import('./src/ui/db.js'); for (const r of await db.dbAll('routines')) if (/Push day/.test(r.name)) await db.dbDelete('routines', r.id); });
     await page.reload();
@@ -1380,12 +1417,14 @@ for (const lang of ['he', 'en']) {
     await page.screenshot({ path: `${shots}${lang}-schedule.png`, fullPage: true });
     // Today: the saved workout leads the big card, basketball has its own card with a done button
     await page.goto(`${base}#/workout`);
-    await page.waitForSelector('.sched-card');
-    assert.ok((await page.textContent('.hero')).includes('Sched Day A'));
-    assert.ok((await page.textContent('.hero-kicker')).match(/מתוכנן להיום|Planned for today/));
+    await page.waitForSelector('.today-next');
+    assert.ok((await page.textContent('.today-next')).includes('Sched Day A'), 'planned today: the next-workout row');
+    assert.ok((await page.textContent('.today-next-when')).match(/מתוכנן להיום|Planned for today/));
+    await page.click('.today-bell');
+    await page.waitForSelector('.sheet .sched-card');
     assert.ok((await page.textContent('.sched-card')).match(/כדורסל|Basketball/));
     await page.locator('.sched-card .btn').click();
-    await page.waitForFunction(() => document.querySelector('.week-day.today.on'));
+    await page.waitForFunction(() => document.querySelector('.today-week .day.today.done'));
     await page.screenshot({ path: `${shots}${lang}-schedule-home.png` });
     // a benchmark workout (WOD) in the plan: chosen from the list, shown on today's card with a start button
     await openToday();
@@ -1395,7 +1434,8 @@ for (const lang of ['he', 'en']) {
     await page.locator('.sheet .btn-primary').last().click();
     await page.waitForFunction(() => /Fran/.test(document.querySelector('.sched-row.today')?.textContent ?? ''));
     await page.goto(`${base}#/workout`);
-    await page.waitForSelector('.sched-card');
+    await page.click('.today-bell');
+    await page.waitForSelector('.sheet .sched-card');
     assert.ok((await page.textContent('.sched-card')).includes('Fran'));
     await page.locator('.sched-card .btn', { hasText: T('התחל', 'Start') }).click();
     await page.waitForFunction(() => location.hash === '#/wod/fran');
@@ -1405,9 +1445,12 @@ for (const lang of ['he', 'en']) {
     await page.waitForFunction(() => document.querySelectorAll('.sheet .sched-item').length === 1);
     await page.locator('.sheet .btn-primary').last().click();
     await page.goto(`${base}#/workout`);
-    await page.waitForSelector('.sched-card');
+    await page.waitForSelector('.today-bell');
+    await page.click('.today-bell');
+    await page.waitForSelector('.sheet .sched-card');
     assert.equal(await page.locator('.sched-card .btn').count(), 0);
-    assert.ok(!(await page.textContent('.hero-kicker')).match(/מתוכנן להיום|Planned for today/), 'a rest day does not schedule a workout');
+    await page.keyboard.press('Escape');
+    assert.ok(!((await page.locator('.today-next-when').textContent().catch(() => '')) ?? '').match(/מתוכנן להיום|Planned for today/), 'a rest day does not schedule a workout');
     // limit: four items, then the add options are replaced by a note
     await openToday();
     for (let i = 0; i < 4; i++) await page.locator('.sheet .chip-select').first().click();
@@ -1416,8 +1459,8 @@ for (const lang of ['he', 'en']) {
     // clear the day
     await page.locator('.sheet .btn-ghost').click();
     await page.goto(`${base}#/workout`); await page.reload();
-    await page.waitForSelector('.hero');
-    assert.equal(await page.locator('.sched-card').count(), 0);
+    await page.waitForSelector('.today-bell');
+    assert.equal(await page.locator('.today-bell .bell-dot').count(), 0, 'a cleared day leaves nothing behind the bell');
     await page.evaluate(async () => { const { dbDelete } = await import('./src/ui/db.js'); await dbDelete('routines', 'r-sched'); });
     await page.reload();
   });
@@ -1483,10 +1526,10 @@ for (const lang of ['he', 'en']) {
       await db.dbPut('kv', { days: { [tomorrow]: [{ id: 'u1', kind: 'workout', ref: 'r-upper' }] }, done: {} }, 'schedule');
     });
     await page.goto(`${base}#/workout`); await page.reload();
-    await page.waitForSelector('.hero');
-    assert.ok((await page.textContent('.hero')).includes('Upper UU'), 'the planned one, not the last added');
-    assert.ok(!(await page.textContent('.hero')).includes('Full body FF'));
-    assert.ok((await page.textContent('.hero-kicker')).match(/למחר|tomorrow/i));
+    await page.waitForSelector('.today-next');
+    assert.ok((await page.textContent('.today-next')).includes('Upper UU'), 'the planned one, not the last added');
+    assert.ok(!(await page.textContent('.today-next')).includes('Full body FF'));
+    assert.ok((await page.textContent('.today-next-when')).match(/למחר|tomorrow/i));
     await page.screenshot({ path: `${shots}${lang}-next-planned.png` });
     await page.evaluate(async () => { const db = await import('./src/ui/db.js'); await db.dbDelete('routines', 'r-upper'); await db.dbDelete('routines', 'r-full'); await db.dbPut('kv', { days: {}, done: {} }, 'schedule'); });
     await page.reload();
