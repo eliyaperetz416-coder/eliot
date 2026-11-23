@@ -17,9 +17,16 @@ async function save(session) {
   emit();
 }
 
+/** fetch() that gives up after ms (a hung request on a bad gym network must never block sync or sign-in forever). */
+function timedFetch(url, init = {}, ms = 15000) {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), ms);
+  return fetch(url, { ...init, signal: ctl.signal }).finally(() => clearTimeout(timer));
+}
+
 async function authPost(path, body) {
   const { url, key } = await config();
-  return fetch(`${url}/auth/v1/${path}`, { method: 'POST', headers: { apikey: key, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  return timedFetch(`${url}/auth/v1/${path}`, { method: 'POST', headers: { apikey: key, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 }
 
 /** Leaves the app for Google; the Auth server sends the user back here with ?code=. */
@@ -65,17 +72,17 @@ export async function getSession() {
 }
 
 /** fetch() to the Supabase REST API as the signed-in user. */
-export async function authFetch(path, init = {}) {
+export async function authFetch(path, init = {}, ms = 15000) {
   const { url, key } = await config();
   const s = await getSession();
   if (!s) throw new Error('signed-out');
-  return fetch(`${url}${path}`, { ...init, headers: { apikey: key, Authorization: `Bearer ${s.accessToken}`, 'Content-Type': 'application/json', ...(init.headers ?? {}) } });
+  return timedFetch(`${url}${path}`, { ...init, headers: { apikey: key, Authorization: `Bearer ${s.accessToken}`, 'Content-Type': 'application/json', ...(init.headers ?? {}) } }, ms);
 }
 
 export async function signOut() {
   const s = await getSession().catch(() => null);
   if (s) {
-    try { const { url, key } = await config(); await fetch(`${url}/auth/v1/logout`, { method: 'POST', headers: { apikey: key, Authorization: `Bearer ${s.accessToken}` } }); } catch { /* offline */ }
+    try { const { url, key } = await config(); await timedFetch(`${url}/auth/v1/logout?scope=local`, { method: 'POST', headers: { apikey: key, Authorization: `Bearer ${s.accessToken}` } }); } catch { /* offline */ } // this phone only
   }
   await save(null);
 }

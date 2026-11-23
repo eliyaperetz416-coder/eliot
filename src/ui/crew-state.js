@@ -177,6 +177,6 @@ export async function enablePush() {
 }
 
 export async function disablePush() {
-  try { const reg = await navigator.serviceWorker.getRegistration(); const sub = await reg?.pushManager.getSubscription(); await sub?.unsubscribe(); } catch { /* ignore */ }
+  // The phone's subscription is shared with the account's rest alarm (push.js), so only the crew's copy is removed here.
   if (crew.local) { try { await rpc('delete_push', { p_token: tok() }); } catch { /* offline: it is switched off locally anyway */ } crew.local.push = false; await persist(); emit(); }
 }

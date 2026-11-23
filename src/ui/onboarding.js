@@ -54,9 +54,13 @@ export function onboarding({ onLanguage, onDone, installPrompt = () => null, sig
       st.migrated = await syncedOnce();
     }
     if (session && !checked && !(store.profile || hasData())) { // a new phone: the account may already hold this person's data
-      checked = true;
       root.replaceChildren(step(t('ob.checking')));
-      await syncNow(); // a pull reloads the page with the account's data
+      const res = await syncNow(); // a pull reloads the page with the account's data
+      if (res !== 'ok') { // never start as a brand-new person before we know the account is empty
+        root.replaceChildren(step(t('ob.check.failed'), mark(), actions(button({ label: t('ob.migrate.retry'), block: true, onClick: () => render() }))));
+        return;
+      }
+      checked = true;
     }
     const id = nextStep(flowState());
     if (id === 'done') { await finish(); return; }
@@ -107,17 +111,19 @@ export function onboarding({ onLanguage, onDone, installPrompt = () => null, sig
 
     migrate: () => {
       const n = store.workouts.length;
-      const status = h('p', { class: 'ob-lead', role: 'status', text: busy === 'failed' ? t('ob.migrate.failed') : t('ob.migrate.count', { n }) });
-      const bar = h('div', { class: 'ob-bar' }, h('span', { class: busy === 'failed' ? '' : 'run' }));
+      const failed = busy && busy !== 'run';
+      const why = { 'too-big': 'ob.migrate.toobig', 'other-user': 'ob.migrate.otheruser' }[busy] ?? 'ob.migrate.failed';
+      const status = h('p', { class: failed ? 'field-error' : 'ob-lead', role: 'status', text: failed ? t(why) : t('ob.migrate.count', { n }) });
+      const bar = h('div', { class: 'ob-bar' }, h('span', { class: failed ? '' : 'run' }));
       const run = async () => {
         busy = 'run'; root.replaceChildren(screens.migrate());
         const res = await syncNow(); // a merge reloads the page; a push returns 'ok'
         if (res === 'ok' && await syncedOnce()) { busy = ''; await go({ migrated: true }); return; }
-        busy = 'failed'; render();
+        busy = res === 'ok' ? 'offline' : res; render();
       };
       if (!busy) setTimeout(run, 0);
       return step(t('ob.migrate.title'), bar, status,
-        busy === 'failed' ? actions(button({ label: t('ob.migrate.retry'), block: true, onClick: run }), button({ label: t('ob.migrate.later'), variant: 'ghost', block: true, onClick: () => finish() })) : null);
+        failed ? actions(busy === 'too-big' ? null : button({ label: t('ob.migrate.retry'), block: true, onClick: run }), button({ label: t('ob.migrate.later'), variant: busy === 'too-big' ? 'primary' : 'ghost', block: true, onClick: () => finish() })) : null);
     },
 
     name: () => {

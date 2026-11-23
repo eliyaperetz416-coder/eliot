@@ -12,10 +12,12 @@ export const profileComplete = (p = {}) => !!p.name && !!p.sex && p.weight > 0;
 
 export function nextStep(s) {
   const p = s.profile ?? {};
-  if (s.platform === 'ios-safari' && !s.installed && !s.installSkipped) return 'install-first';
+  const offerInstall = s.platform === 'ios-safari' && !s.installed && !s.installSkipped;
+  // An iPhone app on the home screen does not share storage with Safari: data already here moves to the account first.
+  if (offerInstall && !s.localData) return 'install-first';
   if (!s.signedIn) return 'signin';
   if (s.localData && !s.migrated) return 'migrate';
-  if (s.migrated && profileComplete(p)) return 'done';
+  if (s.migrated && profileComplete(p)) return offerInstall ? 'install-first' : 'done';
   if (!p.name) return 'name';
   if (!p.sex) return 'curve';
   if (!(p.weight > 0)) return 'weight';

@@ -13,7 +13,7 @@ import { initLink } from './ui/link-state.js';
 import { installLock } from './ui/lock.js';
 import { showMascot } from './ui/mascot.js';
 import { h } from './ui/dom.js';
-import { completeSignIn, getSession, onAuth } from './ui/auth.js';
+import { completeSignIn, getSession, onAuth, startGoogleSignIn } from './ui/auth.js';
 import { startSync } from './ui/sync.js';
 import { dbGet } from './ui/db.js';
 
@@ -68,8 +68,9 @@ function route() {
 
 function render() {
   dispose?.(); dispose = null;
-  // Sign-in is needed once (spec 4.1); the privacy page stays readable from the sign-in screen.
-  if ((!session || !store.profile || !onboarded) && route().id !== 'privacy') {
+  // Sign-in is needed once (spec 4.1); the privacy page stays readable from the sign-in screen. After that the app never
+  // locks on a lost session: it keeps working on this phone and offers to sign in again (banner below).
+  if ((!store.profile || !onboarded) && route().id !== 'privacy') {
     app.replaceChildren(onboarding({ onLanguage: changeLanguage, onDone: finishOnboarding, installPrompt: () => installPrompt, signInFailed }));
     signInFailed = false;
     nav.replaceChildren();
@@ -86,6 +87,8 @@ function render() {
         button({ label: t('crash.home'), block: true, onClick: () => { location.hash = '#/profile'; } })));
   }
   dispose = el._dispose ?? null;
+  if (!session) el.prepend(h('div', { class: 'card card-accent signin-banner', role: 'status' },
+    h('p', { text: t('sync.banner') }), button({ label: t('sync.banner.go'), icon: 'refresh', onClick: () => startGoogleSignIn() })));
   app.replaceChildren(el);
   const tab = { exercises: 'workouts', exercise: 'workouts', custom: 'workouts', requests: 'workouts', routines: 'workouts', routine: 'workouts', plans: 'workouts', plan: 'workouts', schedule: 'workouts', wods: 'workouts', wod: 'workouts', history: 'profile', achievements: 'profile', crew: 'profile', settings: 'profile', calendar: 'profile', numbers: 'profile', privacy: 'profile', result: 'workout', progress: 'ranks', ladder: 'ranks', weakest: 'ranks', card: 'ranks', shop: 'profile', model: 'profile' }[id] ?? id;
   currentTab = tab;

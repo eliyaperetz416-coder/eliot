@@ -1,12 +1,11 @@
--- 014: account sync safety (after the whole-branch review). Additive: only the account tables from 013 change.
+-- 014: account sync safety (after the whole-branch review). Additive: only the account tables from 013 change; nothing is dropped.
 --  * user_data.version: the server counts every write (a trigger), and updated_at is the server's clock, not the phone's.
 --    The app writes with "only if the version is still N" (compare-and-swap); 0 rows means another phone wrote first -> merge.
---  * the size limit is a little looser than the app's (8 MB compact JSON), because jsonb text has extra spaces.
+--  * the size limit stays 8,000,000 bytes of jsonb text; the app keeps its own snapshot under 7 MB of compact JSON, so the
+--    server never refuses what the app thought was fine (jsonb text has extra spaces).
 --  * user_push only accepts endpoints of real push services (same list as 009), so rest-push can never be pointed elsewhere.
 
 alter table public.user_data add column if not exists version bigint not null default 1;
-alter table public.user_data drop constraint if exists user_data_size;
-alter table public.user_data add constraint user_data_size check (octet_length(data::text) <= 9500000);
 
 create or replace function app_private.user_data_stamp() returns trigger
 language plpgsql set search_path = '' as $$
@@ -17,10 +16,8 @@ begin
   return new;
 end $$;
 revoke all on function app_private.user_data_stamp() from public, anon, authenticated;
-drop trigger if exists user_data_stamp on public.user_data;
 create trigger user_data_stamp before insert or update on public.user_data for each row execute function app_private.user_data_stamp();
 
-alter table public.user_push drop constraint if exists user_push_endpoint;
 alter table public.user_push add constraint user_push_endpoint check (
   jsonb_typeof(sub) = 'object' and length(sub::text) <= 2000
   and (sub->>'endpoint') ~ '^https://(web\.push\.apple\.com|fcm\.googleapis\.com|updates\.push\.services\.mozilla\.com|[a-z0-9-]+\.notify\.windows\.com)/'

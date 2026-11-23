@@ -9,6 +9,8 @@ import { APP_VERSION } from '../version.js';
 import { linkSection } from './link-ui.js';
 import { revokeLinkQuietly } from './link-state.js';
 import { getSession, signOut, authFetch } from './auth.js';
+import { syncNow, syncState, onSync } from './sync.js';
+import { dbPut } from './db.js';
 import { enablePush, setRestPush } from './push.js';
 import { crew, leaveCrew, enablePush as enableCrewPush } from './crew-state.js';
 
@@ -56,7 +58,13 @@ export function settingsScreen({ onLanguage }) {
       h('div', { class: 'section-label', text: t('set.account') }),
       list([
         listRow({ title: session?.user?.name || session?.user?.email || '-', sub: session?.user?.email ?? '', icon: 'profile' }),
-        listRow({ title: t('set.account.signout'), sub: t('set.account.signout.sub'), icon: 'refresh', onClick: async () => { await signOut(); } }),
+        listRow({ title: t(`sync.state.${syncState.status}`, {}), icon: 'shield' }),
+        listRow({ title: t('set.account.signout'), sub: t('set.account.signout.sub'), icon: 'refresh', onClick: async () => {
+          if (session && (await syncNow()) !== 'ok') { showToast({ message: t('set.signout.unsaved'), duration: 6000 }); return; } // save first: nothing may be left only on this phone
+          await signOut();
+          await dbPut('kv', false, 'onboarded').catch(() => {});
+          location.hash = ''; location.reload();
+        } }),
       ]),
 
       h('div', { class: 'section-label', text: t('set.training') }),
@@ -102,5 +110,6 @@ export function settingsScreen({ onLanguage }) {
   }
   draw();
   getSession().then((x) => { session = x; draw(); });
+  const off = onSync(() => { if (root.isConnected) draw(); else off(); });
   return root;
 }

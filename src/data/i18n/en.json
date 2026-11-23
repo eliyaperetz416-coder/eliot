@@ -1224,5 +1224,20 @@
   "set.delete.failed": "Couldn't delete. Check your connection and try again.",
   "set.more": "More",
   "set.install": "Install on your phone",
-  "set.install.sub": "Opens like any app, and works offline"
+  "set.install.sub": "Opens like any app, and works offline",
+  "ob.check.failed": "Couldn't check your account. Check your connection and try again.",
+  "ob.migrate.toobig": "There is too much data (mostly exercise photos) to save in the account. Your data stays on this phone.",
+  "ob.migrate.otheruser": "This phone has unsaved data of another account. Sign in to that account first.",
+  "sync.banner": "Not signed in. Changes are saved only on this phone.",
+  "sync.banner.go": "Sign in",
+  "set.signout.unsaved": "You need a connection to save everything to your account before signing out.",
+  "sync.state.idle": "Account: not checked yet",
+  "sync.state.syncing": "Account: saving...",
+  "sync.state.ok": "Account: everything is saved",
+  "sync.state.offline": "Account: will save when you're online",
+  "sync.state.signed-out": "Account: not signed in",
+  "sync.state.waiting": "Account: updates after the workout",
+  "sync.state.too-big": "Account: too much data (mostly photos) to save",
+  "sync.state.rejected": "Account: the server refused to save. Try again later.",
+  "sync.state.other-user": "Account: this phone has another account's data"
 }

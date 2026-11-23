@@ -1,43 +1,51 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { decideSync, tooBig, MAX_SYNC_BYTES, SYNC_DEBOUNCE_MS } from '../src/core/sync.mjs';
+import { decideSync, tooBig, hasLocalData, snapshotHash, stableStringify, MAX_SYNC_BYTES, SYNC_DEBOUNCE_MS } from '../src/core/sync.mjs';
 
-const W = { workouts: [{ id: 'w1', startedMs: 1 }], profile: { name: 'A' } };
-const EMPTY = { workouts: [], profile: null };
-const remote = (updatedAt) => ({ data: W, updatedAt });
+const D = (o) => decideSync({ remoteVersion: null, syncedVersion: null, localDirty: false, localHasData: false, ...o });
 
-test('constants', () => { assert.equal(MAX_SYNC_BYTES, 8_000_000); assert.equal(SYNC_DEBOUNCE_MS, 3000); });
-
-test('1: no remote row -> push when there is something local, else none', () => {
-  assert.deepEqual(decideSync({ local: W, remote: null, meta: { dirtyAt: null, syncedRemoteAt: null } }), { action: 'push' });
-  assert.deepEqual(decideSync({ local: { workouts: [], profile: { name: 'A' } }, remote: null, meta: { dirtyAt: null, syncedRemoteAt: null } }), { action: 'push' });
-  assert.deepEqual(decideSync({ local: EMPTY, remote: null, meta: { dirtyAt: null, syncedRemoteAt: null } }), { action: 'none' });
+test('constants: the app stays under the server limit (8 MB of jsonb text)', () => {
+  assert.equal(MAX_SYNC_BYTES, 7_000_000);
+  assert.equal(SYNC_DEBOUNCE_MS, 3000);
 });
 
-test('2: first sign-in on this phone -> merge when local has workouts, else pull', () => {
-  assert.deepEqual(decideSync({ local: W, remote: remote(50), meta: { dirtyAt: null, syncedRemoteAt: null } }), { action: 'merge' });
-  assert.deepEqual(decideSync({ local: EMPTY, remote: remote(50), meta: { dirtyAt: 10, syncedRemoteAt: null } }), { action: 'pull' });
+test('1: no row on the server -> push when this phone has anything, else none', () => {
+  assert.equal(D({ localHasData: true }), 'push');
+  assert.equal(D({}), 'none');
 });
 
-test('3: remote is newer and nothing changed here -> pull', () => {
-  assert.deepEqual(decideSync({ local: W, remote: remote(200), meta: { dirtyAt: null, syncedRemoteAt: 100 } }), { action: 'pull' });
+test('2: first sync on this phone -> merge when it has anything (nothing is ever replaced), else pull', () => {
+  assert.equal(D({ remoteVersion: 4, localHasData: true }), 'merge');
+  assert.equal(D({ remoteVersion: 4 }), 'pull');
 });
 
-test('4: both changed -> the last change wins', () => {
-  assert.deepEqual(decideSync({ local: W, remote: remote(200), meta: { dirtyAt: 300, syncedRemoteAt: 100 } }), { action: 'push' });
-  assert.deepEqual(decideSync({ local: W, remote: remote(200), meta: { dirtyAt: 150, syncedRemoteAt: 100 } }), { action: 'pull' });
+test('3: another phone wrote since -> pull when nothing changed here, merge when both changed (never push a stale copy)', () => {
+  assert.equal(D({ remoteVersion: 5, syncedVersion: 4, localHasData: true }), 'pull');
+  assert.equal(D({ remoteVersion: 5, syncedVersion: 4, localDirty: true, localHasData: true }), 'merge');
 });
 
-test('5: only this phone changed -> push', () => {
-  assert.deepEqual(decideSync({ local: W, remote: remote(100), meta: { dirtyAt: 120, syncedRemoteAt: 100 } }), { action: 'push' });
+test('4: only this phone changed -> push; nothing changed -> none', () => {
+  assert.equal(D({ remoteVersion: 4, syncedVersion: 4, localDirty: true, localHasData: true }), 'push');
+  assert.equal(D({ remoteVersion: 4, syncedVersion: 4, localHasData: true }), 'none');
 });
 
-test('6: nothing changed anywhere -> none', () => {
-  assert.deepEqual(decideSync({ local: W, remote: remote(100), meta: { dirtyAt: null, syncedRemoteAt: 100 } }), { action: 'none' });
+test('local data counts routines, plans, custom exercises and body weight, not only workouts', () => {
+  assert.equal(hasLocalData({ workouts: [], routines: [{ id: 'r' }] }), true);
+  assert.equal(hasLocalData({ bodyweight: [{ dateKeyTime: 'k' }] }), true);
+  assert.equal(hasLocalData({ profile: { name: 'A' } }), true);
+  assert.equal(hasLocalData({ workouts: [], routines: [], plans: [], custom: [], folders: [], bodyweight: [], profile: null, game: null }), false);
+});
+
+test('the snapshot hash ignores key order (jsonb re-sorts keys) but not content', () => {
+  const a = { profile: { name: 'A', sex: 'm' }, workouts: [{ id: 'w', startedMs: 1 }], crew: null };
+  const b = { crew: null, workouts: [{ startedMs: 1, id: 'w' }], profile: { sex: 'm', name: 'A' } };
+  assert.equal(snapshotHash(a), snapshotHash(b));
+  assert.notEqual(snapshotHash(a), snapshotHash({ ...a, workouts: [] }));
+  assert.equal(stableStringify({ b: 1, a: [{ d: 2, c: 3 }] }), '{"a":[{"c":3,"d":2}],"b":1}');
 });
 
 test('tooBig counts UTF-8 bytes', () => {
-  assert.equal(tooBig('x'.repeat(8_000_001)), true);
+  assert.equal(tooBig('x'.repeat(7_000_001)), true);
   assert.equal(tooBig('{}'), false);
-  assert.equal(tooBig('א'.repeat(4_000_001)), true); // 2 bytes each
+  assert.equal(tooBig('א'.repeat(3_500_001)), true);
 });

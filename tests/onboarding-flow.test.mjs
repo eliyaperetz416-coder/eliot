@@ -45,3 +45,10 @@ test('platform detection', () => {
   assert.equal(platformOf({ ua: 'Mozilla/5.0 (Linux; Android 14; SM-S918B) Chrome/120', standalone: false }), 'android');
   assert.equal(platformOf({ ua: 'Mozilla/5.0 (X11; Linux x86_64) Chrome/120', standalone: false }), 'other');
 });
+
+test('iPhone in Safari with data already on it: sign in and move the data first, offer install after', () => {
+  assert.equal(nextStep(S({ platform: 'ios-safari', localData: true })), 'signin');
+  assert.equal(nextStep(S({ platform: 'ios-safari', localData: true, signedIn: true })), 'migrate');
+  assert.equal(nextStep(S({ platform: 'ios-safari', localData: true, signedIn: true, migrated: true, profile: full })), 'install-first');
+  assert.equal(nextStep(S({ platform: 'ios-safari', localData: true, signedIn: true, migrated: true, profile: full, installSkipped: true })), 'done');
+});

@@ -1,110 +1,153 @@
-// Runs the account sync (OUR DESIGN, spec section 4.3). Decisions live in core/sync.mjs; this file only moves data.
-// kv 'sync' = { dirtyAt, syncedRemoteAt, lastHash, consentAt, consentVersion, consentSent }
+// Runs the account sync (OUR DESIGN, spec 4.3, hardened after the branch review). Decisions live in core/sync.mjs.
+// kv 'sync' = { userId, syncedVersion, lastHash, needsRehash, consentAt, consentVersion, consentSent }
+//  * every write is "only if the server still has version N" (compare-and-swap); a lost race reruns and merges
+//  * "dirty" = the snapshot hashes differently from the one last synced (key order does not matter)
+//  * a pull or merge is applied only if nothing changed on this phone since the decision, and never during a workout
 import { getSession, authFetch, onAuth } from './auth.js';
-import { collectData, applyImport } from './backup.js';
+import { collectData, applyImport, resetAll } from './backup.js';
 import { store, subscribe } from './store.js';
 import { onSettings } from './storage.js';
 import { dbGet, dbPut } from './db.js';
-import { decideSync, tooBig, SYNC_DEBOUNCE_MS } from '../core/sync.mjs';
-import { mergeData, checksum } from '../core/backup.mjs';
+import { decideSync, tooBig, hasLocalData, snapshotHash, SYNC_DEBOUNCE_MS } from '../core/sync.mjs';
+import { mergeData } from '../core/backup.mjs';
 import { APP_VERSION } from '../version.js';
 
+/** status: 'idle' | 'syncing' | 'ok' | 'offline' | 'signed-out' | 'waiting' | 'too-big' | 'rejected' | 'other-user' */
 export const syncState = { status: 'idle', lastOkAt: null };
 const listeners = new Set();
 export const onSync = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
 const set = (status) => { syncState.status = status; if (status === 'ok') syncState.lastOkAt = Date.now(); listeners.forEach((fn) => fn(syncState)); return status; };
 
 const META = 'sync';
-const getMeta = async () => ({ dirtyAt: null, syncedRemoteAt: null, lastHash: null, ...((await dbGet('kv', META).catch(() => null)) ?? {}) });
+const getMeta = async () => ({ userId: null, syncedVersion: null, lastHash: null, needsRehash: false, ...((await dbGet('kv', META).catch(() => null)) ?? {}) });
 const patchMeta = async (patch) => { const m = { ...(await getMeta()), ...patch }; await dbPut('kv', m, META); return m; };
-const hashOf = (data) => checksum(JSON.stringify(data));
 
-let timer = null, running = null, started = false, applying = false;
+/** Saved by the sign-in screen; sent with the first upload of this account. */
+export const recordConsent = (version, now = Date.now()) => patchMeta({ consentAt: now, consentVersion: version, consentSent: false });
+/** True once this phone has synced with the account at least once. */
+export const syncedOnce = async () => (await getMeta()).syncedVersion != null;
 
-/** Remembers when this phone first changed something since the last sync (kept on the phone, so it survives a restart). */
-async function markDirty() {
-  if (applying) return;
-  const m = await getMeta();
-  if (m.dirtyAt == null) await patchMeta({ dirtyAt: Date.now() });
-  clearTimeout(timer);
-  timer = setTimeout(() => { syncNow(); }, SYNC_DEBOUNCE_MS);
-}
+const UPLOAD_MS = 60000;
+const json = async (r) => { try { return await r.json(); } catch { return null; } };
 
-/** Saved by the sign-in screen; sent with the first upload. */
-export const recordConsent = (version, now = Date.now()) => patchMeta({ consentAt: now, consentVersion: version });
-
-async function fetchRemote() {
-  const r = await authFetch('/rest/v1/user_data?select=data,updated_at');
+async function remoteVersion(uid) {
+  const r = await authFetch(`/rest/v1/user_data?select=version&user_id=eq.${uid}`);
   if (!r.ok) throw new Error(`http_${r.status}`);
-  const rows = await r.json();
-  return rows[0] ? { data: rows[0].data, updatedAt: Date.parse(rows[0].updated_at) } : null;
+  const rows = await json(r);
+  return rows?.[0]?.version ?? null;
+}
+async function remoteFull(uid) {
+  const r = await authFetch(`/rest/v1/user_data?select=data,version&user_id=eq.${uid}`, {}, UPLOAD_MS);
+  if (!r.ok) throw new Error(`http_${r.status}`);
+  const row = (await json(r))?.[0];
+  return row ? { data: row.data, version: row.version } : null;
 }
 
-async function push(data, startedAt) {
-  const s = await getSession();
-  if (!s) return 'signed-out';
-  const meta = await getMeta();
-  const row = { user_id: s.user.id, data, app_version: APP_VERSION, updated_at: new Date(startedAt).toISOString() };
+/** Writes the snapshot only if the server still holds `expected` (null = no row yet). -> { status: 'ok', version } | 'conflict' | 'too-big' | 'rejected' */
+async function write(uid, data, expected, meta) {
+  const row = { user_id: uid, data, app_version: APP_VERSION };
   if (!meta.consentSent && meta.consentAt) { row.consent_at = new Date(meta.consentAt).toISOString(); row.consent_version = meta.consentVersion; }
   const body = JSON.stringify(row);
   if (tooBig(body)) return 'too-big';
-  const r = await authFetch('/rest/v1/user_data?on_conflict=user_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body });
+  const headers = { Prefer: 'return=representation' };
+  const r = expected == null
+    ? await authFetch('/rest/v1/user_data', { method: 'POST', headers, body }, UPLOAD_MS)
+    : await authFetch(`/rest/v1/user_data?user_id=eq.${uid}&version=eq.${expected}`, { method: 'PATCH', headers, body }, UPLOAD_MS);
+  if (r.status === 409) return 'conflict';
+  if (r.status >= 400 && r.status < 500) return r.status === 401 ? 'offline' : 'rejected';
   if (!r.ok) throw new Error(`http_${r.status}`);
-  const now = await getMeta(); // a change made while uploading stays dirty
-  await patchMeta({ syncedRemoteAt: startedAt, lastHash: hashOf(data), dirtyAt: now.dirtyAt != null && now.dirtyAt > startedAt ? now.dirtyAt : null, consentSent: now.consentSent || !!row.consent_at });
-  return 'ok';
+  const back = (await json(r))?.[0];
+  if (!back) return 'conflict'; // the PATCH matched no row: another phone wrote first
+  if (row.consent_at) await patchMeta({ consentSent: true });
+  return { status: 'ok', version: back.version };
 }
 
-/** Replaces this phone's data with the server copy, then reloads so every screen starts from it. */
-async function applyRemote(data, updatedAt) {
+let applying = false;
+/** Replaces this phone's data with `data` unless something changed since the decision; then reloads. -> 'applied' | 'changed' */
+async function applyLocal(data, version, hashAtDecision) {
+  if (store.draft || snapshotHash(await collectData()) !== hashAtDecision) return 'changed';
   applying = true;
   await applyImport({ data }, 'replace');
-  await patchMeta({ syncedRemoteAt: updatedAt, lastHash: hashOf(data), dirtyAt: null });
+  await patchMeta({ syncedVersion: version, needsRehash: true }); // the next start hashes what is really on the phone
   location.reload();
+  return 'applied';
 }
 
-/** One sync round. Never throws; the result is also in syncState.status. */
-export function syncNow() {
-  running ??= (async () => {
+/** One round. -> a status, or 'again' when it lost a race and must run once more. */
+async function once(fromChange) {
+  const s = await getSession();
+  if (!s) return 'signed-out';
+  if (navigator.onLine === false) return 'offline';
+  const uid = s.user.id;
+  let meta = await getMeta();
+  let local = await collectData();
+  let hash = snapshotHash(local);
+  if (meta.userId && meta.userId !== uid) { // another account signed in on this phone
+    if (meta.lastHash !== hash) return 'other-user'; // the previous account has unsaved changes here: never mix them in
+    await resetAll(); // everything here is already in the previous account
+    await dbPut('kv', s, 'session');
+    meta = await patchMeta({ userId: uid, syncedVersion: null, lastHash: null, needsRehash: false, consentSent: false, consentAt: meta.consentAt ?? null, consentVersion: meta.consentVersion ?? null });
+    local = await collectData(); hash = snapshotHash(local);
+  }
+  if (!meta.userId) meta = await patchMeta({ userId: uid });
+  if (meta.needsRehash) meta = await patchMeta({ lastHash: hash, needsRehash: false });
+  const localDirty = hash !== meta.lastHash;
+  if (fromChange && !localDirty) return 'ok'; // a change that left the data as it was (opening a screen, a recompute)
+  const rv = await remoteVersion(uid);
+  const action = decideSync({ remoteVersion: rv, syncedVersion: meta.syncedVersion, localDirty, localHasData: hasLocalData(local) });
+  if (action === 'none') return 'ok';
+  if (action === 'push') {
+    const w = await write(uid, local, rv, meta);
+    if (w === 'conflict') return 'again';
+    if (typeof w === 'string') return w;
+    await patchMeta({ syncedVersion: w.version, lastHash: hash });
+    return 'ok';
+  }
+  if (store.draft) return 'waiting'; // pull and merge replace the phone's data: never during a workout
+  const remote = await remoteFull(uid);
+  if (!remote) return 'again';
+  if (action === 'pull') return (await applyLocal(remote.data, remote.version, hash)) === 'changed' ? 'again' : 'ok';
+  const merged = mergeData(local, remote.data);
+  const w = await write(uid, merged, remote.version, meta);
+  if (w === 'conflict') return 'again';
+  if (typeof w === 'string') return w;
+  return (await applyLocal(merged, w.version, hash)) === 'changed' ? 'again' : 'ok';
+}
+
+let running = null, rerun = false, timer = null, started = false;
+/** One sync (repeated when it lost a race or a change came in meanwhile). Never throws; the result is also in syncState. */
+export function syncNow({ fromChange = false } = {}) {
+  if (running) { rerun = true; return running; }
+  running = (async () => {
+    let res = 'ok';
     try {
-      if (!(await getSession())) return set('signed-out');
-      if (navigator.onLine === false) return set('offline');
       set('syncing');
-      const startedAt = Date.now();
-      const [remote, local, meta0] = await Promise.all([fetchRemote(), collectData(), getMeta()]);
-      // A change that leaves the data as it was (opening a screen, a recompute) is not a change.
-      const meta = meta0.dirtyAt != null && meta0.lastHash === hashOf(local) ? await patchMeta({ dirtyAt: null }) : meta0;
-      const { action } = decideSync({ local, remote, meta });
-      if ((action === 'pull' || action === 'merge') && store.draft) return set('waiting'); // never replace data during a workout
-      if (action === 'push') return set(await push(local, startedAt));
-      if (action === 'pull') { await applyRemote(remote.data, remote.updatedAt); return set('ok'); }
-      if (action === 'merge') {
-        const merged = mergeData(local, remote.data);
-        const res = await push(merged, startedAt);
-        if (res !== 'ok') return set(res);
-        await applyRemote(merged, startedAt);
-        return set('ok');
+      for (let i = 0; i < 4; i++) {
+        rerun = false;
+        res = await once(fromChange && i === 0);
+        if (res !== 'again' && !rerun) break;
+        fromChange = false;
       }
-      return set('ok');
-    } catch {
-      return set('offline');
-    } finally {
-      running = null;
-    }
+      if (res === 'again') res = 'offline';
+    } catch { res = 'offline'; } finally { running = null; }
+    return set(res);
   })();
   return running;
 }
 
+const onChange = () => {
+  if (applying) return;
+  clearTimeout(timer);
+  timer = setTimeout(() => { syncNow({ fromChange: true }); }, SYNC_DEBOUNCE_MS);
+};
+
 export function startSync() {
   if (started) return;
   started = true;
-  subscribe(() => { markDirty(); });
-  onSettings(() => { markDirty(); });
+  subscribe(onChange);
+  onSettings(onChange);
   addEventListener('online', () => { syncNow(); });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') syncNow(); });
   onAuth((s) => { if (s) syncNow(); });
   syncNow();
 }
-
-/** True once this phone has synced with the account at least once. */
-export const syncedOnce = async () => (await getMeta()).syncedRemoteAt != null;

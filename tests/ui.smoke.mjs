@@ -1673,6 +1673,51 @@ await check('accounts: a new phone signs in and gets the account data', async ()
   await c.close();
 });
 
+const cloudData = (ids) => ({ profile: { id: 'me', name: 'Cloud', sex: 'f', age: null, lang: 'he', createdAt: new Date().toISOString(), schemaVersion: 1 }, bodyweight: [{ dateKeyTime: '2026-11-01T00000000000001', dateKey: '2026-11-01', at: new Date().toISOString(), ms: 1, kg: 60 }], workouts: ids.map((id, i) => ({ id, startedMs: Date.now() - 5e6 - i, finishedMs: Date.now() - 4e6, entries: [], stats: { workingSets: 0 } })), routines: [], folders: [], plans: [], custom: [], blobs: {}, game: null, settings: {}, renames: {}, requests: [], bases: {}, model: null, schedule: null, crew: null });
+const localIds = (p) => p.evaluate(async () => (await (await import('./src/ui/db.js')).dbAll('workouts')).map((w) => w.id).sort());
+const syncAndSettle = async (p) => { await p.evaluate(() => { import('./src/ui/sync.js').then((m) => m.syncNow()); }); await p.waitForTimeout(2500); await p.waitForSelector('.tabbar'); };
+
+await check('accounts: two phones — an old phone pulls newer data (never pushes its stale copy); when both changed, nothing is lost', async () => {
+  const c = await phone(); const acct = await installFakeSupabase(c, { remote: { data: cloudData(['a-1']), version: 1 } });
+  const p = await c.newPage(); p.on('pageerror', (e) => errors.push(`two phones: ${e.message}`));
+  await p.goto(base); await p.waitForSelector('#google'); await p.check('#consent'); await p.click('#google');
+  await p.waitForSelector('.tabbar', { timeout: 10000 });
+  await p.waitForTimeout(1500); // the start-up sync after the pull
+  assert.deepEqual(await localIds(p), ['a-1']);
+  const uploads0 = acct.uploads.length;
+  // another phone writes; this phone only starts and discards a workout (a change that leaves the data as it was)
+  acct.remote = { data: cloudData(['a-1', 'b-1']), version: acct.remote.version + 1 };
+  await p.evaluate(async () => { const s = await import('./src/ui/store.js'); s.setDraft({ id: 'tmp', name: '', startedMs: Date.now(), entries: [] }); await s.clearDraft(); });
+  await syncAndSettle(p);
+  assert.deepEqual(await localIds(p), ['a-1', 'b-1'], 'pulled the newer data');
+  assert.equal(acct.uploads.length, uploads0, 'did not push its stale copy');
+  // both change: a workout here, another one on the other phone -> merged, both kept everywhere
+  await p.evaluate(async () => { const { dbPut } = await import('./src/ui/db.js'); await dbPut('workouts', { id: 'here-1', startedMs: Date.now(), finishedMs: Date.now(), entries: [], stats: { workingSets: 0 } }); });
+  acct.remote = { data: cloudData(['a-1', 'b-1', 'b-2']), version: acct.remote.version + 1 };
+  await syncAndSettle(p);
+  assert.deepEqual(await localIds(p), ['a-1', 'b-1', 'b-2', 'here-1'], 'merged on this phone');
+  assert.deepEqual(acct.remote.data.workouts.map((w) => w.id).sort(), ['a-1', 'b-1', 'b-2', 'here-1'], 'merged on the server');
+  // a lost session never locks the app: it keeps working and offers to sign in again
+  await p.evaluate(async () => { const { dbDelete } = await import('./src/ui/db.js'); await dbDelete('kv', 'session'); });
+  await p.reload(); await p.waitForSelector('.tabbar');
+  assert.equal(await p.locator('.signin-banner').count(), 1);
+  assert.equal(await p.locator('.onboarding').count(), 0);
+  await p.screenshot({ path: `${shots}he-signin-banner.png` });
+  await c.close();
+});
+
+await check('accounts: a new phone whose first account check fails waits and retries, instead of starting as a new person', async () => {
+  const c = await phone(); await installFakeSupabase(c, { remote: { data: cloudData(['a-1']) }, failReads: 1 });
+  const p = await c.newPage(); await p.goto(base); await p.waitForSelector('#google');
+  await p.check('#consent'); await p.click('#google');
+  await p.waitForSelector('.ob-title:text-is("לא הצלחנו לבדוק את החשבון. בדוק חיבור ונסה שוב.")', { timeout: 10000 });
+  assert.equal(await p.locator('#ob-name').count(), 0, 'no new-person questions');
+  await p.click('.onboarding .ob-actions .btn-primary');
+  await p.waitForSelector('.tabbar', { timeout: 10000 });
+  assert.deepEqual(await localIds(p), ['a-1']);
+  await c.close();
+});
+
 await check('accounts: coming back from Google with no saved key shows "sign-in did not finish"', async () => {
   const c = await phone(); await installFakeSupabase(c);
   const p = await c.newPage(); await p.goto(`${base}?code=stray`);

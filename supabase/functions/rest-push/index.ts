@@ -31,7 +31,13 @@ Deno.serve(async (req) => {
       const payload = JSON.stringify({ title: String(a.title).slice(0, 80), body: String(a.body).slice(0, 160), tag: "rest", url: "#/workout" });
       await webpush.sendNotification(a.sub, payload, { TTL: 60 });
       sent++;
-    } catch { /* an expired subscription: the phone re-subscribes the next time notifications are turned on */ }
+    } catch (e) {
+      // 404/410: the subscription is gone (app removed, permission revoked): forget it so it is never tried again
+      const code = (e as { statusCode?: number }).statusCode;
+      if (code === 404 || code === 410) {
+        await fetch(`${BASE}/rest/v1/user_push?sub->>endpoint=eq.${encodeURIComponent(a.sub.endpoint)}`, { method: "DELETE", headers: H }).catch(() => {});
+      }
+    }
   }));
   return json({ ok: true, sent });
 });
