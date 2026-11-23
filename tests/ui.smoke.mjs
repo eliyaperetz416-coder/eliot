@@ -1533,6 +1533,31 @@ for (const lang of ['he', 'en']) {
     }
   });
 
+  await check(`${lang}: ranks-preview crest (wreath, rim, division diamonds, crown, unique ids)`, async () => {
+    await page.goto(`${base}#/ranks-preview`);
+    await page.waitForSelector('main .emblem svg');
+    const r = await page.evaluate(() => {
+      const out = [];
+      document.querySelectorAll('main .emblem').forEach((em) => {
+        const svg = em.querySelector('svg');
+        const tier = [...em.classList].find((c) => c.startsWith('emblem-')).slice(7);
+        const div = Number(em.dataset.division);
+        out.push({ tier, div, leaves: svg.querySelectorAll('ellipse.leaf').length, rim: svg.querySelectorAll('path.rim').length, dia: svg.querySelectorAll('.dia').length, crown: svg.querySelectorAll('.crown').length });
+      });
+      const ids = [...document.querySelectorAll('[id]')].map((e) => e.id);
+      return { out, dupes: ids.filter((x, i) => ids.indexOf(x) !== i) };
+    });
+    assert.ok(r.out.length >= 41, `emblems ${r.out.length}`);
+    for (const e of r.out) {
+      assert.equal(e.leaves, 36, `${e.tier} leaves`);
+      assert.equal(e.rim, 1, `${e.tier} rim`);
+      if (e.tier === 'greekgod') { assert.equal(e.crown, 1, 'crown'); assert.equal(e.dia, 0, 'gg diamonds'); }
+      else assert.equal(e.dia, 5 - e.div, `${e.tier} ${e.div} diamonds`);
+    }
+    assert.deepEqual(r.dupes, [], 'unique ids');
+    await page.screenshot({ path: `${shots}${lang}-ranks-preview.png`, fullPage: true });
+  });
+
   await check(`${lang}: accessibility basics (names, labels, language, landmarks)`, async () => {
     for (const r of ['workout', 'workouts', 'exercises', 'ranks', 'shop', 'profile', 'settings', 'numbers', 'history']) {
       await page.goto(`${base}#/${r}`);
