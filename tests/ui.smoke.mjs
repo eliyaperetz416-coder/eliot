@@ -372,7 +372,14 @@ for (const lang of ['he', 'en']) {
     await page.screenshot({ path: `${shots}${lang}-workout-start-s5.png`, fullPage: true });
     await page.goto(`${base}#/routines`);
     await page.waitForSelector('.screen h1');
-    await page.getByRole('button', { name: L(lang, 'אימון חדש', 'New workout'), exact: true }).click();
+    // the Workouts screen: four small tiles, a "+" with three choices, the hint only while there is nothing saved
+    assert.equal(await page.locator('.wk-tiles a').count(), 4);
+    const rows0 = await page.locator('.routine-row').count();
+    assert.equal(await page.locator('.wk-hint').count(), rows0 ? 0 : 1, 'hint only with no saved workouts');
+    await page.click('.wk-add');
+    await page.waitForSelector('.sheet .row');
+    assert.equal(await page.locator('.sheet .row').count(), 3, 'new / from a template / new folder');
+    await page.locator('.sheet .row', { hasText: L(lang, 'אימון חדש', 'New workout') }).click();
     await page.waitForSelector('.routine-name');
     await page.fill('.routine-name', L(lang, 'חזה וכתפיים', 'Chest and shoulders'));
     await page.getByRole('button', { name: L(lang, 'הוספת תרגיל', 'Add exercise') }).click();
@@ -390,13 +397,17 @@ for (const lang of ['he', 'en']) {
     await page.reload();
     await page.waitForSelector('.routine-row');
     assert.equal(await page.locator('.routine-row').count(), 1);
+    assert.equal(await page.locator('.wk-hint').count(), 0, 'no hint once something is saved');
     await page.screenshot({ path: `${shots}${lang}-routines.png`, fullPage: true });
     // templates
-    await page.getByRole('button', { name: L(lang, 'מתבנית מוכנה', 'From a template') }).click();
+    await page.click('.wk-add');
+    await page.locator('.sheet .row', { hasText: L(lang, 'מתבנית מוכנה', 'From a template') }).click();
     await page.waitForSelector('.sheet .row');
     await page.locator('.sheet .row').first().click(); // PPL: 3 workouts in a folder
     await page.waitForFunction(() => document.querySelectorAll('.routine-row').length >= 4);
     assert.equal(await page.locator('.routine-row').count(), 4);
+    const tall = await page.evaluate(() => [...document.querySelectorAll('.routine-row')].map((r) => r.getBoundingClientRect().height).filter((x) => x > 72));
+    assert.deepEqual(tall, [], 'each saved workout is one line');
     // duplicate through the menu
     await page.locator('.routine-row').first().getByRole('button', { name: L(lang, 'אפשרויות תרגיל', 'Exercise options') }).click();
     await page.waitForSelector('.sheet .row');

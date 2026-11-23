@@ -866,3 +866,15 @@ button.chip:active, .seg button:active, .tab:active { opacity: .65; }
 .today-quests svg { width: 26px; height: 26px; }
 .today-quests .quest-dot { inset-block-start: 10px; inset-inline-end: 12px; box-shadow: 0 0 0 2px var(--surface-1); }
 .bell-list .card { margin: 0; }
+
+/* ---------- Workouts (OUR DESIGN, redesign): four small tiles, one line per saved workout ---------- */
+.wk-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-2); padding-block: var(--s-2) var(--s-4); }
+.wk-tile { position: relative; display: grid; justify-items: center; align-content: center; gap: 6px; min-height: 84px; padding: 10px 4px; border-radius: var(--r-md); background: var(--surface-1); border: 1px solid var(--line); color: var(--text); text-decoration: none; text-align: center; }
+.wk-tile svg { width: 22px; height: 22px; color: var(--accent); }
+.wk-tile-label { font-size: 12.5px; font-weight: 700; line-height: 1.2; }
+.wk-tile-n { position: absolute; inset-block-start: 6px; inset-inline-end: 8px; font-size: 11px; color: var(--text-mute); }
+.wk-hint { padding-block-end: var(--s-2); }
+.routine-row { min-height: 60px; padding-block: 6px; }
+.routine-row .row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wk-play { color: var(--accent); }
+.wk-play svg { fill: currentColor; }

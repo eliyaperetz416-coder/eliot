@@ -1266,5 +1266,6 @@
   "today.week.aria": "השבוע: {n} ימי אימון. לפתיחת לוח השנה",
   "today.minutes": "≈ {n} דק׳",
   "today.next.aria": "{when}: {title}, {meta}. לבחירת אימון אחר",
-  "today.quests.ready": "משימות, {n} מוכנות לאיסוף"
+  "today.quests.ready": "משימות, {n} מוכנות לאיסוף",
+  "wk.add": "הוספה"
 }

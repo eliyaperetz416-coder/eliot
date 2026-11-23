@@ -1252,5 +1252,6 @@
   "today.week.aria": "This week: {n} training days. Open the calendar",
   "today.minutes": "≈ {n} min",
   "today.next.aria": "{when}: {title}, {meta}. Choose another workout",
-  "today.quests.ready": "Quests, {n} ready to claim"
+  "today.quests.ready": "Quests, {n} ready to claim",
+  "wk.add": "Add"
 }
