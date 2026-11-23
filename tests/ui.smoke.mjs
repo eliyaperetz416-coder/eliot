@@ -190,6 +190,63 @@ for (const lang of ['he', 'en']) {
     await page.screenshot({ path: `${shots}${lang}-${r.replace(/\//g, '_')}.png`, fullPage: r.includes('preview') });
   }
 
+  // Both themes everywhere (redesign): the same sweep in marble, plus readable text (WCAG AA) in each theme.
+  const readability = () => page.evaluate(() => {
+    const parse = (c) => { const m = c.match(/rgba?\(([^)]+)\)/); if (!m) return null; const p = m[1].split(/[ ,/]+/).filter(Boolean).map(Number); return [p[0], p[1], p[2], p[3] ?? 1]; };
+    const lin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+    const lum = ([r, g, b]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+    const over = (top, under) => [0, 1, 2].map((i) => top[i] * top[3] + under[i] * (1 - top[3]));
+    const bgOf = (el) => { // the first solid background up the tree; null when an image or gradient is in the way (not judged)
+      const layers = [];
+      for (let x = el; x; x = x.parentElement) {
+        const cs = getComputedStyle(x);
+        if (cs.backgroundImage !== 'none') return null;
+        const c = parse(cs.backgroundColor);
+        if (c && c[3] > 0) { layers.push(c); if (c[3] >= 1) break; }
+      }
+      let base = parse(getComputedStyle(document.documentElement).getPropertyValue('--bg').trim().replace(/^#(..)(..)(..)$/, (_, r, g, b) => `rgb(${parseInt(r, 16)} ${parseInt(g, 16)} ${parseInt(b, 16)})`)) ?? [0, 0, 0, 1];
+      for (const l of layers.reverse()) base = [...over(l, base), 1];
+      return base;
+    };
+    const bad = [];
+    for (const el of document.querySelectorAll('main *, .tabbar *')) {
+      if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
+      if (el.closest('[aria-hidden="true"], [disabled], .sr-only, svg') || !el.getClientRects().length) continue;
+      const cs = getComputedStyle(el);
+      if (cs.visibility === 'hidden' || Number(cs.opacity) === 0) continue;
+      let op = 1; for (let x = el; x; x = x.parentElement) op *= Number(getComputedStyle(x).opacity);
+      const bg = bgOf(el); const fg = parse(cs.color);
+      if (!bg || !fg) continue;
+      const shown = over([fg[0], fg[1], fg[2], fg[3] * op], bg);
+      const [a, b] = [lum(shown), lum(bg)].sort((m, n) => n - m);
+      const ratio = (a + 0.05) / (b + 0.05);
+      const large = parseFloat(cs.fontSize) >= 24 || (parseFloat(cs.fontSize) >= 18.66 && Number(cs.fontWeight) >= 700);
+      if (ratio < (large ? 3 : 4.5)) bad.push(`${el.className || el.tagName} "${el.textContent.trim().slice(0, 24)}" ${ratio.toFixed(2)}`);
+    }
+    return bad;
+  });
+  for (const theme of ['marble', 'dark']) {
+    await check(`${lang}: ${theme}: every route fits, has 44 px targets and readable text`, async () => {
+      await page.evaluate(async (th) => { const s = await import('./src/ui/storage.js'); await s.updateSettings({ theme: th }); }, theme);
+      const issues = [];
+      for (const r of ROUTES) {
+        await page.goto(`${base}#/${r}`); await page.reload();
+        await page.waitForSelector('.screen');
+        await page.waitForTimeout(500);
+        const o = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, theme: document.documentElement.dataset.theme }));
+        if (o.theme !== theme) issues.push(`#/${r}: theme ${o.theme}`);
+        if (o.sw > o.cw) issues.push(`#/${r}: overflow ${o.sw}`);
+        const small = await page.evaluate(() => [...document.querySelectorAll('button, a.tab, .btn, input:not([type=file]), a.btn')].map((el) => el.getBoundingClientRect()).filter((b) => b.width && b.height < 43.5).length);
+        if (small) issues.push(`#/${r}: ${small} small targets`);
+        for (const x of await readability()) issues.push(`#/${r}: ${x}`);
+        if (theme === 'marble') await page.screenshot({ path: `${shots}${lang}-marble-${r.replace(/\//g, '_')}.png` });
+      }
+      await page.evaluate(async () => { const s = await import('./src/ui/storage.js'); await s.updateSettings({ theme: 'dark' }); });
+      const kinds = [...new Set(issues.map((x) => x.replace(/"[^"]*"/, '').replace(/^#\/\S+ /, '')))]; // one line per kind of problem
+      assert.equal(issues.length, 0, `${issues.length} issues, ${kinds.length} kinds: ${kinds.slice(0, 40).join(' | ')} — e.g. ${issues.slice(0, 3).join(' | ')}`);
+    });
+  }
+
   await check(`${lang}: exercise library lists 320 and searches (incl. gym slang)`, async () => {
     await page.goto(`${base}#/exercises`);
     await page.waitForSelector('.ex-row');

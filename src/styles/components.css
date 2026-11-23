@@ -425,9 +425,10 @@ a.btn { text-decoration: none; }
 .shake-note, .levelup, .milestone, .quest-done { color: var(--accent); font-weight: 700; font-size: 14px; padding-block-start: var(--s-2); }
 .ach-got { display: flex; align-items: center; gap: var(--s-3); padding-block-start: var(--s-3); }
 .ach-got svg { width: 28px; height: 28px; color: var(--accent); flex: none; }
-.ach-row:not(.unlocked) { opacity: .75; }
+.ach-row:not(.unlocked) .row-icon { opacity: .5; } /* locked: the icon dims, the text stays readable (WCAG AA) */
+.ach-row:not(.unlocked) .row-title { color: var(--text-dim); }
 .ach-row.unlocked .row-icon { background: var(--accent-soft); }
-.ach-row .row-end { color: #ffc43d; }
+.ach-row .row-end { color: var(--accent); }
 .wallet { display: flex; align-items: center; gap: var(--s-4); }
 .coin-icon { width: 44px; height: 44px; color: #ffc43d; filter: drop-shadow(0 0 10px rgb(255 196 61 / .5)); }
 .wallet-n { font-size: 34px; }
@@ -971,3 +972,8 @@ button.chip:active, .seg button:active, .tab:active { opacity: .65; }
 .result-delta { display: grid; justify-items: center; gap: 2px; padding-block: var(--s-4) var(--s-5); text-align: center; }
 .result-delta-n { font-family: var(--font-display); font-size: 64px; font-weight: 700; line-height: 1; color: var(--accent); }
 .result-delta-l { font-size: 14px; color: var(--text-dim); }
+
+/* Marble (light) versions of the colours made for the dark theme: same hue, dark enough to read (tests: readable text) */
+[data-theme="marble"] { --danger: #B3203A; }
+[data-theme="marble"] .chip-primary { color: #A3122A; }
+[data-theme="marble"] .chip-secondary, [data-theme="marble"] .chip-warn { color: #8A3F0A; }

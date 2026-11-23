@@ -305,3 +305,17 @@ Plan: `docs/superpowers/plans/2026-11-22-accounts.md`; spec: `docs/superpowers/s
 - **Removed:** backup export/import/reminder, the storage section, the reset (replaced by "Delete account and all data": `public.delete_my_account()`, which deletes only the caller and cascades to the account tables; then the phone is wiped). "Download all my data" keeps the file export.
 - **Server (migration 013, additive):** dry-run in a rolled-back transaction (own row only, B sees 0 of A's rows and updates 0, far alarm rejected, delete removes only the caller, anon has no access), then applied. Nothing v1.47.1 uses was changed.
 - **Launch-day checklist:** Supabase Auth Site URL `https://eliot-three.vercel.app` and redirect URLs (production, preview, localhost); Google provider on; cron job `demigod-rest-alarms` running; order: lock screen → deploy → check → unlock.
+
+## v1.48 (in progress, branch only): the redesign
+Plan: `docs/superpowers/plans/2026-11-23-redesign.md`; spec: `docs/superpowers/specs/2026-11-22-redesign-accounts-design.md` (artboards E5 dark, E6 marble). Ships on launch day with accounts.
+- **Two colour themes** from one palette module (`src/core/themes.mjs`): dark (black, gold, silver) and marble (light stone, bronze accent). Settings → "Colour theme". A colour bought in the shop still replaces the accent. Every text pair is checked for WCAG AA contrast in the unit tests, and the UI tests read every screen in both themes. The old accent switch (`accentMode`) is gone; settings move to version 3.
+- **The crest:** a laurel wreath of 36 leaves, an enamel shield whose rim is the tier colour, a two-tone bolt, and the division as diamonds above it (III = three). Greek God has a crown of three bolts; unranked has a grey dashed rim.
+- **Tab bar:** a floating glass bar with five icon tabs: Today, Workouts, Progress, Crew, Profile.
+- **Today:** level ring, streak, drachmas and a bell (crew messages, a make-up workout, today's planned activities); the crest with its tier and a thin bar; the seven days of the week; the next workout (name, exercises, about how long); "Start workout" and the quests trophy.
+- **Workouts:** four tiles (WODs, the week plan, plans, exercises), one line per saved workout, and a "+" for new / from a template / new folder.
+- **Progress:** three tabs. Rank: a pyramid of the ten tiers with you on your step, and your exercises (five, then "+N more"). Body: the muscle map and the groups. Numbers: this week's tiles and the chart. The consistency bonus moved to the rank path screen.
+- **Crew:** chat first. The top three are a strip under the name; tap it for a podium and the whole board. Statuses are behind the ⚡ next to the message box.
+- **Profile:** your initial in an XP ring, three tiles (achievements, shop, calendar) and "Edit profile" (with the body-weight history). The language switch is in Settings.
+- **Live workout (focus mode):** one exercise is open at a time; finished ones fold to one row and the next opens. Three columns (set, weight, reps): the last time's numbers are the placeholders. The feedback line shows for a moment after ✓, then a small trophy stays on a record. On top: a big clock, a 3 px progress bar, "Finish" and ⋯ (name and notes).
+- **Result:** the change in your rating, big, then the records.
+- **Removed:** "My role model" (the screen, its card on Today, its line on the player card and the quote on the result screen; a model saved on an old phone stays in its data, unused) and Zip the mascot.
