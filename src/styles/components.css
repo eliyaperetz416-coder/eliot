@@ -292,7 +292,7 @@ button.chip { cursor: pointer; min-height: var(--tap); padding-inline: 14px; fon
 .stat-l { font-size: 12px; color: var(--text-mute); }
 
 /* ---------- rank-up ---------- */
-.rankup { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; background: radial-gradient(circle at 50% 40%, rgb(var(--accent-rgb) / .22), rgb(4 5 10 / .96) 70%); animation: fade var(--dur-3) both; padding: var(--gutter); }
+.rankup { color: #F2EDE3; position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; background: radial-gradient(circle at 50% 40%, rgb(var(--accent-rgb) / .22), rgb(4 5 10 / .96) 70%); animation: fade var(--dur-3) both; padding: var(--gutter); }
 .ru-rays { position: absolute; inset: -30%; background: repeating-conic-gradient(from 0deg, rgb(var(--accent-rgb) / .12) 0 6deg, transparent 6deg 18deg); animation: spin 24s linear infinite; mask-image: radial-gradient(circle, #000 10%, transparent 60%); -webkit-mask-image: radial-gradient(circle, #000 10%, transparent 60%); }
 @keyframes spin { to { transform: rotate(360deg); } }
 .ru-body { position: relative; display: grid; justify-items: center; gap: var(--s-4); width: min(100%, 360px); text-align: center; }
@@ -669,11 +669,12 @@ a.btn { text-decoration: none; }
 .ladder-summary p { margin: 0; }
 .ladder-list { list-style: none; margin: var(--s-3) 0; padding: 0; display: grid; gap: var(--s-2); }
 .ladder-row { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-3); background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-md); position: relative; }
-.ladder-row.locked { opacity: .55; }
+.ladder-row.locked .emblem { opacity: .45; } /* locked: the crest dims, the text stays readable */
+.ladder-row.locked .row-title { color: var(--text-dim); }
 .ladder-row.current { border-color: var(--c); background: var(--surface-2); }
 .ladder-info { flex: 1; min-width: 0; display: grid; gap: 4px; }
 .ladder-divs { display: flex; gap: 6px; }
-.ladder-div { min-width: 26px; text-align: center; font-size: 11px; font-weight: 700; padding: 2px 4px; border-radius: 6px; background: var(--surface-3); color: var(--text-mute); }
+.ladder-div { min-width: 26px; text-align: center; font-size: 11px; font-weight: 700; padding: 2px 4px; border-radius: 6px; background: var(--surface-3); color: var(--text-dim); }
 .ladder-div.done { background: var(--c); color: #0a0b12; }
 .ladder-div.current { outline: 2px solid var(--c); color: var(--text); }
 .ladder-check { color: var(--ok); display: grid; place-items: center; }
@@ -977,3 +978,9 @@ button.chip:active, .seg button:active, .tab:active { opacity: .65; }
 [data-theme="marble"] { --danger: #B3203A; }
 [data-theme="marble"] .chip-primary { color: #A3122A; }
 [data-theme="marble"] .chip-secondary, [data-theme="marble"] .chip-warn { color: #8A3F0A; }
+[data-theme="marble"] .btn-secondary { border-color: rgb(28 26 23 / .28); }
+[data-theme="marble"] .icon-btn { background: rgb(28 26 23 / .1); box-shadow: none; }
+[data-theme] .today-bell, [data-theme] .prog-sort, [data-theme] .live-more { background: transparent; } /* bare icons stay bare in both themes */
+[data-theme="marble"] .sheet-grab { background: rgb(28 26 23 / .25); }
+[data-theme="marble"] .empty-art::before { border-color: rgb(28 26 23 / .28); }
+@media (prefers-contrast: more) { [data-theme="marble"] .tabbar, [data-theme="marble"] .toast, [data-theme="marble"] .sheet { border-color: rgb(28 26 23 / .45); } }

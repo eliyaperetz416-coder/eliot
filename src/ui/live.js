@@ -3,7 +3,7 @@ import { h } from './dom.js';
 import { icon } from './icons.js';
 import { t, getLanguage } from '../core/i18n.mjs';
 import * as W from '../core/workout.mjs';
-import { completeSet, reopenSet, refreshWorkout, feedbackOf } from '../core/live.mjs';
+import { completeSet, reopenSet, refreshWorkout, feedbackOf, entryFinished } from '../core/live.mjs';
 import { button, emptyState, exThumb, openSheet } from './components.js';
 import { data } from './data.js';
 import { store, touchDraft, bodyweightKg, baseOf } from './store.js';
@@ -56,7 +56,7 @@ export function liveScreen() {
   // Focus mode (OUR DESIGN, redesign): one exercise is open at a time. openId = the one you tapped (or just added);
   // null = the first one not finished yet. flash = the set you just ticked: its feedback line shows for 1.2 s.
   let openId = null, flash = null;
-  const finished = (e) => { const wk = e.sets.filter((x) => x.type !== 'warmup'); return wk.length > 0 && wk.every((x) => x.done); };
+  const finished = entryFinished;
   const prevCache = new Map();
   const prevOf = (exId) => { if (!prevCache.has(exId)) prevCache.set(exId, W.previousPerformance(store.workouts, exId)); return prevCache.get(exId); };
 
@@ -139,7 +139,10 @@ export function liveScreen() {
     const bw = bodyweightKg();
     completeSet({ workout: w, entryId: entry.id, idx: s.idx, now: Date.now(), bodyweightKg: bw, sex: store.profile.sex, workouts: store.workouts, byId });
     flash = { key: `${entry.id}:${s.idx}`, until: Date.now() + 1200 };
-    if (finished(entry) && (openId == null || openId === entry.id)) openId = null; // move on to the next exercise
+    if (finished(entry) && (openId == null || openId === entry.id)) { // move on to the next exercise, after its feedback had its moment
+      openId = entry.id;
+      setTimeout(() => { if (openId === entry.id && finished(entry) && root.isConnected) { openId = null; rerender(); } }, 1250);
+    }
     if (s.type !== 'warmup') floatXp(entry.id, s.idx, 10 + (s.prWeekly || s.prAllTime ? 25 : 0));
     if (entry.target?.find && s.type !== 'warmup' && s.weight > 0) for (const x of entry.sets) if (!x.done && x.weight == null) x.weight = s.weight; // first working set sets the weight for the rest
     const idx = w.entries.indexOf(entry);

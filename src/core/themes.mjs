@@ -31,3 +31,21 @@ export function contrast(a, b) {
 export const inkFor = (hex) => (contrast('#0A0A0B', hex) >= contrast('#FFFFFF', hex) ? '#0A0A0B' : '#FFFFFF');
 
 export const hexToRgb = (hex) => { const n = parseInt(hex.slice(1), 16); return `${(n >> 16) & 255} ${(n >> 8) & 255} ${n & 255}`; };
+
+const mix = (hex, to, k) => { // k 0..1 toward `to`
+  const a = parseInt(hex.slice(1), 16), b = parseInt(to.slice(1), 16);
+  const ch = (s) => Math.round(((a >> s) & 255) + (((b >> s) & 255) - ((a >> s) & 255)) * k);
+  return `#${((1 << 24) + (ch(16) << 16) + (ch(8) << 8) + ch(0)).toString(16).slice(1)}`;
+};
+
+/** A colour used as TEXT (the accent from the shop, a tier colour): darkened on marble, lightened on dark, just enough
+ *  to read (WCAG AA 4.5) on the page and on cards. A colour that already reads is returned unchanged. */
+export function readableOn(hex, p) {
+  const to = p.scheme === 'light' ? '#000000' : '#FFFFFF';
+  const ok = (c) => [p.bg, p.surface1, p.surface2].every((bg) => contrast(c, bg) >= 4.5);
+  for (let k = 0; k <= 1.0001; k += 0.02) { const c = k ? mix(hex, to, k) : hex; if (ok(c)) return c; }
+  return to;
+}
+
+/** A tier colour as text in the theme that is on now (name from <html data-theme>). */
+export const tierInk = (hex, themeName) => (hex ? readableOn(hex, THEMES[themeName] ?? THEMES.dark) : 'inherit');

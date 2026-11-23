@@ -7,6 +7,7 @@ import { emblem } from './emblem.js';
 import { backLink } from './components.js';
 import { store, shownOverall } from './store.js';
 import { formatNum } from './format.js';
+import { tierInk } from '../core/themes.mjs';
 import { bonusCard } from './ranks.js';
 
 const tierName = (id) => t(`tier.${id}`);
@@ -18,7 +19,7 @@ function summary(L) {
   if (c.unranked) return [h('div', { class: 'ladder-now display', text: t('rank.unranked') }), h('p', { class: 'row-sub', text: store.overall.pending ? t('rank.pending', { n: store.overall.remaining }) : t('ladder.start') })];
   const here = c.tier === 'greekgod' ? tierName('greekgod') : `${tierName(c.tier)} ${c.division}`;
   const next = L.tiers.findIndex((x) => x.id === c.tier) + 1;
-  const lines = [h('div', { class: 'ladder-now display', style: `color:${TIER_COLORS[c.tier]}`, text: here }), h('div', { class: 'row-sub num' }, t('ladder.rating', { n: formatNum(c.rating, 0) }))];
+  const lines = [h('div', { class: 'ladder-now display', style: `color:${tierInk(TIER_COLORS[c.tier], document.documentElement.dataset.theme)}`, text: here }), h('div', { class: 'row-sub num' }, t('ladder.rating', { n: formatNum(c.rating, 0) }))];
   if (L.toNextDivision != null && c.divisionIndex < 4) lines.push(h('p', { text: t('ladder.toDivision', { n: formatNum(L.toNextDivision, 0), name: `${tierName(c.tier)} ${['IV', 'III', 'II', 'I'][c.divisionIndex]}` }) }));
   if (L.toNextTier != null) lines.push(h('p', { text: t('ladder.toTier', { n: formatNum(L.toNextTier, 0), name: tierName(L.tiers[next].id) }) }));
   else lines.push(h('p', { text: t('ladder.top') }));

@@ -14,6 +14,7 @@ import { getSettings, updateSettings } from './storage.js';
 import { saveRoutine, todayKey } from './store.js';
 import { TIER_COLORS, tierFor } from '../core/ranks.mjs';
 import { emblem } from './emblem.js';
+import { tierInk } from '../core/themes.mjs';
 import { shareViaWhatsApp } from './share.js';
 import { formatDateTime, formatNum } from './format.js';
 
@@ -189,7 +190,7 @@ export function crewScreen() {
           h('span', { class: 'crew-pos display num', text: String(i + 1) }),
           h('span', { class: 'row-main' },
             h('span', { class: 'row-title' }, mine ? `${m.nickname} · ${t('crew.you')}` : m.nickname, m.leader ? leaderChip() : null, m.suspended ? h('span', { class: 'chip chip-warn', text: t('crew.suspended') }) : null, m.adjust ? h('span', { class: 'chip chip-warn num', dir: 'ltr', text: signed(m.adjust), title: t('crew.adjust.title') }) : null),
-            h('span', { class: 'row-sub' }, s.tier ? h('span', { style: `color:${TIER_COLORS[s.tier] ?? 'inherit'}`, text: tierLabel(s) }) : t('crew.unranked'), ` · ${t('game.level', { n: s.level ?? 1 })} · `, h('bdi', { class: 'num', text: `${formatNum(s.weekVolume ?? 0, 0)} ${t('unit.kg')}` }))),
+            h('span', { class: 'row-sub' }, s.tier ? h('span', { style: `color:${tierInk(TIER_COLORS[s.tier], document.documentElement.dataset.theme)}`, text: tierLabel(s) }) : t('crew.unranked'), ` · ${t('game.level', { n: s.level ?? 1 })} · `, h('bdi', { class: 'num', text: `${formatNum(s.weekVolume ?? 0, 0)} ${t('unit.kg')}` }))),
           h('span', { class: 'crew-val display num' }, h('bdi', { text: metric[sort](s) })));
       })),
       h('p', { class: 'row-sub', style: 'padding-block-start:8px', text: t('crew.board.note') }),
@@ -271,7 +272,7 @@ export function crewScreen() {
       : h('p', { class: 'row-sub', text: mine ? t('crew.p.mineOff') : t('crew.p.notShared', { name: m.nickname }) });
     const afterLeaderAction = async () => { view = null; await refreshFeed(true); };
     const sh = openSheet({ title: mine ? `${m.nickname} · ${t('crew.you')}` : m.nickname, tall: true, content: h('div', { class: 'stack crew-friend' },
-      h('div', { class: 'row-sub' }, s.tier ? h('span', { style: `color:${TIER_COLORS[s.tier] ?? 'inherit'}`, text: tierLabel(s) }) : t('crew.unranked'), s.rating != null ? ` · ${formatNum(s.rating, 0)}` : ''),
+      h('div', { class: 'row-sub' }, s.tier ? h('span', { style: `color:${tierInk(TIER_COLORS[s.tier], document.documentElement.dataset.theme)}`, text: tierLabel(s) }) : t('crew.unranked'), s.rating != null ? ` · ${formatNum(s.rating, 0)}` : ''),
       h('div', { class: 'stats-grid' },
         stat(t('crew.sort.level'), String(s.level ?? 1)), stat(t('crew.sort.streak'), t('game.streakDays', { n: s.streak ?? 0 })),
         stat(t('crew.p.week'), `${formatNum(s.weekVolume ?? 0, 0)} ${t('unit.kg')}`), stat(t('crew.p.month'), String(s.monthWorkouts ?? 0))),

@@ -100,11 +100,13 @@ export function openSheet({ title, content, tall = false }) {
   const sheet = h('div', { class: `sheet${tall ? ' sheet-tall' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': title }, grab, head, content);
   const ov = h('div', { class: 'overlay' }, bg, sheet);
   const onKey = (e) => { if (e.key === 'Escape') close(); };
+  const onNav = () => close(); // a sheet belongs to its screen: a link inside it (or the back button) takes it away
 
   function close(velocity = 0) {
     if (closed) return;
     closed = true;
     document.removeEventListener('keydown', onKey);
+    window.removeEventListener('hashchange', onNav);
     openSheets = Math.max(0, openSheets - 1);
     if (!openSheets && !document.querySelector('.app-lock')) for (const el of behind()) el.inert = false; // a lock screen keeps them locked
     prevFocus?.focus?.();
@@ -162,7 +164,7 @@ export function openSheet({ title, content, tall = false }) {
   root.append(ov);
   openSheets += 1;
   for (const el of behind()) el.inert = true;
-  document.addEventListener('keydown', onKey);
+  document.addEventListener('keydown', onKey); window.addEventListener('hashchange', onNav);
   if (!tall) closeBtn.focus();
   return { close: () => close() };
 }

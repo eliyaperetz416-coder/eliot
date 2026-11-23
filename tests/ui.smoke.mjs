@@ -12,7 +12,7 @@ mkdirSync(shots, { recursive: true });
 const server = await serve(0);
 const base = `http://localhost:${server.address().port}/`;
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-const ROUTES = ['wods', 'wod/fran', 'weakest', 'workout', 'workouts', 'exercises', 'exercise/barbell-bench-press-medium-grip', 'exercise/plank', 'ranks', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'privacy', 'requests', 'calendar', 'crew', 'profile', 'history', 'kit', 'ranks-preview'];
+const ROUTES = ['ladder', 'wods', 'wod/fran', 'weakest', 'workout', 'workouts', 'exercises', 'exercise/barbell-bench-press-medium-grip', 'exercise/plank', 'ranks', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'privacy', 'requests', 'calendar', 'crew', 'profile', 'history', 'kit', 'ranks-preview'];
 const errors = [];
 let failed = 0;
 const ONLY = process.env.ONLY;
@@ -157,7 +157,10 @@ for (const lang of ['he', 'en']) {
     await page.keyboard.press('Escape');
     await page.click('.today-quests');
     await page.waitForSelector('.sheet .quests');
-    await page.keyboard.press('Escape');
+    await page.evaluate(() => { location.hash = '#/shop'; }); // a link inside a sheet (the streak card's "go to the shop") changes the screen
+    await page.waitForFunction(() => !document.querySelector('.sheet'), null, { timeout: 3000 }); // ...and the sheet goes with the old screen
+    await page.goto(`${base}#/workout`);
+    await page.waitForSelector('.today-quests');
     await page.waitForTimeout(500);
     await page.screenshot({ path: `${shots}${lang}-today-dark.png` });
     await page.evaluate(async () => { const s = await import('./src/ui/storage.js'); await s.updateSettings({ theme: 'marble' }); });
@@ -191,7 +194,7 @@ for (const lang of ['he', 'en']) {
   }
 
   // Both themes everywhere (redesign): the same sweep in marble, plus readable text (WCAG AA) in each theme.
-  const readability = () => page.evaluate(() => {
+  const readability = (scope = 'main *, .tabbar *, .sheet *') => page.evaluate((scope) => {
     const parse = (c) => { const m = c.match(/rgba?\(([^)]+)\)/); if (!m) return null; const p = m[1].split(/[ ,/]+/).filter(Boolean).map(Number); return [p[0], p[1], p[2], p[3] ?? 1]; };
     const lin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
     const lum = ([r, g, b]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
@@ -200,6 +203,7 @@ for (const lang of ['he', 'en']) {
       const layers = [];
       for (let x = el; x; x = x.parentElement) {
         const cs = getComputedStyle(x);
+        if (x.classList.contains('rankup')) { layers.push([4, 5, 10, 1]); break; } // its gradient ends in near-black (components.css)
         if (cs.backgroundImage !== 'none') return null;
         const c = parse(cs.backgroundColor);
         if (c && c[3] > 0) { layers.push(c); if (c[3] >= 1) break; }
@@ -209,7 +213,7 @@ for (const lang of ['he', 'en']) {
       return base;
     };
     const bad = [];
-    for (const el of document.querySelectorAll('main *, .tabbar *')) {
+    for (const el of document.querySelectorAll(scope)) {
       if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
       if (el.closest('[aria-hidden="true"], [disabled], .sr-only, svg') || !el.getClientRects().length) continue;
       const cs = getComputedStyle(el);
@@ -223,8 +227,17 @@ for (const lang of ['he', 'en']) {
       const large = parseFloat(cs.fontSize) >= 24 || (parseFloat(cs.fontSize) >= 18.66 && Number(cs.fontWeight) >= 700);
       if (ratio < (large ? 3 : 4.5)) bad.push(`${el.className || el.tagName} "${el.textContent.trim().slice(0, 24)}" ${ratio.toFixed(2)}`);
     }
+    // buttons that are only an outline or a light fill must still show where they are (an edge or a fill against what is behind)
+    for (const el of document.querySelectorAll('.btn-secondary, .icon-btn, .sheet-grab')) {
+      if (!el.getClientRects().length || el.closest('[aria-hidden="true"]')) continue;
+      const cs = getComputedStyle(el); const behind = bgOf(el.parentElement); if (!behind) continue;
+      if (el.matches('.icon-btn') && !(parse(cs.backgroundColor)?.[3] > 0)) continue; // a bare icon (no circle) shows itself
+      const edge = parse(cs.borderTopColor), fill = parse(cs.backgroundColor);
+      const seen = [edge && parseFloat(cs.borderTopWidth) > 0 ? edge : null, fill].filter((c) => c && c[3] > 0).map((c) => { const m = over(c, behind); const [a, b] = [lum(m), lum(behind)].sort((x, y) => y - x); return (a + 0.05) / (b + 0.05); });
+      if (cs.backgroundImage === 'none' && Math.max(0, ...seen) < 1.15) bad.push(`${el.className} edge ${Math.max(0, ...seen).toFixed(2)}`);
+    }
     return bad;
-  });
+  }, scope);
   for (const theme of ['marble', 'dark']) {
     await check(`${lang}: ${theme}: every route fits, has 44 px targets and readable text`, async () => {
       await page.evaluate(async (th) => { const s = await import('./src/ui/storage.js'); await s.updateSettings({ theme: th }); }, theme);
@@ -241,6 +254,12 @@ for (const lang of ['he', 'en']) {
         for (const x of await readability()) issues.push(`#/${r}: ${x}`);
         if (theme === 'marble') await page.screenshot({ path: `${shots}${lang}-marble-${r.replace(/\//g, '_')}.png` });
       }
+      // the rank-up overlay draws its own dark backdrop: its text must read in both themes
+      await page.evaluate(async () => (await import('./src/ui/post-ui.js')).openRankUp({ change: { kind: 'tier', from: { tier: 'silver', division: 'I' }, to: { tier: 'gold', division: 'V' } }, before: 399, after: 401 }));
+      await page.waitForSelector('.rankup');
+      await page.waitForTimeout(1800);
+      for (const x of await readability('.rankup *')) issues.push(`rank-up: ${x}`);
+      await page.click('.rankup button');
       await page.evaluate(async () => { const s = await import('./src/ui/storage.js'); await s.updateSettings({ theme: 'dark' }); });
       const kinds = [...new Set(issues.map((x) => x.replace(/"[^"]*"/, '').replace(/^#\/\S+ /, '')))]; // one line per kind of problem
       assert.equal(issues.length, 0, `${issues.length} issues, ${kinds.length} kinds: ${kinds.slice(0, 40).join(' | ')} — e.g. ${issues.slice(0, 3).join(' | ')}`);
@@ -361,6 +380,7 @@ for (const lang of ['he', 'en']) {
     assert.equal(await page.locator('.col-prev, .set-prev').count(), 0, 'no "previous" column: the last numbers are the placeholders');
     const sets = await page.evaluate(() => JSON.parse(localStorage.getItem('dg.draft')).entries[0].sets.length);
     for (let i = 0; i < sets; i++) await logSet(page, 0, 150, 5, i);
+    assert.ok(await page.locator('.ent-card').first().locator('.set-fb.flash').count() >= 1, 'the last set shows its feedback too, before the exercise folds');
     await page.waitForSelector('.ent-card.entry.done .ent-row');
     assert.equal(await page.locator('.ent-card.entry.done .set-row').count(), 0, 'the finished exercise is one row');
     assert.ok(await page.locator('.ent-card').nth(1).locator('.set-row').count() >= 1, 'the next exercise opens');

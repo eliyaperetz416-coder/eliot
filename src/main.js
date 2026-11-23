@@ -1,5 +1,5 @@
 import { DIR, LANGS, detectLanguage, setDictionaries, setLanguage, t } from './core/i18n.mjs';
-import { THEMES, inkFor, hexToRgb } from './core/themes.mjs';
+import { THEMES, inkFor, hexToRgb, readableOn } from './core/themes.mjs';
 import { buildScreens } from './ui/screens.js';
 import { tabBar, showToast, backLink, button } from './ui/components.js';
 import { loadSettings, requestPersistence, getSettings, updateSettings, onSettings } from './ui/storage.js';
@@ -37,7 +37,7 @@ function applyTheme() {
   const name = getSettings().theme === 'marble' ? 'marble' : 'dark';
   const p = THEMES[name];
   const equipped = data().shop.cosmetics.find((c) => c.id === store.game.inventory.equipped.theme);
-  const accent = equipped?.hex ?? p.accent;
+  const accent = readableOn(equipped?.hex ?? p.accent, p); // the accent is also text: dark enough on marble, light enough on dark
   const more = matchMedia('(prefers-contrast: more)').matches;
   const solid = more || matchMedia('(prefers-reduced-transparency: reduce)').matches;
   const html = document.documentElement;

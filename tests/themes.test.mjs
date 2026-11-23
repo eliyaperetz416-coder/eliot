@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { THEMES, contrast, inkFor } from '../src/core/themes.mjs';
+import { THEMES, contrast, inkFor, readableOn } from '../src/core/themes.mjs';
+import { TIER_COLORS } from '../src/core/ranks.mjs';
 import { migrateSettings, DEFAULT_SETTINGS, SETTINGS_VERSION } from '../src/core/settings.mjs';
 
 const shopHexes = JSON.parse(readFileSync(new URL('../src/data/shop.json', import.meta.url), 'utf8')).cosmetics.filter((c) => c.kind === 'theme').map((c) => c.hex);
@@ -39,4 +40,23 @@ test('settings v3: the colour-by-rank choice becomes the dark theme', () => {
   assert.equal(s.schemaVersion, 3);
   assert.equal('accentMode' in s, false);
   assert.equal(s.weeklyGoal, 4);
+});
+
+// Final review (Important 1, 3): a shop colour or a tier colour used as TEXT must read on every surface of the theme.
+const minOn = (hex, p) => Math.min(...['bg', 'surface1', 'surface2'].map((k) => contrast(hex, p[k])));
+for (const [name, p] of Object.entries(THEMES)) {
+  test(`${name}: every shop colour, made readable, reads as text on every surface and still carries button text`, () => {
+    for (const hex of [p.accent, ...shopHexes]) {
+      const a = readableOn(hex, p);
+      assert.ok(minOn(a, p) >= 4.5, `${name} ${hex} -> ${a}: ${minOn(a, p).toFixed(2)}`);
+      assert.ok(contrast(inkFor(a), a) >= 4.5, `${name} ink on ${a}`);
+    }
+  });
+  test(`${name}: every tier colour, made readable, reads as text`, () => {
+    for (const [tier, hex] of Object.entries(TIER_COLORS)) assert.ok(minOn(readableOn(hex, p), p) >= 4.5, `${name} ${tier}`);
+  });
+}
+test('readableOn leaves a colour that already reads alone', () => {
+  assert.equal(readableOn(THEMES.marble.accent, THEMES.marble).toLowerCase(), THEMES.marble.accent.toLowerCase());
+  assert.equal(readableOn(THEMES.dark.accent, THEMES.dark).toLowerCase(), THEMES.dark.accent.toLowerCase());
 });
