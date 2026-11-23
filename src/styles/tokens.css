@@ -15,20 +15,21 @@
   src: url("../../assets/fonts/cinzel-latin-700-normal.woff2") format("woff2"); }
 
 :root {
-  --bg: #0a0b12;
-  --surface-1: #11131f;
-  --surface-2: #171a2a;
-  --surface-3: #20243a;
-  --line: rgb(255 255 255 / .09);
-  --text: #f4f5fa;
-  --text-dim: #b0b5cc;
-  --text-mute: #8a90ab;
+  --bg: #0A0A0B;
+  --surface-1: #121214;
+  --surface-2: #18181B;
+  --surface-3: #24221F;
+  --line: rgb(255 255 255 / .08);
+  --text: #F2EDE3;
+  --text-dim: #C9C3B8;
+  --text-mute: #8C867C;
 
-  --accent-rgb: 124 92 255;            /* follows overall rank later */
+  --accent-rgb: 201 162 74;           /* gold; main.js applyTheme() writes every colour from src/core/themes.mjs */
   --accent: rgb(var(--accent-rgb));
   --accent-soft: rgb(var(--accent-rgb) / .14);
   --accent-glow: rgb(var(--accent-rgb) / .38);
-  --accent-ink: #ffffff;
+  --accent-ink: #0A0A0B;
+  --silver: #B9C3D3;
   --danger: #ff5577;
   --ok: #4fe3a0;
 
@@ -42,11 +43,11 @@
   /* Floating tab bar ("island"): it hovers above the bottom edge. --tabbar-space = everything a floating thing must clear. */
   --island-gap: max(12px, calc(var(--safe-b) - 6px));
   --tabbar-space: calc(var(--tabbar-h) + var(--island-gap));
-  --material: rgb(30 34 58 / .34);          /* translucent chrome: Liquid-Glass-like, lets colour through */
-  --material-thick: rgb(26 29 48 / .74);    /* bigger surfaces (sheets) read thicker: more opaque, still glass */
+  --material: rgb(34 31 26 / .55);          /* translucent chrome: Liquid-Glass-like, lets colour through */
+  --material-thick: rgb(24 22 19 / .86);    /* bigger surfaces (sheets) read thicker: more opaque, still glass */
   --glass-filter: blur(26px) saturate(2.1) brightness(1.06);
-  --material-solid: #1b1e30;
-  --material-edge: rgb(255 255 255 / .12);
+  --material-solid: #1A1916;
+  --material-edge: rgb(255 255 255 / .10);
   --spring: cubic-bezier(.32, .72, 0, 1);  /* iOS sheet curve: fast start, no overshoot */
   --gutter: 16px;
 
@@ -60,7 +61,7 @@
 }
 /* Increase contrast (iOS setting): stronger lines and brighter secondary text. */
 @media (prefers-contrast: more) {
-  :root { --line: rgb(255 255 255 / .28); --text-dim: #d6d9e8; --text-mute: #b9bed4; --material: var(--material-solid); --material-thick: var(--material-solid); --material-edge: rgb(255 255 255 / .4); }
+  :root { --line: rgb(255 255 255 / .28); --text-dim: var(--text); --text-mute: var(--text); --material: var(--material-solid); --material-thick: var(--material-solid); --material-edge: rgb(255 255 255 / .4); }
 }
 /* Reduce transparency (iOS setting): solid chrome instead of glass. */
 @media (prefers-reduced-transparency: reduce) {

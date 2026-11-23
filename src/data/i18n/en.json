@@ -752,9 +752,6 @@
   "shop.err.generic": "That did not work",
   "set.title": "Settings",
   "set.language": "Language",
-  "set.accent": "Accent colour",
-  "set.accent.rank": "Follows my rank",
-  "set.accent.fixed": "Fixed colour",
   "set.motion": "Reduce motion",
   "set.motion.on": "On",
   "set.motion.off": "Follow device",
@@ -1239,5 +1236,8 @@
   "sync.state.waiting": "Account: updates after the workout",
   "sync.state.too-big": "Account: too much data (mostly photos) to save",
   "sync.state.rejected": "Account: the server refused to save. Try again later.",
-  "sync.state.other-user": "Account: this phone has another account's data"
+  "sync.state.other-user": "Account: this phone has another account's data",
+  "set.theme": "Colour theme",
+  "set.theme.dark": "Dark",
+  "set.theme.marble": "Marble"
 }

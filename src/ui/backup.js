@@ -8,7 +8,7 @@ import { buildBackup, mergeData, validateBackup } from '../core/backup.mjs';
 const blobToDataUrl = (blob) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(blob); });
 const dataUrlToBlob = (url) => fetch(url).then((r) => r.blob());
 /** Settings that belong to the person (they travel with the account); device-only ones (export dates) stay on the phone. */
-const SYNCED_SETTINGS = ['lang', 'accentMode', 'reducedMotion', 'dumbbellTotal', 'sharePlan', 'weeklyGoal', 'autoRoutineWeight', 'restSound', 'restVibrate', 'restPush'];
+const SYNCED_SETTINGS = ['lang', 'theme', 'reducedMotion', 'dumbbellTotal', 'sharePlan', 'weeklyGoal', 'autoRoutineWeight', 'restSound', 'restVibrate', 'restPush'];
 const pickSettings = (src) => Object.fromEntries(SYNCED_SETTINGS.filter((k) => src?.[k] !== undefined).map((k) => [k, src[k]]));
 
 /** Everything that belongs to the user, as plain JSON (photos become data URLs). The draft is not included. */

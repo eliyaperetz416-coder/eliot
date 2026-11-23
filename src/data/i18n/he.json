@@ -766,9 +766,6 @@
   "shop.err.generic": "זה לא עבד",
   "set.title": "הגדרות",
   "set.language": "שפה",
-  "set.accent": "צבע הדגשה",
-  "set.accent.rank": "לפי הדרגה שלי",
-  "set.accent.fixed": "צבע קבוע",
   "set.motion": "הפחתת תנועה",
   "set.motion.on": "פעיל",
   "set.motion.off": "לפי המכשיר",
@@ -1253,5 +1250,8 @@
   "sync.state.waiting": "החשבון: יעודכן בסוף האימון",
   "sync.state.too-big": "החשבון: יותר מדי נתונים (בעיקר תמונות) לשמירה",
   "sync.state.rejected": "החשבון: השרת סירב לשמור. נסה שוב מאוחר יותר.",
-  "sync.state.other-user": "החשבון: בטלפון יש נתונים של חשבון אחר"
+  "sync.state.other-user": "החשבון: בטלפון יש נתונים של חשבון אחר",
+  "set.theme": "ערכת צבע",
+  "set.theme.dark": "כהה",
+  "set.theme.marble": "שיש"
 }

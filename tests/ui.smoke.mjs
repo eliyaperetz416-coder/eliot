@@ -1216,13 +1216,17 @@ for (const lang of ['he', 'en']) {
     await page.waitForSelector(`.row:has-text("tester@example.com")`);
     await page.screenshot({ path: `${shots}${lang}-settings.png`, fullPage: true });
     assert.ok(!/גיבוי|backup/i.test(await page.textContent('main')), 'no backups anywhere in settings');
-    // accent + reduced motion
-    await page.getByRole('button', { name: T('צבע קבוע', 'Fixed colour') }).click();
+    // colour theme (dark / marble) + reduced motion
+    await page.getByRole('button', { name: T('שיש', 'Marble'), exact: true }).click();
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'marble');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor), 'rgb(234, 228, 217)');
+    await page.screenshot({ path: `${shots}${lang}-settings-marble.png`, fullPage: true });
+    await page.getByRole('button', { name: T('כהה', 'Dark'), exact: true }).click();
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'dark');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor), 'rgb(10, 10, 11)');
     await page.getByRole('button', { name: T('פעיל', 'On'), exact: true }).click();
     assert.equal(await page.evaluate(() => document.documentElement.dataset.motion), 'reduce');
     await page.getByRole('button', { name: T('לפי המכשיר', 'Follow device') }).click();
-    await page.getByRole('button', { name: T('לפי הדרגה שלי', 'Follows my rank') }).click();
-    await page.getByRole('button', { name: T('צבע קבוע', 'Fixed colour') }).click(); // settings now travel with the account: leave it fixed for the shop check
     // rest alert: sound off, then back on
     await page.locator('.seg[aria-label="' + T('צליל', 'Sound') + '"] button', { hasText: T('לא', 'No') }).click();
     assert.equal(await page.evaluate(async () => (await import('./src/ui/storage.js')).getSettings().restSound), false);

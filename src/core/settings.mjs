@@ -1,9 +1,9 @@
 // Settings schema + migrations. Pure; storage lives in src/ui/storage.js.
-export const SETTINGS_VERSION = 2;
+export const SETTINGS_VERSION = 3;
 export const DEFAULT_SETTINGS = Object.freeze({
   schemaVersion: SETTINGS_VERSION,
   lang: null,            // null = detect from the device on first run
-  accentMode: 'fixed',   // 'rank' | 'fixed' (fixed purple is the default since v2)
+  theme: 'dark',         // 'dark' | 'marble' (OUR DESIGN, v3: replaces the accent-by-rank choice)
   reducedMotion: false,
   dumbbellTotal: false,    // OUR DESIGN: type the total of both dumbbells (stored per hand); off = type one dumbbell
   sharePlan: false,        // OUR DESIGN: show your weekly plan to your crew (off until you switch it on)
@@ -21,6 +21,8 @@ const migrations = {
   0: (s) => ({ ...DEFAULT_SETTINGS, ...s, schemaVersion: 1 }),
   // 1 -> 2: one steady accent colour (OUR DESIGN); rank colours stay available in Settings.
   1: (s) => ({ ...s, accentMode: 'fixed', schemaVersion: 2 }),
+  // 2 -> 3: the redesign. Colour themes (dark / marble) replace the accent-by-rank choice.
+  2: (s) => { const { accentMode, ...rest } = s; return { ...rest, theme: 'dark', schemaVersion: 3 }; },
 };
 
 export function migrateSettings(raw) {

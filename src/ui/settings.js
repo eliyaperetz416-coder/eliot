@@ -80,8 +80,8 @@ export function settingsScreen({ onLanguage }) {
       h('div', { class: 'section-label', text: t('set.look') }),
       h('div', { class: 'field' }, h('label', { text: t('set.language') }),
         segmented({ label: t('set.language'), value: getLanguage(), onChange: (l) => onLanguage(l), options: [{ value: 'he', label: t('lang.he'), lang: 'he' }, { value: 'en', label: t('lang.en'), lang: 'en' }] })),
-      h('div', { class: 'field' }, h('label', { text: t('set.accent') }),
-        segmented({ label: t('set.accent'), value: s.accentMode, onChange: async (v) => { await updateSettings({ accentMode: v }); draw(); }, options: [{ value: 'rank', label: t('set.accent.rank') }, { value: 'fixed', label: t('set.accent.fixed') }] })),
+      h('div', { class: 'field' }, h('label', { text: t('set.theme') }),
+        segmented({ label: t('set.theme'), value: s.theme === 'marble' ? 'marble' : 'dark', onChange: async (v) => { await updateSettings({ theme: v }); draw(); }, options: [{ value: 'dark', label: t('set.theme.dark') }, { value: 'marble', label: t('set.theme.marble') }] })),
       h('div', { class: 'field' }, h('label', { text: t('set.motion') }),
         segmented({ label: t('set.motion'), value: s.reducedMotion ? 'on' : 'off', onChange: async (v) => { await updateSettings({ reducedMotion: v === 'on' }); draw(); }, options: [{ value: 'off', label: t('set.motion.off') }, { value: 'on', label: t('set.motion.on') }] })),
 

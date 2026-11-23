@@ -1,5 +1,5 @@
 import { DIR, LANGS, detectLanguage, setDictionaries, setLanguage, t } from './core/i18n.mjs';
-import { TIER_COLORS } from './core/ranks.mjs';
+import { THEMES, inkFor, hexToRgb } from './core/themes.mjs';
 import { buildScreens } from './ui/screens.js';
 import { tabBar, showToast, backLink, button } from './ui/components.js';
 import { loadSettings, requestPersistence, getSettings, updateSettings, onSettings } from './ui/storage.js';
@@ -32,26 +32,27 @@ window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); inst
 const drawNav = () => nav.replaceChildren(store.profile && TABS.some((x) => x.id === currentTab) ? tabBar({ tabs: TABS, current: currentTab, badges: { profile: crew.unread > 0 } }) : '');
 
 const lang2 = () => document.documentElement.lang;
-function hexToRgb(hex) { const n = parseInt(hex.slice(1), 16); return `${(n >> 16) & 255} ${(n >> 8) & 255} ${n & 255}`; }
-
-/** White text on dark accents, dark text on light ones. */
-function inkFor(hex) {
-  const n = parseInt(hex.slice(1), 16), lin = (v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
-  const L = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
-  return L > 0.4 ? '#1a1305' : '#ffffff';
-}
-
-/** The accent follows the overall rank (OUR DESIGN); gold while unranked or when set to fixed. */
-function applyAccent() {
-  const root = document.documentElement.style;
-  const equippedTheme = data().shop.cosmetics.find((c) => c.id === store.game.inventory.equipped.theme);
-  let hex = equippedTheme?.hex ?? '#7c5cff';
-  if (getSettings().accentMode === 'rank' && !store.overall.pending) {
-    const tier = ['wood', 'bronze', 'silver', 'gold', 'platinum', 'diamond', 'champion', 'titan', 'olympian', 'greekgod'];
-    for (const id of tier) if (store.overall.rating >= ({ wood: 1, bronze: 200, silver: 300, gold: 400, platinum: 500, diamond: 600, champion: 700, titan: 800, olympian: 900, greekgod: 1000 })[id]) hex = TIER_COLORS[id];
-  }
-  root.setProperty('--accent-rgb', hexToRgb(hex));
-  root.setProperty('--accent-ink', inkFor(hex));
+/** Colours (OUR DESIGN, redesign): the chosen theme (dark / marble, src/core/themes.mjs); a colour bought in the shop and
+ *  equipped replaces the accent. iOS "increase contrast" and "reduce transparency" still win. */
+function applyTheme() {
+  const name = getSettings().theme === 'marble' ? 'marble' : 'dark';
+  const p = THEMES[name];
+  const equipped = data().shop.cosmetics.find((c) => c.id === store.game.inventory.equipped.theme);
+  const accent = equipped?.hex ?? p.accent;
+  const more = matchMedia('(prefers-contrast: more)').matches;
+  const solid = more || matchMedia('(prefers-reduced-transparency: reduce)').matches;
+  const html = document.documentElement;
+  html.dataset.theme = name;
+  const vars = {
+    '--bg': p.bg, '--surface-1': p.surface1, '--surface-2': p.surface2, '--surface-3': p.surface3,
+    '--line': more ? (name === 'dark' ? 'rgb(255 255 255 / .28)' : 'rgb(28 26 23 / .4)') : p.line,
+    '--text': p.text, '--text-dim': more ? p.text : p.textDim, '--text-mute': more ? p.text : p.textMute,
+    '--accent-rgb': hexToRgb(accent), '--accent-ink': inkFor(accent), '--silver': p.silver,
+    '--material': solid ? p.glassSolid : p.glass, '--material-thick': solid ? p.glassSolid : p.glassThick, '--material-edge': p.glassEdge, '--material-solid': p.glassSolid,
+  };
+  for (const [k, v] of Object.entries(vars)) html.style.setProperty(k, v);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', p.metaColor);
+  document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', p.scheme);
 }
 
 function applyDocument() {
@@ -112,7 +113,7 @@ async function changeLanguage(lang) {
 async function finishOnboarding(result) {
   if (result) await saveProfile(result.profile, result.weight);
   onboarded = true;
-  applyAccent();
+  applyTheme();
   location.hash = '#/workout';
   render();
 }
@@ -134,18 +135,18 @@ async function boot() {
   document.documentElement.lang = lang;
   screens = buildScreens({ onLanguage: changeLanguage });
   applyDocument();
-  applyAccent();
+  applyTheme();
   render();
   initRestTimer(document.getElementById('rest-root'));
   onAchievements((list, reward) => showToast({ message: t('ach.toast', { name: list.map((a) => (lang2() === 'he' ? a.nameHe : a.nameEn)).join(', '), n: reward }) }));
   let hadDraft = !!store.draft;
   subscribe(() => {
-    applyAccent();
+    applyTheme();
     if (!!store.draft !== hadDraft) { hadDraft = !!store.draft; if (store.profile && route().id === 'workout') render(); }
   });
   onSettings((next) => {
     if (next.lang && next.lang !== document.documentElement.lang) { setLanguage(next.lang); document.documentElement.lang = next.lang; refreshRestTimer(); }
-    applyDocument(); applyAccent();
+    applyDocument(); applyTheme();
   });
   onCrew(drawNav);
   startCrewWatcher();
