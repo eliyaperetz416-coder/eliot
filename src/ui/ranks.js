@@ -1,4 +1,4 @@
-// Ranks tab: overall rank, muscle map (rank / recovery), muscle ratings, per-exercise table, links.
+// Progress tab (redesign): three tabs. Rank = the pyramid + your exercises; Body = muscle map + groups; Numbers = tiles + chart.
 import { h } from './dom.js';
 import { icon } from './icons.js';
 import { t, getLanguage } from '../core/i18n.mjs';
@@ -7,11 +7,10 @@ import { ratingsOf } from '../core/post.mjs';
 import { MAP_COLORS, GROUP_OF_MUSCLE } from '../core/muscles.mjs';
 import { freshnessByMuscle, freshColor } from '../core/recovery.mjs';
 import { exerciseRankTable, muscleBestExercises } from '../core/views.mjs';
-import { list, listRow, segmented } from './components.js';
+import { list, listRow, segmented, openSheet } from './components.js';
 import { data } from './data.js';
 import { store, shownOverall } from './store.js';
-import { rankCard } from './rank-card.js';
-import { ladderStrip } from './ladder.js';
+import { pyramid, pyramidNote } from './pyramid.js';
 import { weeklyCount, weeklyVolume, prsSince } from '../core/charts.mjs';
 import { barChart, chartCard } from './charts.js';
 import { BONUS } from '../core/consistency.mjs';
@@ -19,11 +18,11 @@ import { rankBonus, PARTS } from '../core/bonus.mjs';
 import { muscleMap } from './muscle-map.js';
 import { emblem } from './emblem.js';
 import { openNeedSheet } from './need.js';
-import { formatDate, formatDateTime, formatKg, formatNum } from './format.js';
+import { formatDateTime, formatKg, formatNum } from './format.js';
 
 const nameOf = (ex) => (getLanguage() === 'he' ? ex.nameHe : ex.nameEn);
 const tierText = (tr) => (tr.division ? `${t(`tier.${tr.tier}`)} ${tr.division}` : t(`tier.${tr.tier}`));
-const view = { mode: 'rank', sort: 'rating' };
+const view = { tab: 'rank', mode: 'rank', sort: 'rating', all: false };
 
 function setText(ex, b) {
   if (ex.type === 'time' || ex.type === 'cardio') return `${Math.floor(b.reps / 60)}:${String(Math.round(b.reps % 60)).padStart(2, '0')} ${t('need.minutes')}`;
@@ -49,8 +48,8 @@ function summary() {
   ];
 }
 
-/** How the consistency bonus is made up (OUR DESIGN). */
-function bonusCard() {
+/** How the consistency bonus is made up (OUR DESIGN). Shown on the rank path screen. */
+export function bonusCard() {
   const b = rankBonus({ workouts: store.workouts, byId: data().byId, ratings: ratingsOf(store.bests) });
   const p = b.parts;
   const row = (key, args, pts, max) => h('div', { class: 'bonus-row' }, h('span', { class: 'row-sub', text: t(key, args) }), h('b', { class: 'num', dir: 'ltr', text: `+${pts}/${max}` }));
@@ -68,16 +67,45 @@ function bonusCard() {
     h('p', { class: 'row-sub bonus-note', text: t('bonus.note') }));
 }
 
+const SORTS = ['rating', 'name', 'oneRM', 'recent'];
+
 export function ranksScreen() {
   const d = data();
   const root = h('main', { class: 'screen' });
 
-  function draw() {
+  function sortSheet() {
+    const sh = openSheet({ title: t('ranks.sort'), content: h('div', { class: 'list' }, SORTS.map((k) => h('button', { class: 'row', type: 'button', 'aria-pressed': String(view.sort === k), onclick: () => { view.sort = k; sh.close(); draw(); } },
+      h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: t(`ranks.sort.${k}`) })), view.sort === k ? icon('check', 'row-end') : null))) });
+  }
+
+  /** Rank tab: the pyramid, then your exercises (five, then "+N more" in place). */
+  function rankTab() {
+    const o = shownOverall();
+    const table = exerciseRankTable(store.bests, d.byId, view.sort, nameOf);
+    const rows = view.all ? table : table.slice(0, 5);
+    return [
+      pyramid({ rating: o.pending ? 0 : o.rating }),
+      h('p', { class: 'row-sub center pyr-note', text: pyramidNote(o) }),
+      h('div', { class: 'prog-sec-head' }, h('h2', { text: t('ranks.exercises') }),
+        table.length ? h('button', { class: 'icon-btn prog-sort', type: 'button', 'aria-label': t('ranks.sort'), onclick: sortSheet }, icon('filter')) : null),
+      table.length
+        ? h('div', { class: 'ex-rank-list' }, rows.map((r) => {
+          const tr = tierFor(r.rating);
+          return h('button', { class: 'ex-rank-row', type: 'button', onclick: () => openNeedSheet(r.ex), 'aria-label': `${nameOf(r.ex)}: ${tierText(tr)}, ${formatNum(r.rating, 0)}` },
+            h('span', { class: 'tier-dot', style: `background:${tr.tier === 'greekgod' ? '#7df9ff' : TIER_COLORS[tr.tier]}`, 'aria-hidden': 'true' }),
+            h('span', { class: 'row-title', text: nameOf(r.ex) }), h('span', { class: 'display num ex-rank-n', text: formatNum(r.rating, 0) }));
+        }))
+        : h('p', { class: 'row-sub', text: t('ranks.exercises.empty') }),
+      table.length > rows.length ? h('button', { class: 'more-rows', type: 'button', onclick: () => { view.all = true; draw(); } }, t('ranks.more.rows', { n: table.length - rows.length })) : null,
+    ];
+  }
+
+  /** Body tab: the muscle map (rank / recovery) and the eleven groups. */
+  function bodyTab() {
     const ratings = ratingsOf(store.bests);
     const groups = muscleRatings(ratings, d.byId);
     const panel = h('div', { class: 'mmap-panel' });
     const muscleName = (id) => t(`muscle.${id.replace(/^(left|right)-soleus$/, 'calves')}`);
-
     let paint, onSelect;
     if (view.mode === 'rank') {
       paint = (id) => {
@@ -109,20 +137,10 @@ export function ranksScreen() {
         panel.replaceChildren(h('p', { class: 'row-sub center', text: f?.trainedAt == null ? t('recovery.never') : t('recovery.last', { date: formatDateTime(f.trainedAt) }) }));
       };
     }
-
     const legend = view.mode === 'recovery'
       ? h('div', { class: 'recov-legend' }, h('span', { class: 'recov-bar' }), h('div', { class: 'recov-ends' }, h('span', { text: t('recovery.tired') }), h('span', { text: t('recovery.fresh') })), h('p', { class: 'row-sub center', text: t('recovery.disclaimer') }))
       : null;
-
-    const table = exerciseRankTable(store.bests, d.byId, view.sort, nameOf);
-    const kids = [
-      h('header', { class: 'screen-head' }, icon('bolt', 'mark'), h('h1', { text: t('tab.ranks') })),
-      ...summary(),
-      h('div', { class: 'section-label', text: t('ranks.title') }),
-      rankCard(shownOverall()),
-      ladderStrip(),
-      bonusCard(),
-      h('div', { class: 'section-label', text: t('ranks.map') }),
+    return [h('div', { class: 'prog-body' },
       segmented({ label: t('ranks.map'), value: view.mode, onChange: (m) => { view.mode = m; draw(); }, options: [{ value: 'rank', label: t('ranks.mode.rank') }, { value: 'recovery', label: t('ranks.mode.recovery') }] }),
       h('div', { style: 'padding-block-start:12px' }, muscleMap({ muscles: d.muscles, mode: view.mode, paint, onSelect })),
       legend, panel,
@@ -133,25 +151,27 @@ export function ranksScreen() {
           emblem({ tier: tr ? tr.tier : 'unranked', divisionIndex: tr?.divisionIndex ?? 0, size: 40, label: t(`group.${g}`) }),
           h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: t(`group.${g}`) }), h('span', { class: 'row-sub', text: tr ? tierText(tr) : t('rank.unranked') })),
           h('span', { class: 'row-end num', text: r ? formatNum(r, 0) : '–' }));
-      })),
-      h('div', { class: 'section-label', text: t('ranks.exercises') }),
-    ];
-    if (table.length) {
-      kids.push(segmented({ label: t('ranks.sort'), value: view.sort, onChange: (s) => { view.sort = s; draw(); },
-        options: [{ value: 'rating', label: t('ranks.sort.rating') }, { value: 'name', label: t('ranks.sort.name') }, { value: 'oneRM', label: t('ranks.sort.oneRM') }, { value: 'recent', label: t('ranks.sort.recent') }] }),
-      h('div', { class: 'list', style: 'margin-block-start:12px' }, table.map((r) => {
-        const tr = tierFor(r.rating);
-        return h('button', { class: 'row ex-rank-row', type: 'button', onclick: () => openNeedSheet(r.ex) },
-          h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: nameOf(r.ex) }), h('span', { class: 'row-sub num' }, h('bdi', { text: setText(r.ex, r) })), h('span', { class: 'row-sub', text: formatDate(Date.parse(r.dateKey)) })),
-          h('span', { class: 'rank-chip' }, h('span', { class: 'num', text: formatNum(r.rating, 0) }), h('span', { class: 'row-sub', text: tierText(tr) })));
-      })));
-    } else kids.push(h('p', { class: 'row-sub', text: t('ranks.exercises.empty') }));
-    kids.push(h('div', { class: 'section-label', text: t('ranks.more') }),
-      list([
+      })))];
+  }
+
+  /** Numbers tab: this week's tiles, workouts per week, and the detailed charts. */
+  function dataTab() {
+    return [...summary(),
+      h('div', { style: 'padding-block-start:12px' }, list([
         listRow({ title: t('progress.title'), sub: t('progress.sub'), icon: 'history', onClick: () => { location.hash = '#/progress'; } }),
-        listRow({ title: t('card.title'), sub: t('card.sub'), icon: 'shield', onClick: () => { location.hash = '#/card'; } }),
-      ]));
-    root.replaceChildren(...kids.flat().filter(Boolean));
+      ]))];
+  }
+
+  function draw() {
+    const tabs = { rank: rankTab, body: bodyTab, data: dataTab };
+    if (!tabs[view.tab]) view.tab = 'rank';
+    root.replaceChildren(...[
+      h('header', { class: 'screen-head' }, h('h1', { text: t('tab.ranks') }),
+        h('a', { class: 'icon-btn prog-share', href: '#/card', 'aria-label': t('card.title') }, icon('share'))),
+      h('div', { class: 'prog-tabs' }, segmented({ label: t('tab.ranks'), value: view.tab, onChange: (v) => { view.tab = v; draw(); },
+        options: [{ value: 'rank', label: t('prog.tab.rank') }, { value: 'body', label: t('prog.tab.body') }, { value: 'data', label: t('prog.tab.data') }] })),
+      ...tabs[view.tab](),
+    ].flat().filter(Boolean));
   }
   draw();
   return root;

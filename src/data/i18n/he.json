@@ -1267,5 +1267,13 @@
   "today.minutes": "≈ {n} דק׳",
   "today.next.aria": "{when}: {title}, {meta}. לבחירת אימון אחר",
   "today.quests.ready": "משימות, {n} מוכנות לאיסוף",
-  "wk.add": "הוספה"
+  "wk.add": "הוספה",
+  "pyr.reached": "הושג",
+  "pyr.open": "לחיצה לפירוט",
+  "pyr.toDivision": "עוד {n} לדרגת המשנה הבאה · לחיצה על הדרגה לפירוט",
+  "pyr.toTier": "עוד {n} ל־{name} · לחיצה על הדרגה לפירוט",
+  "prog.tab.rank": "דרגה",
+  "prog.tab.body": "גוף",
+  "prog.tab.data": "נתונים",
+  "ranks.more.rows": "+{n} נוספים"
 }

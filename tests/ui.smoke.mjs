@@ -25,7 +25,11 @@ async function onboard(page, lang, shotPrefix) {
   await page.goto(base);
   await page.waitForSelector('html[data-ready="1"]');
   await page.waitForSelector('#google');
-  await page.waitForTimeout(300);
+  // On a fresh phone the service worker takes control and the page reloads once (main.js, controllerchange). A screenshot
+  // caught in that reload hangs headless Chromium (about 1 run in 3 before this wait), so let it happen first.
+  await page.waitForFunction(() => !!navigator.serviceWorker?.controller, null, { timeout: 15000 }).catch(() => {});
+  await page.waitForTimeout(600);
+  await page.waitForSelector('html[data-ready="1"] #google');
   await shot('1-signin');
   assert.ok(await page.locator('#google').isDisabled(), 'Google waits for the consent box');
   await page.check('#consent');
@@ -260,9 +264,8 @@ for (const lang of ['he', 'en']) {
     await page.screenshot({ path: `${shots}${lang}-result.png`, fullPage: true });
     await page.click('main .btn-primary');
     await page.goto(`${base}#/ranks`);
-    await page.waitForSelector('.rank-card');
-    assert.equal(await page.locator('.rank-pending').count(), 0);
-    assert.equal(await page.locator('.rank-card .lp').count(), 1, 'overall rank with LP bar after 3 ranked exercises');
+    await page.waitForSelector('.pyramid');
+    assert.equal(await page.locator('.pyramid li[aria-current="step"]').count(), 1, 'ranked after 3 ranked exercises: you are on a step');
     await page.screenshot({ path: `${shots}${lang}-workout-ranked.png` });
 
     // history: open, edit, save (recalculated), delete with confirmation
@@ -283,8 +286,8 @@ for (const lang of ['he', 'en']) {
     await page.click('.sheet .btn-danger');
     await page.waitForSelector('.empty');
     await page.goto(`${base}#/ranks`);
-    await page.waitForSelector('.rank-card');
-    assert.equal(await page.locator('.rank-card .lp').count(), 0, 'rank pending again after deleting the only workout');
+    await page.waitForSelector('.pyramid');
+    assert.equal(await page.locator('.pyramid li[aria-current="step"]').count(), 0, 'rank pending again after deleting the only workout');
   });
 
   await check(`${lang}: discard keeps nothing; empty finish cannot post`, async () => {
@@ -304,23 +307,23 @@ for (const lang of ['he', 'en']) {
   await check(`${lang}: ranks tab with data (map, groups, table, need sheet, recovery), progress, card, exercise best`, async () => {
     await postThree(page);
     await page.goto(`${base}#/ranks`);
-    await page.waitForSelector('.mmap svg');
-    assert.equal(await page.locator('.rank-card .lp').count(), 1);
-    assert.equal(await page.locator('.mmap svg').count(), 2);
-    assert.ok(await page.locator('.mm-glow').count() >= 3, 'ranked muscles glow in their tier colour');
-    await page.click('.mm[data-muscle="chest"] polygon');
-    assert.match(await page.textContent('.mmap-info'), /Platinum|Diamond|Gold|Silver/);
-    await page.waitForSelector('.mmap-panel .row');
-    assert.equal(await page.locator('.group-row').count(), 11);
-    assert.ok(await page.locator('.ex-rank-row').count() >= 3);
+    // three tabs: rank (pyramid + exercises), body (map + groups), numbers (tiles + chart); share goes to the card
+    await page.waitForSelector('.pyramid');
+    assert.equal(await page.locator('.prog-tabs button').count(), 3);
+    assert.equal(await page.locator('.pyramid li').count(), 10);
+    assert.equal(await page.locator('.pyramid li[aria-current="step"]').count(), 1);
+    assert.equal(await page.locator('.prog-share').getAttribute('href'), '#/card');
+    const shown = await page.locator('.ex-rank-row').count();
+    assert.ok(shown >= 3 && shown <= 5, `rows ${shown}`);
     await page.waitForTimeout(400);
     await page.screenshot({ path: `${shots}${lang}-ranks-data.png`, fullPage: true });
-    const o = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
-    assert.ok(o.sw <= o.cw, 'no horizontal overflow with data');
-    // sort
+    // sort (a sheet with four orders)
     const first = await page.locator('.ex-rank-row .row-title').first().textContent();
-    await page.locator('.seg').nth(1).locator('button').nth(1).click(); // sort by name
-    await page.waitForSelector('.ex-rank-row');
+    await page.click('.prog-sort');
+    await page.waitForSelector('.sheet .row');
+    assert.equal(await page.locator('.sheet .row').count(), 4);
+    await page.locator('.sheet .row').nth(1).click(); // by name
+    await page.waitForFunction(() => !document.querySelector('.sheet'));
     const names = await page.locator('.ex-rank-row .row-title').allTextContents();
     assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b)));
     assert.ok(first.length > 0);
@@ -334,13 +337,30 @@ for (const lang of ['he', 'en']) {
     assert.notEqual(await page.locator('.need-load').first().textContent(), kg1, 'load changes with reps');
     await page.screenshot({ path: `${shots}${lang}-need.png` });
     await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !document.querySelector('.sheet'));
+    // body
+    await page.locator('.prog-tabs button').nth(1).click();
+    await page.waitForSelector('.mmap svg');
+    assert.equal(await page.locator('.mmap svg').count(), 2);
+    assert.ok(await page.locator('.mm-glow').count() >= 3, 'ranked muscles glow in their tier colour');
+    await page.click('.mm[data-muscle="chest"] polygon');
+    assert.match(await page.textContent('.mmap-info'), /Platinum|Diamond|Gold|Silver/);
+    await page.waitForSelector('.mmap-panel .row');
+    assert.equal(await page.locator('.group-row').count(), 11);
+    await page.screenshot({ path: `${shots}${lang}-ranks-body.png`, fullPage: true });
+    const o = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
+    assert.ok(o.sw <= o.cw, 'no horizontal overflow with data');
     // recovery mode
-    await page.locator('.seg').first().locator('button').nth(1).click();
+    await page.locator('.prog-body .seg button').nth(1).click();
     await page.waitForSelector('.recov-bar');
     await page.click('.mm[data-muscle="chest"] polygon');
     assert.match(await page.textContent('.mmap-info'), /%/);
     await page.waitForTimeout(300);
     await page.screenshot({ path: `${shots}${lang}-recovery.png`, fullPage: true });
+    // numbers
+    await page.locator('.prog-tabs button').nth(2).click();
+    await page.waitForSelector('main .stats-grid');
+    await page.screenshot({ path: `${shots}${lang}-ranks-numbers.png`, fullPage: true });
     // progress
     await page.goto(`${base}#/progress`);
     await page.waitForSelector('.chart');
@@ -756,7 +776,7 @@ for (const lang of ['he', 'en']) {
     assert.match(await page.locator('.hist-row').first().textContent(), /Cindy/);
     await page.locator('.hist-row').first().click();
     await page.waitForSelector('.wod-clock-card');
-    await page.goto(`${base}#/ranks`);
+    await page.goto(`${base}#/ladder`);
     await page.waitForSelector('.bonus-card');
     assert.match(await page.locator('.bonus-row', { hasText: T('WOD', 'Benchmark') }).textContent(), /\+10\/40/);
     // clean up so later checks see the same history as before
@@ -1153,7 +1173,7 @@ for (const lang of ['he', 'en']) {
         for (let i = 0; i < 40 && (await p2.evaluate(async () => (await import('./src/ui/store.js')).store.adjust)) !== -100; i++) await p2.waitForTimeout(250);
         const shown = await p2.evaluate(async () => { const m = await import('./src/ui/store.js'); m.store.overall = { pending: false, rating: 500, strength: 500, bonus: 0, remaining: 0 }; return m.shownOverall(); });
         assert.deepEqual([shown.rating, shown.rawRating, shown.adjust], [400, 500, -100]);
-        await p2.goto(`${base}#/ranks`); await p2.waitForSelector('.rank-card');
+        await p2.goto(`${base}#/ranks`); await p2.waitForSelector('.pyramid');
         await p2.goto(`${base}#/crew`); await p2.waitForSelector('#crew-say, .crew-board, .crew-tabs');
         await adjustTool('Dan', async () => { await page.getByRole('button', { name: T('איפוס', 'Reset'), exact: true }).click(); });
         const dracBefore = await p2.evaluate(async () => (await import('./src/ui/store.js')).store.game.drachmas);
@@ -1546,15 +1566,16 @@ for (const lang of ['he', 'en']) {
     await page.reload();
   });
 
-  await check(`${lang}: rank path: strip on Progress, full ladder with you marked`, async () => {
+  await check(`${lang}: rank path: pyramid on Progress, full ladder with you marked`, async () => {
     const T = (he, en) => L(lang, he, en);
     if (ONLY) await postThree(page);
     await page.goto(`${base}#/ranks`);
-    await page.waitForSelector('.ladder-strip');
-    assert.equal(await page.locator('.ladder-dot').count(), 10);
-    assert.equal(await page.locator('.ladder-dot.current').count(), 1);
+    await page.waitForSelector('.pyramid');
+    // five exercises, then "+N more" opens the rest in place
+    assert.ok(await page.locator('.ex-rank-row').count() <= 5);
+    if (await page.locator('.more-rows').count()) { await page.click('.more-rows'); await page.waitForFunction(() => document.querySelectorAll('.ex-rank-row').length > 5); assert.equal(await page.locator('.more-rows').count(), 0); }
     await page.screenshot({ path: `${shots}${lang}-ladder-strip.png` });
-    await page.locator('.ladder-strip').click();
+    await page.locator('.pyramid li[aria-current="step"] a').click();
     await page.waitForSelector('.ladder-row');
     assert.equal(await page.locator('.ladder-row').count(), 10);
     assert.equal(await page.locator('.ladder-row.current').count(), 1);

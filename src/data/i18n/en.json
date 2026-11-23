@@ -1253,5 +1253,13 @@
   "today.minutes": "≈ {n} min",
   "today.next.aria": "{when}: {title}, {meta}. Choose another workout",
   "today.quests.ready": "Quests, {n} ready to claim",
-  "wk.add": "Add"
+  "wk.add": "Add",
+  "pyr.reached": "reached",
+  "pyr.open": "Tap for details",
+  "pyr.toDivision": "{n} to the next division · tap your rank for details",
+  "pyr.toTier": "{n} to {name} · tap your rank for details",
+  "prog.tab.rank": "Rank",
+  "prog.tab.body": "Body",
+  "prog.tab.data": "Numbers",
+  "ranks.more.rows": "+{n} more"
 }
