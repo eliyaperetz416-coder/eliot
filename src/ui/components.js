@@ -31,7 +31,10 @@ export function segmented({ options, value, onChange, label }) {
   for (const o of options) {
     root.append(h('button', {
       type: 'button', 'aria-pressed': String(o.value === value), lang: o.lang,
-      onclick: () => onChange(o.value),
+      onclick: (e) => { // mark the choice right away (a caller that redraws gets the same result)
+        for (const b of root.children) b.setAttribute('aria-pressed', String(b === e.currentTarget));
+        onChange(o.value);
+      },
     }, o.label));
   }
   return root;

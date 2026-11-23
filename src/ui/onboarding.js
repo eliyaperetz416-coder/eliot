@@ -126,37 +126,31 @@ export function onboarding({ onLanguage, onDone, installPrompt = () => null, sig
         failed ? actions(busy === 'too-big' ? null : button({ label: t('ob.migrate.retry'), block: true, onClick: run }), button({ label: t('ob.migrate.later'), variant: busy === 'too-big' ? 'primary' : 'ghost', block: true, onClick: () => finish() })) : null);
     },
 
-    name: () => {
-      const input = h('input', { class: 'text-input', id: 'ob-name', type: 'text', autocomplete: 'given-name', maxlength: 40, value: st.form.name || session?.user?.name?.split(' ')[0] || '' });
-      const err = h('p', { class: 'field-error', role: 'alert', text: t('ob.err.name'), hidden: true });
-      return step(t('ob.name'), h('div', { class: 'field-box' }, input), err,
-        actions(button({ label: t('common.continue'), block: true, onClick: () => { if (!input.value.trim()) { err.hidden = false; return; } go({ form: { ...st.form, name: input.value.trim().slice(0, 40) } }); } })));
-    },
-
-    curve: () => step(t('ob.curve'), h('p', { class: 'ob-lead', text: t('ob.curve.hint') }),
-      segmented({ label: t('ob.curve'), value: st.form.sex, onChange: (x) => go({ form: { ...st.form, sex: x } }), options: [{ value: 'm', label: t('ob.curve.m') }, { value: 'f', label: t('ob.curve.f') }] })),
-
-    weight: () => {
-      const f = numberField({ id: 'ob-weight', label: t('ob.weight'), unit: t('unit.kg'), value: st.form.weight });
-      const err = h('p', { class: 'field-error', role: 'alert', text: t('ob.err.weight'), hidden: true });
-      return step(t('ob.weight'), f, h('p', { class: 'row-sub', text: t('ob.weight.hint') }), err,
+    about: () => {
+      // Name, curve, body weight and age (optional) on one screen; errors show under each field.
+      const form = { ...st.form, name: st.form.name || session?.user?.name?.split(' ')[0] || '' };
+      const errs = {};
+      const err = (k, key) => (errs[k] = h('p', { class: 'field-error', role: 'alert', text: t(key), hidden: true }));
+      const name = h('input', { class: 'text-input', id: 'ob-name', type: 'text', autocomplete: 'given-name', maxlength: 40, value: form.name });
+      const weight = numberField({ id: 'ob-weight', label: t('ob.weight'), unit: t('unit.kg'), value: form.weight });
+      const age = numberField({ id: 'ob-age', label: t('ob.age'), integer: true, value: form.age });
+      const values = () => ({ name: name.value, sex: form.sex, weight: weight.querySelector('input').value, age: age.querySelector('input').value });
+      let tried = false;
+      const sync = () => { if (!tried) return; const r = validateProfile(values()); for (const [k, el] of Object.entries(errs)) el.hidden = !r.errors[k]; return r; };
+      const curve = segmented({ label: t('ob.curve'), value: form.sex, onChange: (x) => { form.sex = x; sync(); }, options: [{ value: 'm', label: t('ob.curve.m') }, { value: 'f', label: t('ob.curve.f') }] });
+      for (const el of [name, weight.querySelector('input'), age.querySelector('input')]) el.addEventListener('input', sync);
+      return step(t('ob.you.title'),
+        h('div', { class: 'stack' },
+          h('div', { class: 'field' }, h('label', { for: 'ob-name', text: t('ob.name') }), h('div', { class: 'field-box' }, name), err('name', 'ob.err.name')),
+          h('div', { class: 'field' }, h('label', { text: t('ob.curve') }), curve, h('p', { class: 'row-sub', text: t('ob.curve.hint') }), err('sex', 'ob.err.sex')),
+          h('div', { class: 'field' }, weight, err('weight', 'ob.err.weight')),
+          h('div', { class: 'field' }, age, err('age', 'ob.err.age'))),
         actions(button({ label: t('common.continue'), block: true, onClick: () => {
-          const v = f.querySelector('input').value;
-          if (validateProfile({ ...st.form, weight: v }).errors.weight) { err.hidden = false; return; }
-          go({ form: { ...st.form, weight: String(validateProfile({ ...st.form, weight: v }).value.weight) } });
+          tried = true;
+          const r = sync();
+          if (!r.ok) return;
+          go({ form: { name: r.value.name, sex: r.value.sex, weight: String(r.value.weight), age: r.value.age == null ? '' : String(r.value.age) }, ageSkipped: r.value.age == null });
         } })));
-    },
-
-    age: () => {
-      const f = numberField({ id: 'ob-age', label: t('ob.age'), integer: true, value: st.form.age });
-      const err = h('p', { class: 'field-error', role: 'alert', text: t('ob.err.age'), hidden: true });
-      return step(t('ob.age'), f, err,
-        actions(button({ label: t('common.continue'), block: true, onClick: () => {
-          const v = f.querySelector('input').value;
-          const r = validateProfile({ ...st.form, age: v });
-          if (r.errors.age || r.value.age == null) { err.hidden = false; return; }
-          go({ form: { ...st.form, age: String(r.value.age) } });
-        } }), button({ label: t('ob.skip'), variant: 'ghost', block: true, onClick: () => go({ ageSkipped: true }) })));
     },
 
     goal: () => {

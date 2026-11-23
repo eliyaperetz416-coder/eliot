@@ -32,25 +32,26 @@ async function onboard(page, lang, shotPrefix) {
   await page.click('#google'); // the fake Auth server sends us back signed in
   await page.waitForSelector('#ob-name');
   assert.equal(await page.inputValue('#ob-name'), 'Test', 'first name from the Google account');
-  await shot('2-name');
+  // "about you": name, curve, weight and age on one screen
+  for (const sel of ['#ob-name', '.seg', '#ob-weight', '#ob-age']) assert.equal(await page.locator(sel).count(), 1, `${sel} on the about screen`);
   await page.fill('#ob-name', '');
-  await page.click('.ob-actions .btn-primary');
+  await page.click('.ob-actions .btn-primary'); // empty -> validation errors, nothing moves on
   await page.waitForSelector('.field-error:visible');
+  assert.equal(await page.locator('#ob-name').count(), 1);
   await page.fill('#ob-name', 'Elia');
-  await page.click('.ob-actions .btn-primary');
-  await page.waitForSelector('.seg');
-  await shot('3-curve');
   await page.click('.seg button >> nth=0');
-  await page.waitForSelector('#ob-weight');
+  assert.equal(await page.getAttribute('.seg button >> nth=0', 'aria-pressed'), 'true', 'the chosen curve is marked');
   await page.fill('#ob-weight', '82,5');
-  await shot('4-weight');
-  await page.click('.ob-actions .btn-primary');
-  await page.waitForSelector('#ob-age');
   await page.fill('#ob-age', '30');
+  assert.equal(await page.locator('.field-error:visible').count(), 0, 'errors clear while typing');
+  await shot('2-about');
   await page.click('.ob-actions .btn-primary');
   await page.waitForSelector('.ob-goal');
   await shot('5-goal');
   await page.click('.seg button >> nth=3');
+  assert.equal(await page.getAttribute('.seg button >> nth=3', 'aria-pressed'), 'true', 'the chosen goal is marked');
+  assert.equal(await page.locator('.seg button[aria-pressed="true"]').count(), 1);
+  assert.equal(await page.textContent('.ob-goal'), '4');
   await page.click('.ob-actions .btn-primary');
   await head('מתקינים את Demigod', 'Install Demigod');
   await shot('6-install');
@@ -118,7 +119,7 @@ for (const lang of ['he', 'en']) {
   page.on('console', (m) => m.type() === 'error' && errors.push(`${lang}: ${m.text()}`));
   page.on('pageerror', (e) => errors.push(`${lang}: ${e.message}`));
 
-  await check(`${lang}: onboarding (sign-in with consent, one question per screen, profile persists and uploads)`, async () => {
+  await check(`${lang}: onboarding (sign-in with consent, "about you" on one screen, profile persists and uploads)`, async () => {
     await page.goto(base);
     await page.waitForSelector('html[data-ready="1"]');
     assert.equal(await page.evaluate(() => document.documentElement.lang), lang);

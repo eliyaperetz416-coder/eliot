@@ -11,14 +11,13 @@ test('iPhone in Safari: install first, then sign-in once skipped', () => {
   assert.equal(nextStep(S({ platform: 'ios-safari', installSkipped: true })), 'signin');
 });
 
-test('Android, signed in, nothing on the phone: the questions start with the name', () => {
-  assert.equal(nextStep(S({ signedIn: true })), 'name');
+test('Android, signed in, nothing on the phone: the questions start with "about you" (name, curve, weight, age on one screen)', () => {
+  assert.equal(nextStep(S({ signedIn: true })), 'about');
 });
 
-test('the questions come in order, age can be skipped', () => {
-  assert.equal(nextStep(S({ signedIn: true, profile: { name: 'A' } })), 'curve');
-  assert.equal(nextStep(S({ signedIn: true, profile: { name: 'A', sex: 'm' } })), 'weight');
-  assert.equal(nextStep(S({ signedIn: true, profile: { name: 'A', sex: 'm', weight: 80 } })), 'age');
+test('the questions come in order; an unanswered age counts as skipped once the screen was sent', () => {
+  assert.equal(nextStep(S({ signedIn: true, profile: { name: 'A' } })), 'about');
+  assert.equal(nextStep(S({ signedIn: true, profile: { name: 'A', sex: 'm', weight: 80 } })), 'about');
   assert.equal(nextStep(S({ signedIn: true, profile: { name: 'A', sex: 'm', weight: 80 }, ageSkipped: true })), 'goal');
   assert.equal(nextStep(S({ signedIn: true, profile: full, goalSet: true })), 'install');
   assert.equal(nextStep(S({ signedIn: true, profile: full, goalSet: true, installSkipped: true })), 'notify');
