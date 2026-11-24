@@ -963,3 +963,13 @@ button.chip:active, .seg button:active, .tab:active { opacity: .65; }
 [data-theme="marble"] .sheet-grab { background: rgb(28 26 23 / .25); }
 [data-theme="marble"] .empty-art::before { border-color: rgb(28 26 23 / .28); }
 @media (prefers-contrast: more) { [data-theme="marble"] .tabbar, [data-theme="marble"] .toast, [data-theme="marble"] .sheet { border-color: rgb(28 26 23 / .45); } }
+
+/* Installed on an iPhone (standalone), iOS can report a viewport shorter than the screen at launch: everything fixed to the
+   bottom then floats over an empty strip. In standalone there are no browser bars, so the large viewport (100lvh) is the
+   screen: whatever the layout is short by, move the bottom-anchored layers down by exactly that much (0 when it is right). */
+@media (display-mode: standalone) {
+  .tabbar { inset-block-end: calc(var(--island-gap) - (100lvh - 100%)); }
+  #toast-root { inset-block-end: calc(var(--tabbar-space) + 12px - (100lvh - 100%)); }
+  .rest-bar { inset-block-end: calc(var(--tabbar-space) + 10px - (100lvh - 100%)); }
+  .overlay, .overlay-exit { inset-block-end: calc(100% - 100lvh); }
+}

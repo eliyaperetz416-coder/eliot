@@ -1,5 +1,5 @@
 *, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; touch-action: manipulation; color-scheme: dark; background: var(--bg); }
+html { -webkit-text-size-adjust: 100%; touch-action: manipulation; color-scheme: dark; background: var(--bg); overscroll-behavior: none; } /* no rubber-band bounce: the page and the floating bar stay put at both ends (Elia, 24.11) */
 [data-theme="marble"] { color-scheme: light; }
 body {
   margin: 0; min-height: 100dvh; background: transparent; color: var(--text); /* html paints the base colour; body::before adds the colour fields */
@@ -26,8 +26,8 @@ a { color: var(--accent); }
 }
 /* Light behind everything (OUR DESIGN, redesign): dark = a soft glow of the accent from above (artboard E5);
    marble = polished stone with faint veins and a sheen (artboard E6). The glass bar reads as glass on both. */
-body::before {
-  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+body::before { /* reaches past both edges, so no strip of plain colour can ever show under a bounce or a short viewport */
+  content: ""; position: fixed; inset: -20vh 0 auto; height: calc(100vh + 40vh); height: calc(100lvh + 40vh); z-index: -1; pointer-events: none;
   background:
     radial-gradient(75% 42% at 50% 30%, rgb(var(--accent-rgb) / .10), transparent 70%),
     radial-gradient(70% 40% at 50% -5%, rgb(255 255 255 / .04), transparent 70%),
@@ -57,3 +57,4 @@ body::before {
 :root[data-motion="reduce"] *, :root[data-motion="reduce"] *::before, :root[data-motion="reduce"] *::after {
   animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important;
 }
+
