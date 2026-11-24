@@ -51,3 +51,10 @@ test('iPhone in Safari with data already on it: sign in and move the data first,
   assert.equal(nextStep(S({ platform: 'ios-safari', localData: true, signedIn: true, migrated: true, profile: full })), 'install-first');
   assert.equal(nextStep(S({ platform: 'ios-safari', localData: true, signedIn: true, migrated: true, profile: full, installSkipped: true })), 'done');
 });
+
+test('an iPad in Safari says "Macintosh": a touch screen tells it apart from a Mac (M-8)', () => {
+  const ipadUa = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15';
+  assert.equal(platformOf({ ua: ipadUa, standalone: false, touchPoints: 5 }), 'ios-safari');
+  assert.equal(platformOf({ ua: ipadUa, standalone: true, touchPoints: 5 }), 'ios-app');
+  assert.equal(platformOf({ ua: ipadUa, standalone: false, touchPoints: 0 }), 'other', 'a real Mac');
+});

@@ -1992,6 +1992,96 @@ await check('accounts: the rest reminder is sent to the server, cancelled on ski
   await c.close();
 });
 
+await check('accounts: an older app never writes over a newer one; data that is not ours never replaces the phone', async () => {
+  const c = await phone(); const acct = await installFakeSupabase(c);
+  const p = await c.newPage(); p.on('pageerror', (e) => errors.push(`old-app: ${e.message}`));
+  await onboard(p, 'he');
+  await p.evaluate(async () => (await import('./src/ui/sync.js')).syncNow());
+  const n = acct.uploads.length;
+  assert.ok(n >= 1 && acct.remote.app_version, 'the app version is stored with the data');
+  // a newer app wrote last: this one keeps its change on the phone and says so
+  acct.remote.app_version = '99.0.0'; acct.remote.version += 1;
+  const st = await p.evaluate(async () => { const s = await import('./src/ui/storage.js'); await s.updateSettings({ weeklyGoal: 6 }); return (await import('./src/ui/sync.js')).syncNow(); });
+  assert.equal(st, 'old-app');
+  assert.equal(acct.uploads.length, n, 'nothing written');
+  // something that is not our data comes down: it is refused, the phone keeps its own
+  acct.remote = { data: { workouts: 'broken' }, version: acct.remote.version + 1, app_version: null };
+  const st2 = await p.evaluate(async () => { await (await import('./src/ui/db.js')).dbPut('kv', { ...(await (await import('./src/ui/db.js')).dbGet('kv', 'sync')), syncedVersion: 1 }, 'sync'); return (await import('./src/ui/sync.js')).syncNow(); });
+  assert.equal(st2, 'rejected');
+  assert.equal(await p.evaluate(async () => (await (await import('./src/ui/db.js')).dbGet('profile', 'me'))?.name), 'Elia');
+  await c.close();
+});
+
+await check('accounts: two refreshes at once use the single-use refresh token once (nobody is signed out)', async () => {
+  const c = await phone(); const acct = await installFakeSupabase(c);
+  const p = await c.newPage();
+  await onboard(p, 'he');
+  const ok = await p.evaluate(async () => {
+    const db = await import('./src/ui/db.js');
+    const s = await db.dbGet('kv', 'session'); await db.dbPut('kv', { ...s, expiresAt: Date.now() - 1000 }, 'session');
+    const auth = await import(`./src/ui/auth.js?fresh=${Date.now()}`); // a fresh module reads the stored (expired) session
+    const r = await Promise.all([auth.getSession(), auth.getSession(), auth.getSession()]);
+    return r.every((x) => x && x.accessToken);
+  });
+  assert.equal(acct.refreshes, 1, 'one refresh');
+  assert.ok(ok, 'still signed in');
+  await c.close();
+});
+
+await check('accounts: deleting the account leaves the crew first; if that fails nothing is deleted', async () => {
+  const c = await phone(); const acct = await installFakeSupabase(c);
+  const order = [];
+  await c.route(/supabase\.co\/rest\/v1\/rpc\/leave_group/, (r) => { order.push('leave'); return r.fulfill({ status: 503, body: '{}' }); });
+  const p = await c.newPage();
+  await onboard(p, 'he');
+  await p.evaluate(async () => { await (await import('./src/ui/db.js')).dbPut('kv', { token: 't'.repeat(64), code: 'ABCDEFGH', name: 'Crew', nickname: 'Me', memberId: 'm1', lastSeenId: 0 }, 'crew'); });
+  await p.reload(); await p.waitForSelector('.tabbar');
+  const del = async () => {
+    await p.goto(`${base}#/settings`);
+    await p.locator('.row', { hasText: 'מחיקת החשבון וכל הנתונים' }).click();
+    await p.fill('.sheet input', 'מחיקה');
+    await p.locator('.sheet .btn-danger').click();
+  };
+  await del();
+  await p.waitForSelector('.toast');
+  assert.equal(acct.deletes, 0, 'the account stays while the crew spot could not be removed');
+  await c.unroute(/supabase\.co\/rest\/v1\/rpc\/leave_group/);
+  await c.route(/supabase\.co\/rest\/v1\/rpc\/leave_group/, (r) => { order.push('leave'); return r.fulfill({ status: 200, contentType: 'application/json', body: 'null' }); });
+  await c.route(/supabase\.co\/rest\/v1\/rpc\/delete_my_account/, (r) => { order.push('delete'); acct.deletes++; return r.fulfill({ status: 204 }); });
+  await p.keyboard.press('Escape'); await p.waitForTimeout(400);
+  await del();
+  await p.waitForSelector('#google', { timeout: 8000 });
+  assert.deepEqual(order.slice(-2), ['leave', 'delete']);
+  await c.close();
+});
+
+await check('accounts: the rest reminder goes to the phone you train on, is withdrawn when the app is on screen at the end, and a rest cut to 0 sends none', async () => {
+  const c = await phone(); const acct = await installFakeSupabase(c);
+  const p = await c.newPage();
+  await onboard(p, 'he');
+  await p.evaluate(async () => {
+    const fakeSub = { endpoint: 'https://push.example/this-phone', toJSON: () => ({ endpoint: 'https://push.example/this-phone', keys: { p256dh: 'x', auth: 'y' } }) };
+    Object.defineProperty(Notification, 'permission', { get: () => 'granted' });
+    Object.defineProperty(navigator.serviceWorker, 'ready', { value: Promise.resolve({ pushManager: { getSubscription: async () => fakeSub } }) });
+    const { setDraft } = await import('./src/ui/store.js'); setDraft({ id: 'rest-2', name: '', startedMs: Date.now(), entries: [] });
+    await (await import('./src/ui/rest-timer.js')).startRestTimer(15, 'x'); // the shortest rest
+  });
+  await p.waitForTimeout(600);
+  assert.ok(acct.pushes.some((x) => x?.sub?.endpoint === 'https://push.example/this-phone'), 'this phone claims the push address');
+  const posts = acct.alarms.filter((a) => a.method === 'POST').length;
+  assert.ok(posts >= 1);
+  await p.waitForTimeout(12000); // 3 s before the end, on screen: withdrawn
+  assert.equal(acct.alarms.at(-1).method, 'DELETE', `withdrawn while the app is on screen: ${acct.alarms.map((a) => a.method).join(',')} vis=${await p.evaluate(() => document.visibilityState)}`);
+  // a rest cut to (almost) nothing: no reminder in the past, the old one is withdrawn
+  await p.evaluate(async () => (await import('./src/ui/rest-timer.js')).startRestTimer(10, 'y'));
+  await p.waitForTimeout(400);
+  await p.locator('.rest-bar .rest-btn', { hasText: '−15' }).click();
+  await p.waitForTimeout(800);
+  assert.equal(acct.alarms.at(-1).method, 'DELETE', `cut to 0: ${acct.alarms.map((a) => `${a.method}${a.body ? Math.round((Date.parse(a.body.fire_at) - Date.now()) / 1000) : ''}`).join(',')} left=${await p.evaluate(async () => { const { store } = await import('./src/ui/store.js'); return store.draft?.timer ? store.draft.timer.endAt - Date.now() : 'none'; })}`);
+  assert.ok(!acct.alarms.some((a) => a.method === 'POST' && Date.parse(a.body.fire_at) < Date.now() - 1000), 'never a reminder in the past');
+  await c.close();
+});
+
 await check('start-up: a failed first request is retried; if it keeps failing there is a message and a button, not a black page', async () => {
   const c1 = await browser.newContext({ serviceWorkers: 'block' });
   const p1 = await c1.newPage(); let n = 0;

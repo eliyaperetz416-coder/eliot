@@ -8,11 +8,11 @@ import { collectData, applyImport, resetAll } from './backup.js';
 import { store, subscribe } from './store.js';
 import { onSettings } from './storage.js';
 import { dbGet, dbPut } from './db.js';
-import { decideSync, tooBig, hasLocalData, snapshotHash, SYNC_DEBOUNCE_MS } from '../core/sync.mjs';
-import { mergeData } from '../core/backup.mjs';
+import { decideSync, tooBig, hasLocalData, snapshotHash, newerApp, SYNC_DEBOUNCE_MS } from '../core/sync.mjs';
+import { mergeData, validData } from '../core/backup.mjs';
 import { APP_VERSION } from '../version.js';
 
-/** status: 'idle' | 'syncing' | 'ok' | 'offline' | 'signed-out' | 'waiting' | 'too-big' | 'rejected' | 'other-user' */
+/** status: 'idle' | 'syncing' | 'ok' | 'offline' | 'signed-out' | 'waiting' | 'too-big' | 'rejected' | 'other-user' | 'old-app' */
 export const syncState = { status: 'idle', lastOkAt: null };
 const listeners = new Set();
 export const onSync = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
@@ -31,10 +31,10 @@ const UPLOAD_MS = 60000;
 const json = async (r) => { try { return await r.json(); } catch { return null; } };
 
 async function remoteVersion(uid) {
-  const r = await authFetch(`/rest/v1/user_data?select=version&user_id=eq.${uid}`);
+  const r = await authFetch(`/rest/v1/user_data?select=version,app_version&user_id=eq.${uid}`);
   if (!r.ok) throw new Error(`http_${r.status}`);
-  const rows = await json(r);
-  return rows?.[0]?.version ?? null;
+  const row = (await json(r))?.[0];
+  return { version: row?.version ?? null, appVersion: row?.app_version ?? null };
 }
 async function remoteFull(uid) {
   const r = await authFetch(`/rest/v1/user_data?select=data,version&user_id=eq.${uid}`, {}, UPLOAD_MS);
@@ -93,7 +93,9 @@ async function once(fromChange) {
   if (meta.needsRehash) meta = await patchMeta({ lastHash: hash, needsRehash: false });
   const localDirty = hash !== meta.lastHash;
   if (fromChange && !localDirty) return 'ok'; // a change that left the data as it was (opening a screen, a recompute)
-  const rv = await remoteVersion(uid);
+  const { version: rv, appVersion } = await remoteVersion(uid);
+  // a newer app wrote last: this older copy must not write over it (it may drop what it does not know). Its own changes wait here.
+  if (newerApp(appVersion, APP_VERSION)) return 'old-app';
   const action = decideSync({ remoteVersion: rv, syncedVersion: meta.syncedVersion, localDirty, localHasData: hasLocalData(local) });
   if (action === 'none') return 'ok';
   if (action === 'push') {
@@ -106,6 +108,7 @@ async function once(fromChange) {
   if (store.draft) return 'waiting'; // pull and merge replace the phone's data: never during a workout
   const remote = await remoteFull(uid);
   if (!remote) return 'again';
+  if (!validData(remote.data)) return 'rejected'; // never replace the phone's data with something that is not ours
   if (action === 'pull') return (await applyLocal(remote.data, remote.version, hash)) === 'changed' ? 'again' : 'ok';
   const merged = mergeData(local, remote.data);
   const w = await write(uid, merged, remote.version, meta);

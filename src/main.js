@@ -124,8 +124,9 @@ async function boot() {
   await initStore();
   await initCrew();
   await initLink();
-  signInFailed = (await completeSignIn()) === 'error';
+  const back = await completeSignIn();
   session = await getSession();
+  signInFailed = back === 'error' && !session; // a stray ?error= in the address while signed in is not a failed sign-in
   onboarded = !!(await dbGet('kv', 'onboarded').catch(() => null));
   onAuth((s) => { const was = !!session; session = s; if (was !== !!s) render(); });
   const lang = settings.lang ?? store.profile?.lang ?? detectLanguage(navigator.language);

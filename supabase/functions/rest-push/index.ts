@@ -16,9 +16,20 @@ async function cfg(key: string): Promise<string | null> {
 
 type Alarm = { sub: webpush.PushSubscription; title: string; body: string };
 
+/** Compares two secrets in time that does not depend on where they differ (both are hashed first, so length leaks nothing either). */
+async function sameSecret(given: string | null, expected: string): Promise<boolean> {
+  if (!given) return false;
+  const enc = new TextEncoder();
+  const [a, b] = await Promise.all([given, expected].map((x) => crypto.subtle.digest("SHA-256", enc.encode(x))));
+  const x = new Uint8Array(a), y = new Uint8Array(b);
+  let diff = 0;
+  for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i];
+  return diff === 0;
+}
+
 Deno.serve(async (req) => {
   const secret = await cfg("notify_secret");
-  if (!secret || req.headers.get("x-notify-secret") !== secret) return json({ error: "forbidden" }, 403);
+  if (!secret || !(await sameSecret(req.headers.get("x-notify-secret"), secret))) return json({ error: "forbidden" }, 403);
   const body = await req.json().catch(() => ({}));
   const alarms: Alarm[] = Array.isArray(body.alarms) ? body.alarms : [];
   if (!alarms.length) return json({ ok: true, sent: 0 });

@@ -1230,5 +1230,6 @@
   "crew.board.open": "The top three. Tap for the full board",
   "live.more": "More",
   "res.delta": "rating",
-  "res.delta.first": "your first rating"
+  "res.delta.first": "your first rating",
+  "sync.state.old-app": "Account: a newer version of the app saved last. Close and reopen the app to save."
 }

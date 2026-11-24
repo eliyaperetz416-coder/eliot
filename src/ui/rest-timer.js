@@ -41,19 +41,38 @@ function restDone() {
 const alarmText = () => [t('rest.done'), nextLabel ? t('rest.done.next', { name: nextLabel }) : t('rest.done.title')];
 
 /** next = the name of what comes next (shown at the end of the rest and in the notification). */
+/** The server reminder is for a locked or hidden phone. When the app is on screen at the end it shows its own alert, so the
+ *  reminder is withdrawn a few seconds before (no double alert); if the app is hidden in those seconds, it is sent again. */
+const EARLY_CANCEL_MS = 3000;
+let earlyCancel = null;
+function remind() {
+  clearTimeout(earlyCancel);
+  const t = store.draft?.timer;
+  if (!t) return;
+  if (t.endAt - Date.now() <= EARLY_CANCEL_MS) { cancelRestAlarm(); return; } // ends now (or the rest was cut to 0): the app alerts itself
+  scheduleRestAlarm(t.endAt, ...alarmText());
+  const endAt = t.endAt;
+  earlyCancel = setTimeout(() => { if (document.visibilityState === 'visible' && store.draft?.timer?.endAt === endAt) cancelRestAlarm(); }, endAt - Date.now() - EARLY_CANCEL_MS);
+}
+document.addEventListener('visibilitychange', () => {
+  const t = store.draft?.timer;
+  if (document.visibilityState === 'hidden' && t && t.endAt - Date.now() > 1000 && t.endAt - Date.now() <= EARLY_CANCEL_MS) scheduleRestAlarm(t.endAt, ...alarmText());
+});
+
 export function startRestTimer(seconds, next = '') {
   if (!store.draft) return;
   nextLabel = next;
   store.draft.timer = startRest(Date.now(), seconds);
   touchDraft(); loop();
-  scheduleRestAlarm(store.draft.timer.endAt, ...alarmText());
+  remind();
 }
-export function skipRest() { if (store.draft?.timer) cancelRestAlarm(); if (store.draft) { store.draft.timer = null; touchDraft(); } doneUntil = 0; paint(); }
+export function skipRest() { clearTimeout(earlyCancel); if (store.draft?.timer) cancelRestAlarm(); if (store.draft) { store.draft.timer = null; touchDraft(); } doneUntil = 0; paint(); }
 function adjust(delta) {
   if (!store.draft?.timer) return;
   store.draft.timer = adjustRest(store.draft.timer, delta, Date.now());
-  touchDraft(); paint();
-  scheduleRestAlarm(store.draft.timer.endAt, ...alarmText());
+  touchDraft();
+  remind(); // before paint(): a rest cut to 0 ends there, and the server reminder must be withdrawn first
+  paint();
 }
 
 function paint() {

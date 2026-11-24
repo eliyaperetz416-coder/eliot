@@ -60,9 +60,15 @@ export async function completeSignIn() {
 }
 
 /** The current session, refreshed when it is about to expire. null when signed out (local data is never touched). */
+let refreshing = null;
 export async function getSession() {
   if (!loaded) { current = (await dbGet('kv', 'session').catch(() => null)) ?? null; loaded = true; }
   if (!current || !needsRefresh(current, Date.now())) return current;
+  // one refresh at a time: the refresh token is single-use, so a second refresh in parallel would be refused and sign the person out
+  refreshing ??= refresh().finally(() => { refreshing = null; });
+  return refreshing;
+}
+async function refresh() {
   try {
     const r = await authPost('token?grant_type=refresh_token', { refresh_token: current.refreshToken });
     if (r.status === 400 || r.status === 401) { await save(null); return null; }

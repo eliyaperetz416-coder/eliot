@@ -49,3 +49,25 @@ test('tooBig counts UTF-8 bytes', () => {
   assert.equal(tooBig('{}'), false);
   assert.equal(tooBig('א'.repeat(3_500_001)), true);
 });
+
+test('validData: what comes down from the account must look like our data before it replaces the phone (M-1)', async () => {
+  const { validData } = await import('../src/core/backup.mjs');
+  assert.equal(validData({ profile: { name: 'A' }, workouts: [{ id: 'w', startedMs: 1 }], routines: [], blobs: {} }), true);
+  assert.equal(validData(null), false);
+  assert.equal(validData('x'), false);
+  assert.equal(validData([]), false);
+  assert.equal(validData({ workouts: 'nope' }), false);
+  assert.equal(validData({ workouts: [{ id: 5 }] }), false);
+  assert.equal(validData({ blobs: [] }), false);
+});
+
+test('newerApp: an older app never writes over data from a newer one (M-2)', async () => {
+  const { newerApp } = await import('../src/core/sync.mjs');
+  assert.equal(newerApp('1.49.0', '1.48.2'), true);
+  assert.equal(newerApp('1.48.10', '1.48.9'), true);
+  assert.equal(newerApp('2.0', '1.99.99'), true);
+  assert.equal(newerApp('1.48.2', '1.48.2'), false);
+  assert.equal(newerApp('1.47.1', '1.48.0'), false);
+  assert.equal(newerApp(null, '1.48.0'), false, 'unknown: not newer');
+  assert.equal(newerApp('garbage', '1.48.0'), false);
+});

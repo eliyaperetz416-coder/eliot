@@ -35,17 +35,35 @@ export async function setRestPush(on) {
   try { await authFetch(`/rest/v1/user_push?user_id=eq.${s.user.id}`, { method: 'PATCH', body: JSON.stringify({ rest_enabled: !!on }) }); } catch { /* offline: the setting still stops new reminders */ }
 }
 
+/** The account keeps one push address. The phone you train on claims it when a rest starts (no question asked: only when
+ *  notifications are already allowed here), so the reminder reaches the phone in your hand, not the one that enabled it last. */
+async function claimPushRow(s) {
+  if (!pushSupported() || Notification.permission !== 'granted') return;
+  const sub = await (await navigator.serviceWorker.ready).pushManager.getSubscription();
+  if (!sub) return;
+  await authFetch('/rest/v1/user_push?on_conflict=user_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ user_id: s.user.id, sub: sub.toJSON(), rest_enabled: true, updated_at: new Date().toISOString() }) });
+}
+
+// Reminder requests go out one after another, in the order they were made: a slow "schedule" must never land after the
+// "cancel" that followed it (the server would keep a reminder nobody wants).
+let chain = Promise.resolve();
+const inOrder = (fn) => (chain = chain.then(fn, fn));
+
 /** Asks the server to notify at fireAtMs. Silent on every failure: the in-app alert still works. */
-export async function scheduleRestAlarm(fireAtMs, title, body) {
+export const scheduleRestAlarm = (fireAtMs, title, body) => inOrder(() => sendRestAlarm(fireAtMs, title, body));
+export const cancelRestAlarm = () => inOrder(sendCancel);
+
+async function sendRestAlarm(fireAtMs, title, body) {
   if (!getSettings().restPush) return;
   try {
     const s = await getSession();
     if (!s) return;
+    await claimPushRow(s).catch(() => {});
     await authFetch('/rest/v1/rest_alarms?on_conflict=user_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ user_id: s.user.id, fire_at: new Date(fireAtMs).toISOString(), title: String(title).slice(0, 80), body: String(body).slice(0, 160) }) });
   } catch { /* offline */ }
 }
 
-export async function cancelRestAlarm() {
+async function sendCancel() {
   try {
     const s = await getSession();
     if (!s) return;

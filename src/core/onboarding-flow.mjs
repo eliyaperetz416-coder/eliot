@@ -2,8 +2,8 @@
 // migrated = the account's data is already on this phone (moved up from here, or pulled down from the account).
 
 /** 'ios-safari' (iPhone/iPad browser) | 'ios-app' (added to the home screen) | 'android' | 'other' */
-export function platformOf({ ua = '', standalone = false }) {
-  const ios = /iPhone|iPad|iPod/i.test(ua);
+export function platformOf({ ua = '', standalone = false, touchPoints = 0 }) {
+  const ios = /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && touchPoints > 1); // iPadOS Safari presents itself as a Mac
   if (ios) return standalone ? 'ios-app' : 'ios-safari';
   return /Android/i.test(ua) ? 'android' : 'other';
 }

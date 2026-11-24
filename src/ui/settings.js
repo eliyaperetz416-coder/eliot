@@ -20,11 +20,12 @@ function deleteFlow() {
   const input = h('input', { class: 'text-input', type: 'text', autocomplete: 'off', autocapitalize: 'off', 'aria-label': t('set.delete.type', { word }) });
   const go = button({ label: t('set.delete.go'), variant: 'danger', block: true, disabled: true, onClick: async () => {
     go.disabled = true;
+    // the crew spot first: it lives outside the account, so once the account is gone nothing could remove it any more
+    if (crew.local) { try { await leaveCrew(); } catch { showToast({ message: t('set.delete.failed'), duration: 6000 }); go.disabled = false; return; } }
     try {
       const r = await authFetch('/rest/v1/rpc/delete_my_account', { method: 'POST', body: '{}' });
       if (!r.ok) throw new Error(`http_${r.status}`);
     } catch { showToast({ message: t('set.delete.failed'), duration: 6000 }); go.disabled = false; return; }
-    if (crew.local) { try { await leaveCrew(); } catch { /* offline: the crew spot is gone with the data anyway */ } }
     await revokeLinkQuietly();
     await resetAll();
     sh.close();

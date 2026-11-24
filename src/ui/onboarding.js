@@ -34,7 +34,7 @@ export function onboarding({ onLanguage, onDone, installPrompt = () => null, sig
   const flowState = () => {
     const p = store.profile ?? st.form;
     return {
-      platform: platformOf({ ua: navigator.userAgent, standalone: isStandalone() }),
+      platform: platformOf({ ua: navigator.userAgent, standalone: isStandalone(), touchPoints: navigator.maxTouchPoints ?? 0 }),
       installed: isStandalone(), installSkipped: !!st.installSkipped, signedIn: !!session,
       localData: !!store.profile || hasData(), migrated: st.migrated,
       profile: { name: p?.name, sex: p?.sex, weight: store.profile ? bodyweightKg() : Number(st.form.weight) || null, age: p?.age === '' ? null : (p?.age ?? null) },

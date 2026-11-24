@@ -27,3 +27,12 @@ export function decideSync({ remoteVersion, syncedVersion, localDirty, localHasD
 }
 
 export const tooBig = (json) => new TextEncoder().encode(json).length > MAX_SYNC_BYTES;
+
+/** True when app version `a` is newer than `b` ("1.49.0" > "1.48.2"). Unknown or malformed: false. */
+export function newerApp(a, b) {
+  const parse = (v) => (/^\d+(\.\d+)*$/.test(String(v ?? '')) ? String(v).split('.').map(Number) : null);
+  const x = parse(a), y = parse(b);
+  if (!x || !y) return false;
+  for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (x[i] ?? 0) - (y[i] ?? 0); if (d) return d > 0; }
+  return false;
+}

@@ -25,6 +25,19 @@ export function buildBackup({ data, appVersion, now }) {
   return { format: BACKUP_FORMAT, schemaVersion: BACKUP_VERSION, appVersion, exportedAt: now, checksum: checksum(JSON.stringify(d)), data: d };
 }
 
+/** True when `d` has the shape of our data (a backup's data, or the snapshot that comes down from the account). */
+export function validData(d) {
+  if (!d || typeof d !== 'object' || Array.isArray(d)) return false;
+  const obj = (v) => v == null || (typeof v === 'object' && !Array.isArray(v));
+  for (const k of ARRAYS) if (d[k] != null && !Array.isArray(d[k])) return false;
+  if (!obj(d.blobs) || !obj(d.renames) || !obj(d.bases) || !obj(d.model)) return false;
+  if (d.profile != null && typeof d.profile !== 'object') return false;
+  for (const w of d.workouts ?? []) if (!w || typeof w.id !== 'string' || !Number.isFinite(w.startedMs)) return false;
+  for (const k of ['routines', 'folders', 'plans', 'custom', 'requests']) for (const x of d[k] ?? []) if (!x || typeof x.id !== 'string') return false;
+  for (const e of d.bodyweight ?? []) if (!e || typeof e.dateKeyTime !== 'string') return false;
+  return true;
+}
+
 /** Returns { ok: true, backup } or { ok: false, error } with error one of: json, format, newer, checksum, shape. */
 export function validateBackup(text) {
   let b;
@@ -34,14 +47,7 @@ export function validateBackup(text) {
   if (b.schemaVersion > BACKUP_VERSION) return { ok: false, error: 'newer' };
   if (b.checksum !== checksum(JSON.stringify(b.data))) return { ok: false, error: 'checksum' };
   const d = b.data;
-  for (const k of ARRAYS) if (d[k] != null && !Array.isArray(d[k])) return { ok: false, error: 'shape' };
-  if (d.blobs != null && (typeof d.blobs !== 'object' || Array.isArray(d.blobs))) return { ok: false, error: 'shape' };
-  for (const k of ['renames', 'bases']) if (d[k] != null && (typeof d[k] !== 'object' || Array.isArray(d[k]))) return { ok: false, error: 'shape' };
-  if (d.profile != null && typeof d.profile !== 'object') return { ok: false, error: 'shape' };
-  if (d.model != null && (typeof d.model !== 'object' || Array.isArray(d.model))) return { ok: false, error: 'shape' };
-  for (const w of d.workouts ?? []) if (!w || typeof w.id !== 'string' || !Number.isFinite(w.startedMs)) return { ok: false, error: 'shape' };
-  for (const k of ['routines', 'folders', 'plans', 'custom', 'requests']) for (const x of d[k] ?? []) if (!x || typeof x.id !== 'string') return { ok: false, error: 'shape' };
-  for (const e of d.bodyweight ?? []) if (!e || typeof e.dateKeyTime !== 'string') return { ok: false, error: 'shape' };
+  if (!validData(d)) return { ok: false, error: 'shape' };
   return { ok: true, backup: { ...b, data: { ...EMPTY_DATA, ...d, blobs: d.blobs ?? {}, settings: d.settings ?? {}, renames: d.renames ?? {}, requests: d.requests ?? [], bases: d.bases ?? {} } } };
 }
 
