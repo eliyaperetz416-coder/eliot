@@ -6,8 +6,7 @@ import { getSettings, updateSettings } from './storage.js';
 import { exportBackup, resetAll } from './backup.js';
 import { recompute } from './store.js';
 import { APP_VERSION } from '../version.js';
-import { linkSection } from './link-ui.js';
-import { revokeLinkQuietly } from './link-state.js';
+import { retireLink } from './link-state.js';
 import { getSession, signOut, authFetch } from './auth.js';
 import { syncNow, syncState, onSync } from './sync.js';
 import { dbPut } from './db.js';
@@ -26,7 +25,7 @@ function deleteFlow() {
       const r = await authFetch('/rest/v1/rpc/delete_my_account', { method: 'POST', body: '{}' });
       if (!r.ok) throw new Error(`http_${r.status}`);
     } catch { showToast({ message: t('set.delete.failed'), duration: 6000 }); go.disabled = false; return; }
-    await revokeLinkQuietly();
+    await retireLink();
     await resetAll();
     sh.close();
     setTimeout(() => { location.hash = ''; location.reload(); }, 300);
@@ -36,6 +35,11 @@ function deleteFlow() {
     h('p', { text: t('set.delete.body') }), h('p', { class: 'row-sub', text: t('set.delete.type', { word }) }),
     h('div', { class: 'field-box' }, input), go,
     button({ label: t('common.cancel'), variant: 'ghost', block: true, onClick: () => sh.close() })) });
+}
+
+function creditsSheet() {
+  const sh = openSheet({ title: t('set.credits'), content: h('div', { class: 'stack' }, h('p', { text: t('set.credits.body') }),
+    button({ label: t('common.close'), variant: 'ghost', block: true, onClick: () => sh.close() })) });
 }
 
 function installSheet() {
@@ -60,7 +64,7 @@ export function settingsScreen({ onLanguage }) {
       list([
         listRow({ title: session?.user?.name || session?.user?.email || '-', sub: session?.user?.email ?? '', icon: 'profile' }),
         listRow({ title: t(`sync.state.${syncState.status}`, {}), icon: 'shield' }),
-        listRow({ title: t('set.account.signout'), sub: t('set.account.signout.sub'), icon: 'refresh', onClick: async () => {
+        listRow({ title: t('set.account.signout'), icon: 'refresh', onClick: async () => {
           if (session && (await syncNow()) !== 'ok') { showToast({ message: t('set.signout.unsaved'), duration: 6000 }); return; } // save first: nothing may be left only on this phone
           await signOut();
           await dbPut('kv', false, 'onboarded').catch(() => {});
@@ -88,25 +92,24 @@ export function settingsScreen({ onLanguage }) {
 
       h('div', { class: 'section-label', text: t('set.perm') }),
       list([
-        listRow({ title: t('set.perm.notify'), sub: t('set.perm.notify.sub'), icon: 'bolt', onClick: async () => {
+        listRow({ title: t('set.perm.notify'), icon: 'bolt', onClick: async () => {
           const r = await enablePush();
           if (r === 'on' && crew.local) { try { await enableCrewPush(); } catch { /* the crew switch stays in the crew settings */ } }
           showToast({ message: t(r === 'on' ? 'set.perm.on' : r === 'denied' ? 'set.perm.denied' : r === 'unsupported' ? 'set.perm.unsupported' : 'set.delete.failed'), duration: 5000 });
         } }),
-        listRow({ title: t('set.download'), sub: t('set.download.sub'), icon: 'download', onClick: async () => {
+        listRow({ title: t('set.download'), icon: 'download', onClick: async () => {
           try { const r = await exportBackup(); if (r !== 'cancelled') showToast({ message: t('set.download.done') }); } catch { showToast({ message: t('set.download.failed') }); }
         } }),
-        listRow({ title: t('privacy.link'), sub: t('privacy.link.sub'), icon: 'shield', onClick: () => { location.hash = '#/privacy'; } }),
+        listRow({ title: t('privacy.link'), icon: 'shield', onClick: () => { location.hash = '#/privacy'; } }),
       ]),
-      ...linkSection(draw),
 
       h('div', { class: 'section-label', text: t('set.more') }),
       list([
-        listRow({ title: t('set.install'), sub: t('set.install.sub'), icon: 'download', onClick: installSheet }),
-        listRow({ title: t('set.numbers'), sub: t('set.numbers.sub'), icon: 'info', onClick: () => { location.hash = '#/numbers'; } }),
-        listRow({ title: t('app.name'), sub: t('app.tagline'), icon: 'bolt', end: h('span', { class: 'num', dir: 'ltr', text: `${t('profile.version')} ${APP_VERSION}` }) }),
+        listRow({ title: t('set.install'), icon: 'download', onClick: installSheet }),
+        listRow({ title: t('set.numbers'), icon: 'info', onClick: () => { location.hash = '#/numbers'; } }),
+        listRow({ title: t('set.credits'), icon: 'shield', onClick: creditsSheet }),
+        listRow({ title: t('app.name'), icon: 'bolt', end: h('span', { class: 'num', dir: 'ltr', text: `${t('profile.version')} ${APP_VERSION}` }) }),
       ]),
-      h('section', { class: 'card', style: 'margin-block-start:12px' }, h('h2', { text: t('set.credits') }), h('p', { text: t('set.credits.body') })),
       h('div', { style: 'padding-block-start:16px' }, list([listRow({ title: t('set.delete'), sub: t('set.delete.sub'), icon: 'trash', onClick: deleteFlow })])));
   }
   draw();

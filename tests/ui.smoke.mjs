@@ -1374,50 +1374,33 @@ for (const lang of ['he', 'en']) {
     }
   });
 
-  await check(`${lang}: Habit Coach link: connect, code, sync, never in the backup, disconnect`, async () => {
-    const T = (he, en) => L(lang, he, en);
-    if (ONLY) await postThree(page);
+  await check(`${lang}: Habit Coach is gone: an old link is closed on the server once and forgotten; nothing about it on screen`, async () => {
     const ctx = page.context();
     const fake = createFakeCrew();
     await fake.install(ctx);
     try {
-      await page.goto(`${base}#/settings`);
-      await page.waitForSelector('.screen h1');
-      await page.getByRole('button', { name: T('חיבור ל-Habit Coach', 'Connect to Habit Coach') }).click();
-      await page.waitForSelector('[data-testid="link-code"]');
-      const code = await page.locator('[data-testid="link-code"]').inputValue();
-      assert.match(code, /^DG1-[0-9a-f]{64}$/);
-      const token = code.slice(4);
-      const snap = fake.links.get(token)?.snapshot;
-      assert.ok(snap && snap.v === 1 && snap.counts.total > 0, 'first summary uploaded');
-      for (const word of ['bodyweight', 'notes', 'entries', token]) assert.equal(JSON.stringify(snap).includes(word), false, `not shared: ${word}`);
-      await page.screenshot({ path: `${shots}${lang}-link-code.png` });
-      await page.locator('.sheet .btn-ghost').click();
-      // the token stays out of the backup file
-      const data = await page.evaluate(async () => JSON.stringify(await (await import('./src/ui/backup.js')).collectData()));
-      assert.equal(data.includes(token), false, 'token not in the backup');
-      // update now
-      const before = fake.calls.filter((c) => c.name === 'link_put').length;
-      await page.locator('.row', { hasText: T('עדכון עכשיו', 'Update now') }).click();
-      await page.waitForTimeout(300);
-      assert.ok(fake.calls.filter((c) => c.name === 'link_put').length > before, 'sync now sends');
-      await page.screenshot({ path: `${shots}${lang}-link-settings.png`, fullPage: true });
-      // survives a reload
-      await page.reload(); await page.waitForSelector('.screen h1');
-      assert.equal(await page.locator('.row', { hasText: T('ניתוק', 'Disconnect') }).count(), 1);
-      // disconnect empties the server copy
-      await page.locator('.row', { hasText: T('ניתוק', 'Disconnect') }).click();
-      await page.locator('.sheet .btn-danger').click();
-      await page.getByRole('button', { name: T('חיבור ל-Habit Coach', 'Connect to Habit Coach') }).waitFor();
-      assert.equal(fake.links.get(token).active, false);
-      assert.deepEqual(fake.links.get(token).snapshot, {});
-      assert.equal(await page.evaluate(async () => (await import('./src/ui/db.js')).dbGet('kv', 'link')), null);
-    } finally {
-      await ctx.unroute(/supabase\.co\/rest\/v1\/rpc\//);
-    }
+      await page.evaluate(async () => (await import('./src/ui/db.js')).dbPut('kv', { token: 'k'.repeat(64), connectedMs: 1, lastSyncMs: 1 }, 'link'));
+      await page.goto(`${base}#/settings`); await page.reload(); await page.waitForSelector('.screen h1');
+      await page.waitForFunction(async () => !(await (await import('./src/ui/db.js')).dbGet('kv', 'link')), null, { timeout: 5000 });
+      assert.ok(fake.calls.some((c) => c.name === 'link_revoke' && c.args.p_token === 'k'.repeat(64)), 'the summary is emptied on the server');
+      assert.equal(await page.getByText(/Habit Coach/).count(), 0, 'no Habit Coach anywhere in Settings');
+      const n = fake.calls.filter((c) => c.name === 'link_revoke').length;
+      await page.reload(); await page.waitForSelector('.screen h1'); await page.waitForTimeout(500);
+      assert.equal(fake.calls.filter((c) => c.name === 'link_revoke').length, n, 'only once');
+    } finally { await ctx.unroute(/supabase\.co\/rest\/v1\/rpc\//); }
   });
 
   await check(`${lang}: settings: account, rest alert switches, download my data, numbers page, delete account (then sign back in)`, async () => {
+    {
+      const T = (he, en) => L(lang, he, en);
+      await page.goto(`${base}#/settings`); await page.waitForSelector('.screen h1');
+      assert.ok(await page.locator('main .row .row-sub').count() <= 2, 'only the account e-mail and "delete" keep a second line');
+      assert.equal(await page.getByText('free-exercise-db').count(), 0, 'the credits are not spread on the page');
+      await page.locator('.row', { hasText: T('קרדיטים ורישיונות', 'Credits and licences') }).click();
+      await page.waitForSelector('.sheet');
+      assert.ok((await page.textContent('.sheet')).includes('free-exercise-db'));
+      await page.keyboard.press('Escape'); await page.waitForFunction(() => !document.querySelector('.sheet'));
+    }
     const T = (he, en) => L(lang, he, en);
     if (ONLY) await postThree(page);
     await page.goto(`${base}#/settings`);
