@@ -137,3 +137,14 @@ test('holds and cardio are rated by duration (v1.33): longer is higher, no bodyw
   assert.equal(r.bests[ID.plank].oneRM, undefined, 'no 1RM for a hold');
 });
 
+
+test('ratingDelta: the change on the result screen (first rating, a real change, nothing for no change), with the leader adjust', async () => {
+  const { ratingDelta } = await import('../src/core/post.mjs');
+  assert.deepEqual(ratingDelta({ pending: true }, { pending: false, rating: 342.4 }, 0), { kind: 'first', n: 342 });
+  assert.deepEqual(ratingDelta({ pending: true }, { pending: false, rating: 342 }, -100), { kind: 'first', n: 242 }, 'the first rating is the one shown everywhere else');
+  assert.deepEqual(ratingDelta({ pending: false, rating: 330 }, { pending: false, rating: 342 }, 0), { kind: 'change', n: 12 });
+  assert.deepEqual(ratingDelta({ pending: false, rating: 350 }, { pending: false, rating: 342 }, 0), { kind: 'change', n: -8 });
+  assert.equal(ratingDelta({ pending: false, rating: 342.2 }, { pending: false, rating: 341.9 }, 0), null, 'no change: nothing big on top');
+  assert.equal(ratingDelta({ pending: true }, { pending: true }, 0), null, 'still pending');
+  assert.deepEqual(ratingDelta({ pending: false, rating: 3 }, { pending: false, rating: 5 }, -100), { kind: 'change', n: 2 }, 'the adjust never hides a change (floored at 1 on both sides)');
+});

@@ -13,8 +13,8 @@ const pickSettings = (src) => Object.fromEntries(SYNCED_SETTINGS.filter((k) => s
 
 /** Everything that belongs to the user, as plain JSON (photos become data URLs). The draft is not included. */
 export async function collectData() {
-  const [profile, bodyweight, workouts, routines, folders, plans, custom, game, renames, requests, bases, model, schedule, crew] = await Promise.all([
-    dbGet('profile', 'me'), dbAll('bodyweight'), dbAll('workouts'), dbAll('routines'), dbAll('folders'), dbAll('plans'), dbAll('custom'), dbGet('game', 'me'), dbGet('kv', 'renames'), dbGet('kv', 'requests'), dbGet('kv', 'bases'), dbGet('kv', 'model'), dbGet('kv', 'schedule'), dbGet('kv', 'crew'),
+  const [profile, bodyweight, workouts, routines, folders, plans, custom, game, renames, requests, bases, schedule, crew] = await Promise.all([
+    dbGet('profile', 'me'), dbAll('bodyweight'), dbAll('workouts'), dbAll('routines'), dbAll('folders'), dbAll('plans'), dbAll('custom'), dbGet('game', 'me'), dbGet('kv', 'renames'), dbGet('kv', 'requests'), dbGet('kv', 'bases'), dbGet('kv', 'schedule'), dbGet('kv', 'crew'),
   ]);
   const blobs = {};
   for (const ex of custom) {
@@ -22,8 +22,7 @@ export async function collectData() {
     const b = await dbGet('blobs', ex.imageBlobId);
     if (b) blobs[ex.imageBlobId] = await blobToDataUrl(b);
   }
-  if (model?.photoBlobId) { const b = await dbGet('blobs', model.photoBlobId); if (b) blobs[model.photoBlobId] = await blobToDataUrl(b); }
-  return { profile: profile ?? null, bodyweight, workouts, routines, folders, plans, custom, blobs, game: game ?? null, renames: renames ?? {}, requests: requests ?? [], bases: bases ?? {}, model: model ?? null, schedule: schedule ?? null, crew: crew ?? null, settings: pickSettings(getSettings()) };
+  return { profile: profile ?? null, bodyweight, workouts, routines, folders, plans, custom, blobs, game: game ?? null, renames: renames ?? {}, requests: requests ?? [], bases: bases ?? {}, schedule: schedule ?? null, crew: crew ?? null, settings: pickSettings(getSettings()) };
 }
 
 export const backupFileName = (now = Date.now()) => `demigod-backup-${new Date(now).toISOString().slice(0, 10)}.json`;
@@ -66,7 +65,7 @@ export async function applyImport(backup, mode) {
   for (const k of ['routines', 'folders', 'plans', 'custom']) for (const x of data[k] ?? []) ops.push(['put', k, x]);
   for (const [id, b] of Object.entries(blobs)) ops.push(['put', 'blobs', b, id]);
   if (data.game) ops.push(['put', 'game', data.game, 'me']);
-  ops.push(['put', 'kv', data.renames ?? {}, 'renames'], ['put', 'kv', data.requests ?? [], 'requests'], ['put', 'kv', data.bases ?? {}, 'bases'], ['put', 'kv', data.model ?? null, 'model'], ['put', 'kv', data.schedule ?? null, 'schedule']);
+  ops.push(['put', 'kv', data.renames ?? {}, 'renames'], ['put', 'kv', data.requests ?? [], 'requests'], ['put', 'kv', data.bases ?? {}, 'bases'], ['put', 'kv', data.schedule ?? null, 'schedule']);
   if (data.crew) ops.push(['put', 'kv', data.crew, 'crew']);
   await openDb();
   await dbBatch(ops);

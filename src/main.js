@@ -134,6 +134,8 @@ async function boot() {
   screens = buildScreens({ onLanguage: changeLanguage });
   applyDocument();
   applyTheme();
+  // iOS "increase contrast" / "reduce transparency" switched while the app is open take effect at once
+  for (const q of ['(prefers-contrast: more)', '(prefers-reduced-transparency: reduce)']) matchMedia(q).addEventListener?.('change', applyTheme);
   render();
   initRestTimer(document.getElementById('rest-root'));
   onAchievements((list, reward) => showToast({ message: t('ach.toast', { name: list.map((a) => (lang2() === 'he' ? a.nameHe : a.nameEn)).join(', '), n: reward }) }));

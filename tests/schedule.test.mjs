@@ -85,3 +85,9 @@ test('workoutSize: exercises, sets and a rough length for the "next workout" row
   assert.equal(workoutSize([]), null, 'nothing in it: no row');
   assert.equal(workoutSize(undefined), null);
 });
+
+test('workoutSize: warm-up sets do not count (sets given as an array)', async () => {
+  const { workoutSize } = await import('../src/core/schedule.mjs');
+  const sets = [{ type: 'warmup' }, { type: 'warmup' }, { type: 'normal' }, { type: 'normal' }, { type: 'normal' }, { type: 'normal' }];
+  assert.deepEqual(workoutSize([{ exerciseId: 'a', sets }, { exerciseId: 'b', sets }]), { exercises: 2, sets: 8, minutes: 20 });
+});

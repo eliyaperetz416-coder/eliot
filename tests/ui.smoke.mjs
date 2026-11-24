@@ -163,6 +163,16 @@ for (const lang of ['he', 'en']) {
     await page.waitForSelector('.today-quests');
     await page.waitForTimeout(500);
     await page.screenshot({ path: `${shots}${lang}-today-dark.png` });
+    // a notched iPhone: Today still fits the screen without scrolling
+    await page.evaluate(() => document.documentElement.style.setProperty('--safe-t', '47px'));
+    await page.waitForTimeout(100);
+    assert.ok(await page.evaluate(() => document.scrollingElement.scrollHeight <= innerHeight + 1), 'Today does not scroll with a notch');
+    await page.evaluate(() => document.documentElement.style.removeProperty('--safe-t'));
+    // iOS "increase contrast" switched on while the app is open takes effect at once
+    await page.emulateMedia({ contrast: 'more' });
+    await page.waitForFunction(() => { const cs = getComputedStyle(document.documentElement); return cs.getPropertyValue('--text-dim').trim() === cs.getPropertyValue('--text').trim(); }, null, { timeout: 3000 });
+    await page.emulateMedia({ contrast: null });
+    await page.waitForFunction(() => { const cs = getComputedStyle(document.documentElement); return cs.getPropertyValue('--text-dim').trim() !== cs.getPropertyValue('--text').trim(); }, null, { timeout: 3000 });
     await page.evaluate(async () => { const s = await import('./src/ui/storage.js'); await s.updateSettings({ theme: 'marble' }); });
     await page.reload(); await page.waitForSelector('.today-crest');
     assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'marble');
@@ -383,8 +393,18 @@ for (const lang of ['he', 'en']) {
     assert.ok(await page.locator('.ent-card').first().locator('.set-fb.flash').count() >= 1, 'the last set shows its feedback too, before the exercise folds');
     await page.waitForSelector('.ent-card.entry.done .ent-row');
     assert.equal(await page.locator('.ent-card.entry.done .set-row').count(), 0, 'the finished exercise is one row');
+    // a superset keeps its mark when folded: link the two, open a third exercise
+    await page.click('.live-actions .btn-secondary');
+    await addExercise(page, 'barbell deadlift');
+    await page.evaluate(async () => { const { store, touchDraft } = await import('./src/ui/store.js'); const W = await import('./src/core/workout.mjs'); W.linkSuperset(store.draft, store.draft.entries[0].id); await touchDraft(); window.dispatchEvent(new HashChangeEvent('hashchange')); });
+    await page.waitForTimeout(300);
+    await page.locator('.ent-card').nth(2).locator('.ent-row').click();
+    await page.waitForFunction(() => document.querySelectorAll('.ent-card.entry:not(.open).ss').length === 2);
+    assert.equal(await page.locator('.ent-card.entry:not(.open) .ss-label').count(), 1, 'one superset label over the folded pair');
+    await page.locator('.ent-card').nth(1).locator('.ent-row').click(); // back to the squat
+    await page.waitForFunction(() => document.querySelectorAll('.ent-card').length === 3 && document.querySelectorAll('.ent-card')[1].querySelector('.set-row'));
     assert.ok(await page.locator('.ent-card').nth(1).locator('.set-row').count() >= 1, 'the next exercise opens');
-    await page.locator('.ent-card.entry.done .ent-row').click(); // tap it to look again
+    if (await page.locator('.ent-card.entry.done .ent-row').count()) await page.locator('.ent-card.entry.done .ent-row').click(); // tap it to look again (in a superset it opens with its partner)
     await page.waitForSelector('.ent-card.entry.done .set-row');
     await page.waitForTimeout(1400); // the feedback line shows for a moment, then only the record mark stays
     assert.equal(await page.locator('.set-fb.flash').count(), 0);
@@ -1492,6 +1512,11 @@ for (const lang of ['he', 'en']) {
 
   await check(`${lang}: no role model any more (#/model opens Today); the result still compares the weight with something familiar`, async () => {
     const T = (he, en) => L(lang, he, en);
+    // a role model saved by the old app (with a photo) is cleared from the phone and never travels to the account again
+    await page.evaluate(async () => { const db = await import('./src/ui/db.js'); await db.dbPut('blobs', new Blob(['x'], { type: 'image/png' }), 'model-old'); await db.dbPut('kv', { name: 'Old hero', photoBlobId: 'model-old' }, 'model'); });
+    await page.goto(`${base}#/workout`); await page.reload(); await page.waitForSelector('.today-start');
+    await page.waitForFunction(async () => { const db = await import('./src/ui/db.js'); return !(await db.dbGet('kv', 'model')) && !(await db.dbGet('blobs', 'model-old')); }, null, { timeout: 5000 });
+    assert.equal(await page.evaluate(async () => { const d = await (await import('./src/ui/backup.js')).collectData(); return 'model' in d || Object.keys(d.blobs).some((k) => k.startsWith('model')); }), false, 'no model in what is synced');
     await page.goto(`${base}#/model`);
     await page.waitForSelector('.today-start');
     assert.equal(await page.locator('.model-card, .model-quote').count(), 0);
@@ -1591,6 +1616,9 @@ for (const lang of ['he', 'en']) {
     await rowOf(T('ארגמן', 'Crimson')).locator('.btn').first().click();
     await page.waitForFunction(() => getComputedStyle(document.documentElement).getPropertyValue('--accent-rgb').trim().startsWith('255 77 94'));
     await page.screenshot({ path: `${shots}${lang}-shop-themes.png`, fullPage: true });
+    await page.goto(`${base}#/workout`); await page.waitForSelector('.today-start');
+    assert.ok(!/221, 186, 102|176, 138, 60/.test(await page.evaluate(() => getComputedStyle(document.querySelector('.today-start')).backgroundImage)), 'the start button follows the bought colour, no gold edges');
+    await page.goto(`${base}#/shop`); await page.waitForSelector('.shop-row');
     // title: buy and equip, then it shows on the profile
     await rowOf(T('צייד חזרות', 'Rep Hunter')).locator('.btn').click();
     await page.waitForTimeout(250);

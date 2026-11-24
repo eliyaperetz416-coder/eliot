@@ -116,3 +116,13 @@ export function buildEvents(workouts) {
   }
   return events;
 }
+
+/** The rating change shown big on the result screen (OUR DESIGN, redesign). The first rating is shown as the rating the
+ *  person sees everywhere (with a crew leader's adjust, floored at 1); a change is the real strength change (the adjust
+ *  cancels out). null when still pending or when nothing changed (no big "+0"). */
+export function ratingDelta(before, after, adjust = 0) {
+  if (!after || after.pending) return null;
+  if (!before || before.pending) return { kind: 'first', n: Math.max(1, Math.round(after.rating + (Number(adjust) || 0))) };
+  const n = Math.round(after.rating) - Math.round(before.rating);
+  return n ? { kind: 'change', n } : null;
+}

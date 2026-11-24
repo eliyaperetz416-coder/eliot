@@ -213,7 +213,10 @@ export function liveScreen() {
     const done = finished(entry);
     const n = entry.sets.filter((x) => x.type !== 'warmup').length;
     const doneSets = entry.sets.filter((x) => x.type !== 'warmup' && x.done).length;
-    return h('section', { class: `card ent-card entry ${done ? 'done' : 'next'}` },
+    const prevE = w.entries[i - 1], nextE = w.entries[i + 1], inSS = !!entry.supersetGroup; // a folded superset keeps its mark
+    const ssFirst = inSS && prevE?.supersetGroup !== entry.supersetGroup, ssLast = inSS && nextE?.supersetGroup !== entry.supersetGroup;
+    return h('section', { class: `card ent-card entry ${done ? 'done' : 'next'}${inSS ? ' ss' : ''}${ssFirst ? ' ss-first' : ''}${ssLast ? ' ss-last' : ''}` },
+      ssFirst ? h('div', { class: 'ss-label', text: t('superset.label') }) : null,
       h('button', { class: 'ent-row', type: 'button', onclick: () => { openId = entry.id; rerender(); } },
         h('span', { class: 'ent-row-mark', 'aria-hidden': 'true' }, done ? icon('check') : h('span', { class: 'num', text: String(i + 1) })),
         h('span', { class: 'ent-row-name', text: nameOf(ex) }),

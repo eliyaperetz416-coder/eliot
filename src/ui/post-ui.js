@@ -3,7 +3,7 @@ import { h } from './dom.js';
 import { icon } from './icons.js';
 import { t, getLanguage } from '../core/i18n.mjs';
 import * as W from '../core/workout.mjs';
-import { postWorkout, rankIndex } from '../core/post.mjs';
+import { postWorkout, rankIndex, ratingDelta } from '../core/post.mjs';
 import { filledOpenSets, completeFilled } from '../core/live.mjs';
 import { applyPost } from '../core/gamestate.mjs';
 import { rewardsCard } from './game-ui.js';
@@ -134,11 +134,10 @@ export function compareCard(volume) {
 
 /** The rating change, big, on top (OUR DESIGN, redesign): "+12", or your first rating. Nothing while the rank is still pending. */
 function deltaBlock(s) {
-  const b = s.overallBefore, a = s.overallAfter;
-  if (!a || a.pending) return null;
-  const d = !b || b.pending ? null : Math.round(a.rating) - Math.round(b.rating);
-  const n = d == null ? formatNum(a.rating, 0) : `${d >= 0 ? '+' : '−'}${formatNum(Math.abs(d), 0)}`;
-  return h('div', { class: 'result-delta' }, h('span', { class: 'result-delta-n num', dir: 'ltr', text: n }), h('span', { class: 'result-delta-l', text: t(d == null ? 'res.delta.first' : 'res.delta') }));
+  const d = ratingDelta(s.overallBefore, s.overallAfter, store.adjust);
+  if (!d) return null;
+  const n = d.kind === 'first' ? formatNum(d.n, 0) : `${d.n > 0 ? '+' : '−'}${formatNum(Math.abs(d.n), 0)}`;
+  return h('div', { class: 'result-delta' }, h('span', { class: 'result-delta-n num', dir: 'ltr', text: n }), h('span', { class: 'result-delta-l', text: t(d.kind === 'first' ? 'res.delta.first' : 'res.delta') }));
 }
 
 function prList(s, byId) {

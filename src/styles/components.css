@@ -590,18 +590,6 @@ a.btn { text-decoration: none; }
 .crew-codebar { padding-block: var(--s-3); }
 .crew-codebar .crew-code { font-size: 24px; }
 
-/* My role model (OUR DESIGN) */
-.model-card { position: relative; overflow: hidden; display: grid; margin-block: var(--s-3); padding: 0; }
-.model-card .model-photo { width: 100%; height: 180px; object-fit: cover; display: block; }
-.model-body { padding: var(--s-4); display: grid; gap: 6px; }
-.model-kicker { font-size: 12px; font-weight: 700; letter-spacing: .08em; color: var(--accent); text-transform: uppercase; }
-.model-name { font-size: 22px; font-weight: 700; color: var(--text); text-decoration: none; }
-.model-note { margin: 0; color: var(--text-dim); }
-.model-links { display: flex; flex-wrap: wrap; gap: var(--s-2); padding-block-start: var(--s-1); }
-.model-link { text-decoration: none; min-height: 36px; }
-.model-photo-box { display: grid; gap: var(--s-2); }
-.model-photo-preview { width: 100%; max-height: 260px; object-fit: cover; border-radius: var(--r-md); }
-
 /* Plates per side under a set (OUR DESIGN) */
 .set-plates { font-size: 13px; padding-inline-start: 46px; padding-block: 2px 4px; color: var(--accent); }
 
@@ -628,15 +616,6 @@ a.btn { text-decoration: none; }
 .swatch-dot { width: 32px; height: 32px; border-radius: 50%; flex: none; border: 2px solid var(--line); }
 .shop-row.equipped { border-color: rgb(var(--accent-rgb) / .6); }
 .profile-title { color: var(--accent); font-weight: 600; font-size: 14px; }
-
-/* Role model: weekly target, tip, quote (OUR DESIGN) */
-.model-goal { display: grid; gap: 6px; padding-block-start: var(--s-2); }
-.model-goal-top { display: flex; justify-content: space-between; gap: var(--s-3); font-size: 14px; color: var(--text-dim); }
-.model-tip { background: var(--surface-2); border-radius: var(--r-md); padding: var(--s-3); margin-block-start: var(--s-2); }
-.model-tip p { margin: 4px 0 0; }
-.model-tip-label { font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: .06em; text-transform: uppercase; }
-.model-quote { margin-block: var(--s-3); display: grid; gap: 4px; border-color: rgb(var(--accent-rgb) / .4); }
-.model-quote p { margin: 0; }
 
 /* Volume comparison on the result screen (OUR DESIGN) */
 .compare-card { display: flex; align-items: center; gap: var(--s-4); margin-block: var(--s-3); border-color: rgb(var(--accent-rgb) / .4); }
@@ -803,7 +782,7 @@ button.chip:active, .seg button:active, .tab:active { opacity: .65; }
 .signin-banner { display: grid; gap: var(--s-2); margin-block-end: var(--s-3); }
 
 /* ---------- Today (OUR DESIGN, artboards E5 dark / E6 marble) ---------- */
-.today-screen { display: flex; flex-direction: column; min-height: calc(100dvh - var(--tabbar-space) - 40px); position: relative; }
+.today-screen { display: flex; flex-direction: column; min-height: calc(100dvh - var(--tabbar-space) - 32px - var(--safe-t)); position: relative; } /* #app adds safe-t + 8 on top and tabbar-space + 24 below */
 .today-hero { overflow-x: clip; }
 .today-top { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding-block: var(--s-3) 0; position: relative; z-index: 1; }
 .today-level { display: flex; align-items: center; gap: 10px; min-height: var(--tap); color: var(--text); text-decoration: none; }
@@ -857,7 +836,7 @@ button.chip:active, .seg button:active, .tab:active { opacity: .65; }
 
 .today-actions { display: flex; gap: 10px; padding-block-end: var(--s-2); }
 .today-start { flex: 1; height: 68px; border: 0; border-radius: 14px; gap: 10px; font-size: 22px; font-weight: 900; line-height: 1.1;
-  background: linear-gradient(180deg, #DDBA66 0%, var(--accent) 55%, #B08A3C 100%); color: var(--accent-ink);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 78%, #fff) 0%, var(--accent) 55%, color-mix(in srgb, var(--accent) 82%, #000) 100%); color: var(--accent-ink);
   box-shadow: 0 10px 30px rgb(var(--accent-rgb) / .22), inset 0 1px 0 rgb(255 255 255 / .35); }
 .today-start svg { display: none; }
 [data-theme="marble"] .today-start { background: linear-gradient(180deg, #2A2723 0%, #1C1A17 100%); color: #F6F2EA; box-shadow: 0 10px 24px rgb(28 26 23 / .25), inset 0 1px 0 rgb(255 255 255 / .12); }

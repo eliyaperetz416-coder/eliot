@@ -37,6 +37,14 @@ export function recompute() {
   store.overall = overallRating(ratingsOf(store.bests), data().byId, rankBonus({ workouts: store.workouts, byId: data().byId, ratings: ratingsOf(store.bests) }).total);
 }
 
+/** "My role model" is gone (redesign): a model saved by the old app, and its photo, are removed from the phone, so they
+ *  never travel to the account again (the photo was of another person, and nothing in the app can show or delete it). */
+async function purgeOldModel() {
+  const old = await dbGet('kv', 'model').catch(() => null);
+  if (!old) return;
+  await dbBatch([...(old.photoBlobId ? [['delete', 'blobs', old.photoBlobId]] : []), ['delete', 'kv', 'model']]).catch(() => {});
+}
+
 const urls = new Map();
 async function loadCustom() {
   const list = await dbAll('custom').catch(() => []);
@@ -61,6 +69,7 @@ export async function initStore() {
   store.bases = (await dbGet('kv', 'bases').catch(() => null)) ?? {};
   store.makeup = (await dbGet('kv', 'makeup').catch(() => null)) ?? null;
   store.schedule = cleanSchedule(await dbGet('kv', 'schedule').catch(() => null));
+  await purgeOldModel();
   store.profile = profile ?? null;
   store.bwLog = bw.sort((a, b) => a.ms - b.ms);
   store.workouts = workouts.map(migrateWorkout).filter(Boolean).sort((a, b) => a.startedMs - b.startedMs);
