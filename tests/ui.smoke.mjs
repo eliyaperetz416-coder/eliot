@@ -167,11 +167,8 @@ for (const lang of ['he', 'en']) {
     assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).overscrollBehaviorY), 'none');
     const bg = await page.evaluate(() => { const cs = getComputedStyle(document.body, '::before'); return { top: parseFloat(cs.top), h: parseFloat(cs.height), vh: innerHeight }; });
     assert.ok(bg.top < 0 && bg.top + bg.h > bg.vh, `background ${JSON.stringify(bg)}`);
-    // the installed-app correction keeps the bar exactly where it is when the viewport is right
-    const barBefore = await page.evaluate(() => document.querySelector('.tabbar').getBoundingClientRect().bottom);
-    await page.addStyleTag({ content: '.tabbar { inset-block-end: calc(var(--island-gap) - (100lvh - 100%)) !important; }' });
-    assert.ok(Math.abs(await page.evaluate(() => document.querySelector('.tabbar').getBoundingClientRect().bottom) - barBefore) < 1, 'no shift when nothing is wrong');
-    await page.reload(); await page.waitForSelector('.today-crest');
+    // the floating bar sits inside the screen (never pushed past the bottom edge, where iOS does not draw)
+    assert.ok(await page.evaluate(() => { const b = document.querySelector('.tabbar').getBoundingClientRect(); return b.top >= 0 && b.bottom <= innerHeight; }), 'the whole bar is on screen');
     // a notched iPhone: Today still fits the screen without scrolling
     await page.evaluate(() => document.documentElement.style.setProperty('--safe-t', '47px'));
     await page.waitForTimeout(100);
