@@ -709,7 +709,7 @@
   "set.numbers": "About the numbers",
   "set.numbers.sub": "What is verified and what is our design",
   "set.credits": "Credits and licences",
-  "set.credits.body": "Exercise data and images: free-exercise-db (public domain). Muscle map polygons: react-body-highlighter (MIT). Fonts: Cinzel and Heebo (SIL OFL 1.1). Logo, icons and rank emblems: original artwork. Full text in docs/LICENSES.md in the repository.",
+  "set.credits.body": "Exercise data and images: free-exercise-db (public domain). Muscle map polygons: react-body-highlighter (MIT). Fonts: Cinzel and Heebo (SIL OFL 1.1). Symbols in the middle of the rank crests: Lorc and Delapouite from game-icons.net (CC BY 3.0), recoloured and placed. Logo, the other icons and the crest itself: original artwork. Full text in docs/LICENSES.md in the repository.",
   "privacy.title": "Privacy",
   "privacy.updated": "What the app keeps, where and for how long. Last updated: December 2026.",
   "privacy.link": "Privacy policy",

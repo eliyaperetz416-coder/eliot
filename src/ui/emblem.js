@@ -1,10 +1,12 @@
 // OUR DESIGN: the rank crest (artboard E5, made solid on 26.11 — Elia: "too plain, and in places you can see it is a line,
 // not a shape"; the louder versions with rays and wings were "too much"). A laurel wreath of full leaves on a stem around a
 // solid metal shield: a frame in the tier colour, a darker bevel step, enamel inside, a soft sheen (no hard highlight
-// line), and a gold bolt with a lit facet and a glow in the tier colour. The division is the gems above (V = 1 ... I = 5).
+// line), and in the middle each tier's own symbol in gold with a glow in the tier colour (crest-icons.js; the same bolt for
+// every tier "looked lazy"). Unranked keeps a dim bolt. The division is the gems above (V = 1 ... I = 5).
 // The only thing that grows with the tier is the wreath's metal: bronze (Wood, Bronze), silver (Silver), gold (Gold to
 // Olympian), white-gold to cyan (Greek God, who wears a crown of three bolts instead of gems). Unranked: iron, a dim bolt.
 import { TIER_COLORS, GREEK_GOD_GRADIENT } from '../core/ranks.mjs';
+import { ICONS, GLYPH_OF } from './crest-icons.js';
 
 let uid = 0;
 
@@ -57,6 +59,24 @@ const INNER = 'M130 53 L174 67 V107 C174 141 155 162 130 176 C105 162 86 141 86 
 const SHEEN = 'M86 67 L130 53 L174 67 V84 C150 75 108 78 86 94 Z';
 const BOLT = 'M139 70 L111 121 H127 L121 165 L151 108 H134 L143 70 Z';
 const FACET = 'M139 70 L111 121 H118 L140 76 Z';
+const ICON_SCALE = 0.1482; // a 512 icon -> about 76 px, centred at (130, 118) in the shield
+
+/** The tier's symbol painted with `paint` (a colour or url(#..)). `key` keeps the hydra's clip id unique on the page. */
+function glyph(name, paint, key) {
+  const icon = (n, extra = '') => `<g transform="translate(130 118) scale(${ICON_SCALE}) translate(-256 -256)" fill="${paint}"${extra}>${ICONS[n].map((d) => `<path d="${d}"/>`).join('')}</g>`;
+  if (name === 'bolt') return `<path d="${BOLT}" fill="${paint}"/>`;
+  if (name === 'target') { // our own (the old Wood symbol), in the old 160-wide drawing's units
+    return `<g transform="translate(130 118) scale(1.12) translate(-80 -78)"><g fill="none" stroke="${paint}" stroke-width="3.5"><circle cx="80" cy="76" r="8"/><circle cx="80" cy="76" r="16"/><circle cx="80" cy="76" r="24" stroke-dasharray="40 10"/></g><circle cx="80" cy="76" r="3" fill="${paint}"/></g>`;
+  }
+  if (name === 'temple-bolts') { // the Greek temple with three of our bolts above it
+    const bolt = (x, y, k) => `<path transform="translate(${x} ${y}) scale(${k})" d="${CROWN_BOLT}" fill="${paint}"/>`;
+    return `<g transform="translate(130 118) scale(1.15) translate(-80 -78)"><g transform="translate(0 13) translate(80 78) scale(.7) translate(-80 -78)"><g transform="translate(80 78) scale(.1289) translate(-256 -256)" fill="${paint}">${ICONS['delapouite/greek-temple'].map((d) => `<path d="${d}"/>`).join('')}</g></g>${bolt(63, 44, 0.95)}${bolt(78, 33, 1.22)}${bolt(95, 44, 0.95)}</g>`;
+  }
+  if (name === 'lorc/hydra') { // the icon's necks end in a straight cut on the left: round it into a body
+    return `<defs><clipPath id="hc${key}"><ellipse cx="320" cy="310" rx="302" ry="275"/><rect x="300" y="0" width="212" height="512"/></clipPath></defs>${icon(name, ` clip-path="url(#hc${key})"`)}`;
+  }
+  return icon(name);
+}
 const KNOT = 'M107 208 Q118 206 127 199 L129 202 Q121 210 108 212 Z M153 208 Q142 206 133 199 L131 202 Q139 210 152 212 Z';
 const CROWN_BOLT = 'M3 0 L-5 12 H0 L-3 22 L7 7 H2 L6 0 Z';
 
@@ -66,6 +86,7 @@ export function emblem({ tier = 'unranked', divisionIndex = 0, size = 96, label 
   const gg = tier === 'greekgod', un = !gg && !TIER_COLORS[tier];
   const base = un ? '#6B7080' : gg ? GREEK_GOD_GRADIENT[1] : TIER_COLORS[tier];
   const metal = wreathMetal(un ? 'unranked' : tier);
+  const sym = un ? 'bolt' : GLYPH_OF[tier];
   const anim = gg && !reduced()
     ? `<animate attributeName="stop-color" values="#ffffff;${GREEK_GOD_GRADIENT[1]};#ffffff" dur="3.6s" repeatCount="indefinite"/>`
     : '';
@@ -94,14 +115,15 @@ export function emblem({ tier = 'unranked', divisionIndex = 0, size = 96, label 
     <path class="rim" d="${SHIELD}" fill="url(#r${id})"/>
     <path d="${BEVEL}" fill="${shade(base, -0.55)}" opacity=".55"/>
     <path d="${INNER}" fill="url(#e${id})"/>
-    <path class="bolt-glow" d="${BOLT}" fill="${base}" filter="url(#f${id})" opacity="${un ? 0.25 : 0.75}"/>
-    <g${un ? ' opacity=".45"' : ''}><path d="${BOLT}" fill="url(#b${id})"/><path d="${FACET}" fill="#fff" opacity=".28"/></g>
+    <g class="glyph-glow" filter="url(#f${id})" opacity="${un ? 0.25 : 0.7}">${glyph(sym, base, `g${id}`)}</g>
+    <g class="glyph"${un ? ' opacity=".45"' : ''}>${glyph(sym, `url(#b${id})`, `m${id}`)}${un ? `<path d="${FACET}" fill="#fff" opacity=".28"/>` : ''}</g>
     <path d="${SHEEN}" fill="url(#s${id})"/>
     ${gems}${crown}`;
   const wrap = document.createElement('span');
   wrap.className = `emblem emblem-${un ? 'unranked' : tier}`;
   wrap.dataset.division = String(div);
   wrap.dataset.wreath = metal;
+  wrap.dataset.glyph = sym;
   wrap.style.setProperty('--em-glow', gg ? GREEK_GOD_GRADIENT[1] : base);
   wrap.style.width = `${size}px`;
   wrap.innerHTML = `<svg viewBox="0 0 260 230" width="${size}" height="${Math.round(size * 230 / 260)}" role="img" aria-label="${String(label ?? tier).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)}">${body}</svg>`;
