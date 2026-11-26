@@ -1661,7 +1661,7 @@ for (const lang of ['he', 'en']) {
     }
   });
 
-  await check(`${lang}: ranks-preview crest (wreath, rim, division diamonds, crown, unique ids)`, async () => {
+  await check(`${lang}: ranks-preview crest (wreath metal by tier, solid shield, glowing bolt, division diamonds, crown, unique ids)`, async () => {
     await page.goto(`${base}#/ranks-preview`);
     await page.waitForSelector('main .emblem svg');
     const r = await page.evaluate(() => {
@@ -1670,15 +1670,20 @@ for (const lang of ['he', 'en']) {
         const svg = em.querySelector('svg');
         const tier = [...em.classList].find((c) => c.startsWith('emblem-')).slice(7);
         const div = Number(em.dataset.division);
-        out.push({ tier, div, leaves: svg.querySelectorAll('ellipse.leaf').length, rim: svg.querySelectorAll('path.rim').length, dia: svg.querySelectorAll('.dia').length, crown: svg.querySelectorAll('.crown').length });
+        out.push({ tier, div, wreath: em.dataset.wreath, leaves: svg.querySelectorAll('path.leaf').length, rim: svg.querySelectorAll('path.rim').length, glow: svg.querySelectorAll('.bolt-glow').length,
+          dia: svg.querySelectorAll('.dia').length, crown: svg.querySelectorAll('.crown').length, thinWhite: [...svg.querySelectorAll('[stroke="#FFFFFF"], [stroke="#fff"]')].length });
       });
       const ids = [...document.querySelectorAll('[id]')].map((e) => e.id);
       return { out, dupes: ids.filter((x, i) => ids.indexOf(x) !== i) };
     });
     assert.ok(r.out.length >= 41, `emblems ${r.out.length}`);
+    const metal = { unranked: 'iron', wood: 'bronze', bronze: 'bronze', silver: 'silver', gold: 'gold', platinum: 'gold', diamond: 'gold', champion: 'gold', titan: 'gold', olympian: 'gold', greekgod: 'divine' };
     for (const e of r.out) {
-      assert.equal(e.leaves, 36, `${e.tier} leaves`);
-      assert.equal(e.rim, 1, `${e.tier} rim`);
+      assert.equal(e.leaves, 50, `${e.tier} leaves (12 pairs and a tip on each branch)`);
+      assert.equal(e.rim, 1, `${e.tier} solid shield`);
+      assert.equal(e.glow, 1, `${e.tier} the bolt glows`);
+      assert.equal(e.thinWhite, 0, `${e.tier} no thin white line on the shield`);
+      assert.equal(e.wreath, metal[e.tier], `${e.tier} wreath metal`);
       if (e.tier === 'greekgod') { assert.equal(e.crown, 1, 'crown'); assert.equal(e.dia, 0, 'gg diamonds'); }
       else assert.equal(e.dia, 5 - e.div, `${e.tier} ${e.div} diamonds`);
     }

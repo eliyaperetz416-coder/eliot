@@ -1,6 +1,9 @@
-// OUR DESIGN: the rank crest (artboard E5). A gold laurel wreath (36 leaves) around an enamel shield whose rim is the
-// tier colour, a faceted two-tone bolt in the middle, and the division as diamonds above (III = 3, V lowest).
-// Greek God: a #fff1b8 -> #7df9ff rim and a crown of three bolts instead of diamonds. Unranked: a grey rim, no diamonds.
+// OUR DESIGN: the rank crest (artboard E5, made solid on 26.11 — Elia: "too plain, and in places you can see it is a line,
+// not a shape"; the louder versions with rays and wings were "too much"). A laurel wreath of full leaves on a stem around a
+// solid metal shield: a frame in the tier colour, a darker bevel step, enamel inside, a soft sheen (no hard highlight
+// line), and a gold bolt with a lit facet and a glow in the tier colour. The division is the gems above (V = 1 ... I = 5).
+// The only thing that grows with the tier is the wreath's metal: bronze (Wood, Bronze), silver (Silver), gold (Gold to
+// Olympian), white-gold to cyan (Greek God, who wears a crown of three bolts instead of gems). Unranked: iron, a dim bolt.
 import { TIER_COLORS, GREEK_GOD_GRADIENT } from '../core/ranks.mjs';
 
 let uid = 0;
@@ -13,57 +16,93 @@ function shade(hex, amt) { // amt -1..1
 }
 const reduced = () => document.documentElement.dataset.motion === 'reduce' || matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// Left half of the wreath: [cx, cy, rx, ry, rotate]. The right half mirrors it around x = 130.
-const LEAVES = [[87.7, 191.5, 9, 3.6, 180], [82.1, 202.1, 9, 3.6, 236], [69.8, 178.9, 8.6, 3.5, 194], [61.7, 187.8, 8.6, 3.5, 250],
-  [55.4, 162.3, 8.3, 3.3, 208], [45.4, 169, 8.3, 3.3, 264], [45.4, 142.8, 7.9, 3.2, 222], [34.2, 146.9, 7.9, 3.2, 278],
-  [40.5, 121.4, 7.6, 3, 236], [28.6, 122.7, 7.6, 3, 292], [40.9, 99.5, 7.2, 2.9, 250], [29, 97.8, 7.2, 2.9, 306],
-  [46.6, 78.3, 6.8, 2.7, 264], [35.4, 73.8, 6.8, 2.7, 320], [57.2, 59.1, 6.5, 2.6, 278], [47.5, 52, 6.5, 2.6, 334],
-  [72.1, 43.1, 6.1, 2.4, 292], [64.4, 33.9, 6.1, 2.4, 348]];
-const leaf = (x, y, rx, ry, r) => `<ellipse class="leaf" cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" transform="rotate(${r} ${x} ${y})"/>`;
-const WREATH = LEAVES.map(([x, y, rx, ry, r]) => leaf(x, y, rx, ry, r) + leaf(+(260 - x).toFixed(1), y, rx, ry, 180 - r)).join('');
+/** The wreath's metal for a tier: 'iron' | 'bronze' | 'silver' | 'gold' | 'divine'. */
+export function wreathMetal(tier) {
+  if (tier === 'greekgod') return 'divine';
+  if (tier === 'wood' || tier === 'bronze') return 'bronze';
+  if (tier === 'silver') return 'silver';
+  return TIER_COLORS[tier] ? 'gold' : 'iron';
+}
+const WREATH_BASE = { iron: '#7c8190', bronze: '#c4874c', silver: '#c3ccda', gold: '#e3b84f' };
+function wreathStops(metal) {
+  if (metal === 'divine') return '<stop offset="0" stop-color="#ffffff"/><stop offset=".4" stop-color="#fff1b8"/><stop offset="1" stop-color="#5fd6e6"/>';
+  const m = WREATH_BASE[metal];
+  return `<stop offset="0" stop-color="${shade(m, 0.6)}"/><stop offset=".5" stop-color="${m}"/><stop offset="1" stop-color="${shade(m, -0.5)}"/>`;
+}
 
-const SHIELD = 'M130 46 L180 62 V108 C180 145 158 169 130 183 C102 169 80 145 80 108 V62 Z';
-const INNER = 'M130 56 L171 69 V108 C171 139 153 159 130 171 C107 159 89 139 89 108 V69 Z';
-const BOLT = 'M136 72 114 112h15l-4 40 26-48h-16l3-32z';
-const SMALL_BOLT = (x, y, s) => `<path d="M${x + 3 * s} ${y} L${x - 4 * s} ${y + 10 * s} H${x} L${x - 2 * s} ${y + 18 * s} L${x + 6 * s} ${y + 6 * s} H${x + 2 * s} Z"/>`;
+// One branch (the left one; the right one mirrors it around x = 130): a stem on an arc, 12 pairs of leaves pointing up
+// along it (bigger at the bottom) and one leaf at the tip. Built once; every crest fills it with its own gradient.
+const LEAF = 'M0 0 C4 -5.2 12 -5.6 18 0 C12 5.6 4 5.2 0 0 Z';
+const CX = 130, CY = 116, R = 96, FROM = 104, TO = 228, PAIRS = 12;
+const at = (deg) => [CX + R * Math.cos(deg * Math.PI / 180), CY + R * Math.sin(deg * Math.PI / 180)];
+const f1 = (n) => n.toFixed(1);
+function leafAt(deg, side, k) {
+  const [x, y] = at(deg);
+  return `<g transform="translate(${f1(x)} ${f1(y)}) rotate(${f1(deg + 90 + side * 32)}) scale(${k.toFixed(2)})"><path class="leaf" d="${LEAF}" stroke="none"/><path d="M2.5 0 Q9 -.4 15 0" fill="none" stroke="rgba(40,24,0,.38)" stroke-width=".9"/></g>`;
+}
+const BRANCH = (() => {
+  const [x0, y0] = at(FROM), [x1, y1] = at(TO);
+  let s = `<path d="M${f1(x0)} ${f1(y0)} A${R} ${R} 0 0 1 ${f1(x1)} ${f1(y1)}" fill="none" stroke-width="2.6" stroke-linecap="round"/>`;
+  for (let i = 0; i < PAIRS; i++) {
+    const deg = FROM + (TO - FROM) * (i / (PAIRS - 1)), k = 1.2 - 0.45 * (i / (PAIRS - 1));
+    s += leafAt(deg, -1, k) + leafAt(deg, 1, k);
+  }
+  const [tx, ty] = at(TO + 6);
+  return s + `<g transform="translate(${f1(tx)} ${f1(ty)}) rotate(${f1(TO + 96)}) scale(.7)"><path class="leaf" d="${LEAF}" stroke="none"/></g>`;
+})();
+
+const SHIELD = 'M130 40 L186 58 V107 C186 149 162 175 130 191 C98 175 74 149 74 107 V58 Z';
+const BEVEL = 'M130 47 L180 63 V107 C180 145 158 169 130 184 C102 169 80 145 80 107 V63 Z';
+const INNER = 'M130 53 L174 67 V107 C174 141 155 162 130 176 C105 162 86 141 86 107 V67 Z';
+const SHEEN = 'M86 67 L130 53 L174 67 V84 C150 75 108 78 86 94 Z';
+const BOLT = 'M139 70 L111 121 H127 L121 165 L151 108 H134 L143 70 Z';
+const FACET = 'M139 70 L111 121 H118 L140 76 Z';
+const KNOT = 'M107 208 Q118 206 127 199 L129 202 Q121 210 108 212 Z M153 208 Q142 206 133 199 L131 202 Q139 210 152 212 Z';
+const CROWN_BOLT = 'M3 0 L-5 12 H0 L-3 22 L7 7 H2 L6 0 Z';
 
 /** emblem({tier, divisionIndex (0=V..4=I), size, label}) -> element. `size` is the width in px. */
 export function emblem({ tier = 'unranked', divisionIndex = 0, size = 96, label }) {
   const id = ++uid; // gradient ids carry it: ids must stay unique when several crests share a screen
-  const gg = tier === 'greekgod', un = tier === 'unranked' || !TIER_COLORS[tier];
-  const base = un ? '#6B7080' : TIER_COLORS[tier];
+  const gg = tier === 'greekgod', un = !gg && !TIER_COLORS[tier];
+  const base = un ? '#6B7080' : gg ? GREEK_GOD_GRADIENT[1] : TIER_COLORS[tier];
+  const metal = wreathMetal(un ? 'unranked' : tier);
   const anim = gg && !reduced()
-    ? `<animate attributeName="stop-color" values="${GREEK_GOD_GRADIENT[0]};${GREEK_GOD_GRADIENT[1]};${GREEK_GOD_GRADIENT[0]}" dur="3.6s" repeatCount="indefinite"/>`
+    ? `<animate attributeName="stop-color" values="#ffffff;${GREEK_GOD_GRADIENT[1]};#ffffff" dur="3.6s" repeatCount="indefinite"/>`
     : '';
-  const rimStops = gg
-    ? `<stop offset="0" stop-color="${GREEK_GOD_GRADIENT[0]}">${anim}</stop><stop offset="1" stop-color="${GREEK_GOD_GRADIENT[1]}"/>`
-    : `<stop offset="0" stop-color="${shade(base, 0.7)}"/><stop offset=".4" stop-color="${base}"/><stop offset=".6" stop-color="${shade(base, -0.35)}"/><stop offset="1" stop-color="${shade(base, 0.45)}"/>`;
+  const frameStops = gg
+    ? `<stop offset="0" stop-color="#ffffff">${anim}</stop><stop offset=".35" stop-color="${GREEK_GOD_GRADIENT[0]}"/><stop offset=".7" stop-color="${GREEK_GOD_GRADIENT[1]}"/><stop offset="1" stop-color="#d9fbff"/>`
+    : `<stop offset="0" stop-color="${shade(base, 0.65)}"/><stop offset=".38" stop-color="${base}"/><stop offset=".7" stop-color="${shade(base, -0.45)}"/><stop offset="1" stop-color="${shade(base, 0.35)}"/>`;
   const div = Math.max(0, Math.min(4, divisionIndex | 0));
   const n = gg || un ? 0 : 5 - div;
-  const xs = Array.from({ length: n }, (_, i) => 130 + (i - (n - 1) / 2) * 15);
-  const diamonds = xs.map((x) => { const big = n % 2 === 1 && x === 130; const s = big ? 8 : 6; return `<rect class="dia" x="${x - s / 2}" y="${26 - s / 2 + (big ? 0 : 4)}" width="${s}" height="${s}" transform="rotate(45 ${x} ${26 + (big ? 0 : 4)})"/>`; }).join('');
-  const crown = gg ? `<g class="crown" fill="url(#r${id})">${SMALL_BOLT(112, 22, 0.8)}${SMALL_BOLT(130, 12, 1.05)}${SMALL_BOLT(148, 22, 0.8)}</g>` : '';
+  const gems = Array.from({ length: n }, (_, i) => {
+    const x = 130 + (i - (n - 1) / 2) * 15;
+    return `<g class="dia" transform="translate(${x} 26)"><path d="M0 -6 L6 0 L0 6 L-6 0 Z" fill="url(#w${id})"/><path d="M0 -6 L6 0 L0 0 Z" fill="#fff" opacity=".5"/><path d="M-6 0 L0 0 L0 6 Z" fill="#000" opacity=".25"/></g>`;
+  }).join('');
+  const crown = gg ? `<g class="crown" fill="url(#b${id})">${[[112, 14, 0.9], [130, 4, 1.15], [148, 14, 0.9]].map(([x, y, k]) => `<path transform="translate(${x} ${y}) scale(${k})" d="${CROWN_BOLT}"/>`).join('')}</g>` : '';
   const body = `
     <defs>
-      <linearGradient id="r${id}" x1="0" y1="0" x2="1" y2="1">${rimStops}</linearGradient>
-      <linearGradient id="g${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F3DB9A"/><stop offset=".5" stop-color="#C9A24A"/><stop offset="1" stop-color="#8F6E2C"/></linearGradient>
-      <radialGradient id="e${id}" cx=".5" cy=".35" r=".75"><stop offset="0" stop-color="${un ? '#1A1C22' : shade(base, -0.78)}"/><stop offset="1" stop-color="#080B12"/></radialGradient>
-      <linearGradient id="b${id}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FAEBC0"/><stop offset=".5" stop-color="#E2BE5E"/><stop offset=".5" stop-color="#A9853A"/><stop offset="1" stop-color="#7A5C22"/></linearGradient>
+      <linearGradient id="r${id}" x1="0" y1="0" x2="1" y2="1">${frameStops}</linearGradient>
+      <linearGradient id="w${id}" x1="0" y1="0" x2="0" y2="1">${wreathStops(metal)}</linearGradient>
+      <radialGradient id="e${id}" cx=".5" cy=".28" r=".85"><stop offset="0" stop-color="${gg ? '#1f4553' : shade(base, -0.5)}"/><stop offset=".55" stop-color="${gg ? '#0b1a22' : shade(base, -0.8)}"/><stop offset="1" stop-color="#05070b"/></radialGradient>
+      <linearGradient id="s${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+      <linearGradient id="b${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fffaf0"/><stop offset=".4" stop-color="${gg ? '#c6fbff' : '#f6cf6a'}"/><stop offset="1" stop-color="${gg ? '#2aa9c8' : '#9a6a18'}"/></linearGradient>
+      <filter id="f${id}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4.5"/></filter>
     </defs>
-    <g fill="none" stroke="url(#g${id})" stroke-width="1.4" stroke-linecap="round"><path d="M84.9 196.8 A96 96 0 0 1 68.3 38.5"/><path d="M175.1 196.8 A96 96 0 0 0 191.7 38.5"/></g>
-    <g fill="url(#g${id})">${WREATH}</g>
-    <path d="M130 207 l-14 14 M130 207 l14 14" stroke="url(#g${id})" stroke-width="2" stroke-linecap="round"/>
-    <circle cx="130" cy="205" r="4" fill="url(#g${id})"/>
-    <path class="rim" d="${SHIELD}" fill="url(#e${id})" stroke="url(#r${id})" stroke-width="4"${un ? ' stroke-dasharray="7 5"' : ''}/>
-    <path d="${INNER}" fill="none" stroke="url(#g${id})" stroke-width=".8" opacity=".7"/>
-    <path d="M86 66 L128 52" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round" opacity=".55"/>
-    <path d="${BOLT}" fill="url(#b${id})"${un ? ' opacity=".45"' : ''}/>
-    <g fill="url(#g${id})">${diamonds}</g>
-    ${crown}`;
+    <g fill="url(#w${id})" stroke="url(#w${id})">${BRANCH}</g>
+    <g fill="url(#w${id})" stroke="url(#w${id})" transform="translate(260 0) scale(-1 1)">${BRANCH}</g>
+    <path d="${KNOT}" fill="url(#w${id})"/><circle cx="130" cy="200" r="4.5" fill="url(#w${id})"/>
+    <path class="rim" d="${SHIELD}" fill="url(#r${id})"/>
+    <path d="${BEVEL}" fill="${shade(base, -0.55)}" opacity=".55"/>
+    <path d="${INNER}" fill="url(#e${id})"/>
+    <path class="bolt-glow" d="${BOLT}" fill="${base}" filter="url(#f${id})" opacity="${un ? 0.25 : 0.75}"/>
+    <g${un ? ' opacity=".45"' : ''}><path d="${BOLT}" fill="url(#b${id})"/><path d="${FACET}" fill="#fff" opacity=".28"/></g>
+    <path d="${SHEEN}" fill="url(#s${id})"/>
+    ${gems}${crown}`;
   const wrap = document.createElement('span');
   wrap.className = `emblem emblem-${un ? 'unranked' : tier}`;
   wrap.dataset.division = String(div);
-  wrap.style.setProperty('--em-glow', gg ? '#7df9ff' : base);
+  wrap.dataset.wreath = metal;
+  wrap.style.setProperty('--em-glow', gg ? GREEK_GOD_GRADIENT[1] : base);
   wrap.style.width = `${size}px`;
   wrap.innerHTML = `<svg viewBox="0 0 260 230" width="${size}" height="${Math.round(size * 230 / 260)}" role="img" aria-label="${String(label ?? tier).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)}">${body}</svg>`;
   return wrap;
