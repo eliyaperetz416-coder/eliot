@@ -15,6 +15,8 @@ import { h } from './ui/dom.js';
 import { completeSignIn, getSession, onAuth, startGoogleSignIn } from './ui/auth.js';
 import { startSync } from './ui/sync.js';
 import { dbGet } from './ui/db.js';
+import { LOCKED } from './core/maintenance.mjs';
+import { maintenanceScreen, keepEager } from './ui/maintenance.js';
 
 const TABS = [
   { id: 'workout', icon: 'bolt' }, { id: 'workouts', icon: 'workout' }, { id: 'ranks', icon: 'progress' }, { id: 'crew', icon: 'chat' }, { id: 'profile', icon: 'profile' },
@@ -199,9 +201,26 @@ function registerServiceWorker() {
 // `touch-action: manipulation` in base.css (chosen by Elia, v1.47).
 
 /** A failed first request (bad network, a busy server) must never leave a black page: try again a few times, then say so (OUR DESIGN). */
+// Launch day lock (spec section 3): only the dictionaries load, then the lock screen. Data, store, crew and the account
+// are never touched while locked.
+async function bootLocked() {
+  const [he, en] = await Promise.all(LANGS.map((l) => fetch(`src/data/i18n/${l}.json`).then((r) => r.json())));
+  setDictionaries({ he, en });
+  const lang = detectLanguage(navigator.language);
+  setLanguage(lang);
+  document.documentElement.lang = lang;
+  document.documentElement.dir = DIR[lang];
+  document.title = t('app.name');
+  app.replaceChildren(maintenanceScreen());
+  nav.replaceChildren();
+  document.getElementById('rest-root').replaceChildren();
+  document.documentElement.dataset.ready = '1';
+  keepEager();
+}
+
 async function start() {
   for (let i = 0; i < 3; i++) { // about 3 s in all, well before boot-guard.js (9 s) would reload the page
-    try { await boot(); return; } catch (err) { console.error(err); await new Promise((r) => setTimeout(r, 500 * (i + 1))); }
+    try { await (LOCKED ? bootLocked() : boot()); return; } catch (err) { console.error(err); await new Promise((r) => setTimeout(r, 500 * (i + 1))); }
   }
   const retry = h('button', { class: 'btn btn-primary btn-block', type: 'button', onclick: () => location.reload(), text: 'נסה שוב / Try again' });
   app.replaceChildren(h('main', { class: 'screen' }, h('h1', { class: 'display', text: 'Demigod' }),

@@ -2055,6 +2055,31 @@ await check('accounts: the morning reminder gets the seven messages from the wee
   await c.close();
 });
 
+await check('maintenance lock: only "Updating." with the return time, no button or link, in he / en / other languages; it stays (no reload)', async () => {
+  const lockServer = await serve(0, { locked: true });
+  const lockBase = `http://localhost:${lockServer.address().port}/`;
+  try {
+    for (const [locale, title] of [['he-IL', 'מתעדכנים.'], ['en-US', 'Updating.'], ['ru-RU', 'Updating.']]) {
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale, serviceWorkers: 'block' });
+      const page = await ctx.newPage();
+      await page.goto(lockBase);
+      await page.waitForSelector('html[data-ready="1"]');
+      assert.equal((await page.textContent('main.maint h1')).trim(), title, locale);
+      assert.match(await page.textContent('.maint-back'), /\d\d:\d\d/, `${locale}: the time`);
+      assert.equal(await page.locator('#app button, #app a').count(), 0, `${locale}: no button or link`);
+      assert.equal(await page.evaluate(() => document.getElementById('nav-root').childElementCount + document.getElementById('rest-root').childElementCount), 0);
+      if (locale !== 'ru-RU') await page.screenshot({ path: `${shots}lock-${locale.slice(0, 2)}.png` });
+      if (locale === 'he-IL') {
+        const url = page.url();
+        await page.waitForTimeout(10000); // boot-guard.js reloads a page that never got ready after 9 s
+        assert.equal(page.url(), url);
+        assert.equal(await page.locator('main.maint').count(), 1, 'still the lock after 10 s');
+      }
+      await ctx.close();
+    }
+  } finally { lockServer.close(); }
+});
+
 await check('installed iPhone app with a short screen (iOS reports it shorter by the status bar): the bar drops to the edge and casts no shadow into the strip', async () => {
   const c = await phone({ viewport: { width: 393, height: 793 }, screen: { width: 393, height: 852 } });
   await installFakeSupabase(c);

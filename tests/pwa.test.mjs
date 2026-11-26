@@ -65,3 +65,16 @@ test('every @font-face file exists and is precached (headings use Heebo 800/900)
   for (const w of [800, 900]) for (const s of ['hebrew', 'latin']) assert.ok(urls.includes(`assets/fonts/heebo-${s}-${w}-normal.woff2`), `${s} ${w}`);
   for (const f of urls) { assert.ok(existsSync(r(f)), f); assert.ok(list.includes(f), `precache ${f}`); }
 });
+
+test('the lock release takes over at once, the next one asks as usual (ACTIVATE_NOW follows LOCKED)', () => {
+  const sw = readFileSync(r('sw.js'), 'utf8');
+  const m = readFileSync(r('src/core/maintenance.mjs'), 'utf8');
+  const locked = /export const LOCKED = true/.test(m);
+  assert.match(sw, new RegExp(`const ACTIVATE_NOW = ${locked};`));
+});
+
+test('the lock screen works offline: its files and both dictionaries are precached', () => {
+  const sw = readFileSync(r('sw.js'), 'utf8');
+  const list = JSON.parse(sw.match(/const PRECACHE = (\[[\s\S]*?\]);/)[1]);
+  for (const f of ['src/core/maintenance.mjs', 'src/ui/maintenance.js', 'src/data/i18n/he.json', 'src/data/i18n/en.json']) assert.ok(list.includes(f), f);
+});

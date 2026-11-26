@@ -963,3 +963,15 @@ button.chip:active, .seg button:active, .tab:active { opacity: .65; }
    so nothing is cut off at the strip iOS leaves below (it cannot be drawn into). */
 [data-shortvp="1"] { --island-gap: 6px; }
 [data-shortvp="1"] .tabbar { box-shadow: inset 0 1px 0 rgb(255 255 255 / .30), inset 0 -1px 0 rgb(255 255 255 / .07), 0 -10px 28px -14px rgb(0 0 0 / .45); }
+
+/* ---------- update lock (launch day, spec section 3) ---------- */
+.maint { min-height: 100dvh; display: grid; place-content: center; justify-items: center; gap: var(--s-3); padding: var(--s-6) var(--s-5); text-align: center; }
+.maint h1 { margin: var(--s-2) 0 0; font-size: 40px; }
+.maint p { margin: 0; color: var(--text-dim); max-width: 30ch; }
+.maint .maint-back { color: var(--accent); font-weight: 700; }
+.maint-mark { width: 160px; height: 160px; display: grid; place-items: center; border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, #f6cf6a 34%, transparent) 0%, transparent 68%);
+  animation: maint-glow 3s ease-in-out infinite; }
+@keyframes maint-glow { 0%, 100% { opacity: .75; transform: scale(.96); } 50% { opacity: 1; transform: scale(1.04); } }
+[data-motion="reduce"] .maint-mark { animation: none; }
+@media (prefers-reduced-motion: reduce) { .maint-mark { animation: none; } }
