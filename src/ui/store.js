@@ -12,13 +12,9 @@ import { markPlanDone } from '../core/generator.mjs';
 import { newGame, migrateGame, evaluateAchievements } from '../core/gamestate.mjs';
 import { dateKey } from '../core/workout.mjs';
 
-export const store = { adjust: 0, profile: null, bwLog: [], workouts: [], draft: null, bests: {}, overall: { pending: true, remaining: 3, rating: 0 }, routines: [], folders: [], plans: [], custom: [], game: newGame(), requests: [], bases: {}, makeup: null, model: null, modelPhotoUrl: '', schedule: { days: {}, done: {} } };
-/** The rating shown to the member: strength + bonuses, then the crew leader's adjustment (a penalty or a prize, OUR DESIGN). store.overall stays the real one. */
-export function shownOverall() {
-  const o = store.overall, adj = Number(store.adjust) || 0;
-  if (o.pending || !adj) return o;
-  return { ...o, rating: Math.max(1, o.rating + adj), adjust: adj, rawRating: o.rating };
-}
+export const store = { profile: null, bwLog: [], workouts: [], draft: null, bests: {}, overall: { pending: true, remaining: 3, rating: 0 }, routines: [], folders: [], plans: [], custom: [], game: newGame(), requests: [], bases: {}, makeup: null, schedule: { days: {}, done: {} } };
+/** The rating shown to the member (the crew leader's adjustment is gone, migration 016): the real one. */
+export const shownOverall = () => store.overall;
 export const todayKey = () => dateKey(Date.now());
 let achievementListener = null;
 export const onAchievements = (fn) => { achievementListener = fn; };
@@ -35,6 +31,14 @@ export function recompute() {
   setWeeklyGoal(getSettings().weeklyGoal);
   setQuestClaims(store.game?.quests?.claimed);
   store.overall = overallRating(ratingsOf(store.bests), data().byId, rankBonus({ workouts: store.workouts, byId: data().byId, ratings: ratingsOf(store.bests) }).total);
+}
+
+/** "My role model" is gone (redesign): a model saved by the old app, and its photo, are removed from the phone, so they
+ *  never travel to the account again (the photo was of another person, and nothing in the app can show or delete it). */
+async function purgeOldModel() {
+  const old = await dbGet('kv', 'model').catch(() => null);
+  if (!old) return;
+  await dbBatch([...(old.photoBlobId ? [['delete', 'blobs', old.photoBlobId]] : []), ['delete', 'kv', 'model']]).catch(() => {});
 }
 
 const urls = new Map();
@@ -60,8 +64,8 @@ export async function initStore() {
   store.requests = (await dbGet('kv', 'requests').catch(() => null)) ?? [];
   store.bases = (await dbGet('kv', 'bases').catch(() => null)) ?? {};
   store.makeup = (await dbGet('kv', 'makeup').catch(() => null)) ?? null;
-  await loadModel();
   store.schedule = cleanSchedule(await dbGet('kv', 'schedule').catch(() => null));
+  await purgeOldModel();
   store.profile = profile ?? null;
   store.bwLog = bw.sort((a, b) => a.ms - b.ms);
   store.workouts = workouts.map(migrateWorkout).filter(Boolean).sort((a, b) => a.startedMs - b.startedMs);
@@ -257,33 +261,6 @@ export const MAKEUP_DAYS = 4;
 export async function saveMakeup(m) { store.makeup = m; await dbPut('kv', m, 'makeup').catch(() => {}); emit(); }
 export async function clearMakeup() { store.makeup = null; await dbPut('kv', null, 'makeup').catch(() => {}); emit(); }
 export const activeMakeup = (now = Date.now()) => (store.makeup?.entries?.length && now - store.makeup.createdMs < MAKEUP_DAYS * 86400000 ? store.makeup : null);
-
-/* ---------- my role model (OUR DESIGN): name, links and an optional photo you pick yourself ---------- */
-async function loadModel() {
-  store.model = (await dbGet('kv', 'model').catch(() => null)) ?? null;
-  if (store.modelPhotoUrl) URL.revokeObjectURL(store.modelPhotoUrl);
-  store.modelPhotoUrl = '';
-  if (store.model?.photoBlobId) { const b = await dbGet('blobs', store.model.photoBlobId).catch(() => null); if (b) store.modelPhotoUrl = URL.createObjectURL(b); }
-}
-/** photo: a Blob to set a new photo, null to remove it, undefined to keep the current one. */
-export async function saveModel(model, photo) {
-  const old = store.model?.photoBlobId ?? null;
-  const ops = [];
-  let photoBlobId = old;
-  if (photo instanceof Blob) { photoBlobId = `model-${Date.now().toString(36)}`; ops.push(['put', 'blobs', photo, photoBlobId]); }
-  else if (photo === null) photoBlobId = null;
-  if (old && old !== photoBlobId) ops.push(['delete', 'blobs', old]);
-  ops.push(['put', 'kv', { ...model, photoBlobId }, 'model']);
-  await dbBatch(ops);
-  await loadModel();
-  emit();
-}
-export async function clearModel() {
-  const old = store.model?.photoBlobId;
-  await dbBatch([...(old ? [['delete', 'blobs', old]] : []), ['put', 'kv', null, 'model']]);
-  await loadModel();
-  emit();
-}
 
 /* ---------- weekly schedule (OUR DESIGN) ---------- */
 export async function saveSchedule(next) {

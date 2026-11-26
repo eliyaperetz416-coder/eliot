@@ -116,3 +116,9 @@ test('weekly schedule travels in the backup; on merge a planned week on this pho
   assert.deepEqual(mergeData({ schedule: { days: {}, done: {} } }, { schedule: theirs }).schedule, theirs);
   assert.equal(validateBackup(JSON.stringify(buildBackup({ data: { schedule: theirs }, appVersion: 't', now: 1 }))).ok, true);
 });
+
+test('the crew spot travels with the data (accounts sync)', () => {
+  assert.equal(mergeData({ crew: null }, { crew: { token: 't' } }).crew.token, 't');
+  assert.equal(mergeData({ crew: { token: 'mine' } }, { crew: { token: 't' } }).crew.token, 'mine');
+  assert.ok('crew' in buildBackup({ data: {}, appVersion: '1', now: 1 }).data);
+});

@@ -2,124 +2,153 @@ import { h } from './dom.js';
 import { icon } from './icons.js';
 import { t, getLanguage } from '../core/i18n.mjs';
 import { button, list, listRow, openSheet, segmented, showToast, backLink } from './components.js';
-import { getSettings, updateSettings, requestPersistence, storageInfo } from './storage.js';
-import { exportBackup, readBackupFile, applyImport, resetAll } from './backup.js';
-import { summarize } from '../core/backup.mjs';
-import { formatDate, formatNum } from './format.js';
+import { getSettings, updateSettings } from './storage.js';
+import { exportBackup, resetAll } from './backup.js';
 import { recompute } from './store.js';
 import { APP_VERSION } from '../version.js';
-import { linkSection } from './link-ui.js';
-import { revokeLinkQuietly } from './link-state.js';
+import { retireLink } from './link-state.js';
+import { getSession, signOut, authFetch, startGoogleSignIn } from './auth.js';
+import { signedInWithin, REAUTH_S } from '../core/pkce.mjs';
+import { syncNow, syncState, onSync } from './sync.js';
+import { dbGet, dbPut, dbDelete } from './db.js';
+import { enablePush, setRestPush } from './push.js';
+import { crew, leaveCrew, enablePush as enableCrewPush } from './crew-state.js';
 
-const mb = (n) => `${formatNum(n / 1048576, n < 10485760 ? 1 : 0)} MB`;
-
-function importFlow(file, done) {
-  readBackupFile(file).then((r) => {
-    if (!r.ok) { showToast({ message: t(`set.import.err.${r.error}`), duration: 6000 }); return; }
-    const { backup } = r;
-    const s = summarize(backup.data);
-    const body = h('div', { class: 'stack' });
-    const run = async (mode) => {
-      try { await applyImport(backup, mode); } catch { showToast({ message: t('set.import.failed'), duration: 6000 }); sh.close(); return; }
-      sh.close();
-      showToast({ message: t('set.import.done') });
-      setTimeout(() => location.reload(), 600);
-    };
-    const choose = () => body.replaceChildren(
-      h('p', { text: t('set.import.summary', { date: formatDate(backup.exportedAt), version: backup.appVersion }) }),
-      h('p', { class: 'row-sub', text: t('set.import.counts', s) }),
-      list([
-        listRow({ title: t('set.import.merge'), sub: t('set.import.merge.sub'), icon: 'plus', onClick: () => run('merge') }),
-        listRow({ title: t('set.import.replace'), sub: t('set.import.replace.sub'), icon: 'refresh', onClick: confirm }),
-      ]),
-      button({ label: t('common.cancel'), variant: 'ghost', block: true, onClick: () => sh.close() }));
-    const confirm = () => body.replaceChildren(
-      h('p', { text: t('set.import.confirm') }),
-      button({ label: t('set.import.confirm.yes'), variant: 'danger', block: true, onClick: () => run('replace') }),
-      button({ label: t('common.cancel'), variant: 'ghost', block: true, onClick: choose }));
-    const sh = openSheet({ title: t('set.import.title'), content: body });
-    choose();
-    done?.();
-  });
+// Deleting needs a Google sign-in from the last 15 minutes (the server checks the same, migration 020): a phone left open
+// on a table cannot be used to erase the account. Before signing in again we note it, so the app comes back to this sheet.
+const REAUTH_KEY = 'reauth-delete';
+function reauthSheet() {
+  const sh = openSheet({ title: t('set.delete'), content: h('div', { class: 'stack' },
+    h('p', { text: t('set.delete.reauth') }),
+    h('div', { class: 'reauth-go' }, button({ label: t('set.delete.reauth.go'), block: true, onClick: async () => { await dbPut('kv', Date.now(), REAUTH_KEY); startGoogleSignIn(); } })),
+    button({ label: t('common.cancel'), variant: 'ghost', block: true, onClick: () => sh.close() })) });
 }
 
-function resetFlow() {
-  const word = t('set.reset.word');
-  const input = h('input', { class: 'text-input', type: 'text', autocomplete: 'off', autocapitalize: 'off', 'aria-label': t('set.reset.type', { word }) });
-  const go = button({ label: t('set.reset.go'), variant: 'danger', block: true, disabled: true, onClick: async () => {
-    await revokeLinkQuietly();
+/** Back from that sign-in: open the delete sheet again (once, and only within the 15 minutes). */
+async function resumeDelete() {
+  const at = await dbGet('kv', REAUTH_KEY).catch(() => null);
+  if (!at) return;
+  await dbDelete('kv', REAUTH_KEY).catch(() => {});
+  const s = await getSession().catch(() => null);
+  if (Date.now() - at < REAUTH_S * 1000 && s && signedInWithin(s.accessToken, Date.now())) deleteFlow();
+}
+
+/** Deletes the account (server: delete_my_account, which cascades to every account table) and then this phone's data. */
+function deleteFlow() {
+  const word = t('set.delete.word');
+  const input = h('input', { class: 'text-input', type: 'text', autocomplete: 'off', autocapitalize: 'off', 'aria-label': t('set.delete.type', { word }) });
+  const go = button({ label: t('set.delete.go'), variant: 'danger', block: true, disabled: true, onClick: async () => {
+    go.disabled = true;
+    const s = await getSession().catch(() => null);
+    if (!s || !signedInWithin(s.accessToken, Date.now())) { sh.close(); reauthSheet(); return; }
+    // the crew spot first: it lives outside the account, so once the account is gone nothing could remove it any more
+    if (crew.local) { try { await leaveCrew(); } catch { showToast({ message: t('set.delete.failed'), duration: 6000 }); go.disabled = false; return; } }
+    try {
+      const r = await authFetch('/rest/v1/rpc/delete_my_account', { method: 'POST', body: '{}' });
+      if (!r.ok) {
+        const why = await r.json().catch(() => null);
+        if (why?.message === 'reauth') { sh.close(); reauthSheet(); return; }
+        throw new Error(`http_${r.status}`);
+      }
+    } catch { showToast({ message: t('set.delete.failed'), duration: 6000 }); go.disabled = false; return; }
+    await retireLink();
     await resetAll();
     sh.close();
-    showToast({ message: t('set.reset.done') });
-    setTimeout(() => { location.hash = ''; location.reload(); }, 500);
+    setTimeout(() => { location.hash = ''; location.reload(); }, 300);
   } });
   input.addEventListener('input', () => { go.disabled = input.value.trim().toLowerCase() !== word.toLowerCase(); });
-  const sh = openSheet({ title: t('set.reset.title'), content: h('div', { class: 'stack' },
-    h('p', { text: t('set.reset.body') }), h('p', { class: 'row-sub', text: t('set.reset.type', { word }) }),
+  const sh = openSheet({ title: t('set.delete'), content: h('div', { class: 'stack' },
+    h('p', { text: t('set.delete.body') }), h('p', { class: 'row-sub', text: t('set.delete.type', { word }) }),
     h('div', { class: 'field-box' }, input), go,
     button({ label: t('common.cancel'), variant: 'ghost', block: true, onClick: () => sh.close() })) });
 }
 
-/** Hidden file input + importFlow, used by the "restore from backup" button on the first onboarding screen. */
-export function pickBackupFile() {
-  const input = h('input', { type: 'file', accept: 'application/json,.json', hidden: true, 'data-testid': 'onboarding-import-file', 'aria-label': t('set.backup.import') });
-  input.addEventListener('change', () => { const f = input.files?.[0]; input.remove(); if (f) importFlow(f); });
-  document.body.append(input);
-  input.click();
+function creditsSheet() {
+  const sh = openSheet({ title: t('set.credits'), content: h('div', { class: 'stack' }, h('p', { text: t('set.credits.body') }),
+    button({ label: t('common.close'), variant: 'ghost', block: true, onClick: () => sh.close() })) });
 }
+
+function installSheet() {
+  const sh = openSheet({ title: t('set.install'), content: h('div', { class: 'stack' },
+    h('ol', { class: 'tour-list' }, ['ob.install.ios.1', 'ob.install.ios.2', 'ob.install.ios.3'].map((k, i) => h('li', {}, h('span', { class: 'tour-n display', text: String(i + 1) }), h('span', { text: t(k) })))),
+    h('p', { class: 'row-sub', text: t('ob.install.menu') }),
+    button({ label: t('common.close'), variant: 'ghost', block: true, onClick: () => sh.close() })) });
+}
+
+const yesNo = (label, key, after) => segmented({ label, value: getSettings()[key] === false ? 'no' : 'yes', onChange: async (v) => { await updateSettings({ [key]: v === 'yes' }); after?.(v === 'yes'); }, options: [{ value: 'yes', label: t('set.yes') }, { value: 'no', label: t('set.no') }] });
 
 export function settingsScreen({ onLanguage }) {
   const root = h('main', { class: 'screen' });
-  const fileInput = h('input', { type: 'file', accept: 'application/json,.json', hidden: true, 'data-testid': 'import-file', 'aria-label': t('set.backup.import') });
-  fileInput.addEventListener('change', () => { const f = fileInput.files?.[0]; fileInput.value = ''; if (f) importFlow(f); });
-  let info = { persisted: false, usage: null };
+  let session = null;
   function draw() {
     const s = getSettings();
     root.replaceChildren(
       backLink('#/profile', t('tab.profile')),
       h('header', { class: 'screen-head' }, icon('settings', 'mark'), h('h1', { text: t('set.title') })),
-      h('div', { class: 'section-label', text: t('set.language') }),
-      segmented({ label: t('set.language'), value: getLanguage(), onChange: (l) => onLanguage(l), options: [{ value: 'he', label: t('lang.he'), lang: 'he' }, { value: 'en', label: t('lang.en'), lang: 'en' }] }),
-      h('div', { class: 'section-label', text: t('set.accent') }),
-      segmented({ label: t('set.accent'), value: s.accentMode, onChange: async (v) => { await updateSettings({ accentMode: v }); draw(); }, options: [{ value: 'rank', label: t('set.accent.rank') }, { value: 'fixed', label: t('set.accent.fixed') }] }),
-      h('div', { class: 'section-label', text: t('set.motion') }),
-      segmented({ label: t('set.motion'), value: s.reducedMotion ? 'on' : 'off', onChange: async (v) => { await updateSettings({ reducedMotion: v === 'on' }); draw(); }, options: [{ value: 'off', label: t('set.motion.off') }, { value: 'on', label: t('set.motion.on') }] }),
-      h('p', { class: 'row-sub', style: 'padding-block-start:8px', text: t('set.motion.hint') }),
-      h('div', { class: 'section-label', text: t('set.autoweight') }),
-      segmented({ label: t('set.autoweight'), value: s.autoRoutineWeight === false ? 'off' : 'on', onChange: async (v) => { await updateSettings({ autoRoutineWeight: v === 'on' }); draw(); }, options: [{ value: 'on', label: t('set.autoweight.on') }, { value: 'off', label: t('set.autoweight.off') }] }),
-      h('p', { class: 'row-sub', style: 'padding-block-start:8px', text: t('set.autoweight.hint') }),
-      h('div', { class: 'section-label', text: t('set.goal') }),
-      segmented({ label: t('set.goal'), value: String(s.weeklyGoal ?? 3), onChange: async (v) => { await updateSettings({ weeklyGoal: Number(v) }); recompute(); draw(); }, options: [2, 3, 4, 5, 6].map((n) => ({ value: String(n), label: String(n) })) }),
-      h('p', { class: 'row-sub', style: 'padding-block-start:8px', text: t('set.goal.hint') }),
-      h('div', { class: 'section-label', text: t('set.backup') }),
-      h('p', { class: 'row-sub', style: 'padding-block-end:8px', text: t('set.backup.note') }),
+
+      h('div', { class: 'section-label', text: t('set.account') }),
       list([
-        listRow({ title: t('set.backup.export'), sub: s.lastExportAt ? t('set.backup.last', { date: formatDate(s.lastExportAt) }) : t('set.backup.never'), icon: 'download', onClick: async () => {
-          try { const r = await exportBackup(); if (r !== 'cancelled') showToast({ message: t(r === 'shared' ? 'set.backup.shared' : 'set.backup.downloaded') }); draw(); } catch { showToast({ message: t('set.backup.failed') }); }
+        listRow({ title: session?.user?.name || session?.user?.email || '-', sub: session?.user?.email ?? '', icon: 'profile' }),
+        listRow({ title: t(`sync.state.${syncState.status}`, {}), icon: 'shield' }),
+        listRow({ title: t('set.account.signout'), icon: 'refresh', onClick: async () => {
+          if (session && (await syncNow()) !== 'ok') { showToast({ message: t('set.signout.unsaved'), duration: 6000 }); return; } // save first: nothing may be left only on this phone
+          await signOut();
+          await dbPut('kv', false, 'onboarded').catch(() => {});
+          location.hash = ''; location.reload();
         } }),
-        listRow({ title: t('set.backup.import'), sub: t('set.backup.import.sub'), icon: 'upload', onClick: () => fileInput.click() }),
-      ]), fileInput,
-      ...linkSection(draw),
-      h('div', { class: 'section-label', text: t('set.storage') }),
-      list([
-        listRow({ title: t('set.storage.used'), icon: 'info', end: h('span', { class: 'num', dir: 'ltr', text: info.usage != null ? mb(info.usage) : '-' }) }),
-        listRow({ title: t('set.storage.persist'), icon: 'shield', end: t(info.persisted ? 'set.storage.persist.yes' : 'set.storage.persist.no') }),
       ]),
-      info.persisted ? null : h('div', { class: 'stack', style: 'padding-block-start:8px' }, button({ label: t('set.storage.ask'), variant: 'secondary', block: true, onClick: async () => {
-        const ok = await requestPersistence(); info = await storageInfo();
-        showToast({ message: t(ok ? 'set.storage.granted' : 'set.storage.denied') }); draw();
-      } })),
-      h('div', { class: 'section-label', text: t('set.about') }),
+
+      h('div', { class: 'section-label', text: t('set.training') }),
+      h('div', { class: 'field' }, h('label', { text: t('set.goal') }),
+        segmented({ label: t('set.goal'), value: String(s.weeklyGoal ?? 3), onChange: async (v) => { await updateSettings({ weeklyGoal: Number(v) }); recompute(); draw(); }, options: [1, 2, 3, 4, 5, 6, 7].map((n) => ({ value: String(n), label: String(n) })) })),
+      h('div', { class: 'field' }, h('label', { text: t('set.autoweight') }),
+        segmented({ label: t('set.autoweight'), value: s.autoRoutineWeight === false ? 'off' : 'on', onChange: async (v) => { await updateSettings({ autoRoutineWeight: v === 'on' }); draw(); }, options: [{ value: 'on', label: t('set.autoweight.on') }, { value: 'off', label: t('set.autoweight.off') }] })),
+      h('div', { class: 'section-label', text: t('set.rest') }),
+      h('div', { class: 'field' }, h('label', { text: t('set.rest.sound') }), yesNo(t('set.rest.sound'), 'restSound')),
+      h('div', { class: 'field' }, h('label', { text: t('set.rest.vibrate') }), yesNo(t('set.rest.vibrate'), 'restVibrate')),
+      h('div', { class: 'field' }, h('label', { text: t('set.rest.push') }), yesNo(t('set.rest.push'), 'restPush', (on) => setRestPush(on))),
+
+      h('div', { class: 'section-label', text: t('set.morning') }),
+      h('div', { class: 'field' }, h('label', { text: t('set.morning') }), yesNo(t('set.morning'), 'morningReminder', () => draw())),
+      s.morningReminder === false ? null : h('div', { class: 'field' }, h('label', { for: 'morning-time', text: t('set.morning.time') }),
+        h('div', { class: 'field-box' }, (() => {
+          const el = h('input', { class: 'text-input', type: 'time', id: 'morning-time', value: s.morningTime ?? '08:00', step: 300, dir: 'ltr' });
+          el.addEventListener('change', async () => { if (/^\d{2}:\d{2}$/.test(el.value)) await updateSettings({ morningTime: el.value }); });
+          return el;
+        })())),
+
+      h('div', { class: 'section-label', text: t('set.look') }),
+      h('div', { class: 'field' }, h('label', { text: t('set.language') }),
+        segmented({ label: t('set.language'), value: getLanguage(), onChange: (l) => onLanguage(l), options: [{ value: 'he', label: t('lang.he'), lang: 'he' }, { value: 'en', label: t('lang.en'), lang: 'en' }] })),
+      h('div', { class: 'field' }, h('label', { text: t('set.theme') }),
+        segmented({ label: t('set.theme'), value: s.theme === 'marble' ? 'marble' : 'dark', onChange: async (v) => { await updateSettings({ theme: v }); draw(); }, options: [{ value: 'dark', label: t('set.theme.dark') }, { value: 'marble', label: t('set.theme.marble') }] })),
+      h('div', { class: 'field' }, h('label', { text: t('set.motion') }),
+        segmented({ label: t('set.motion'), value: s.reducedMotion ? 'on' : 'off', onChange: async (v) => { await updateSettings({ reducedMotion: v === 'on' }); draw(); }, options: [{ value: 'off', label: t('set.motion.off') }, { value: 'on', label: t('set.motion.on') }] })),
+
+      h('div', { class: 'section-label', text: t('set.perm') }),
       list([
-        listRow({ title: t('set.numbers'), sub: t('set.numbers.sub'), icon: 'info', onClick: () => { location.hash = '#/numbers'; } }),
-        listRow({ title: t('privacy.link'), sub: t('privacy.link.sub'), icon: 'shield', onClick: () => { location.hash = '#/privacy'; } }),
-        listRow({ title: t('app.name'), sub: t('app.tagline'), icon: 'bolt', end: h('span', { class: 'num', dir: 'ltr', text: `${t('profile.version')} ${APP_VERSION}` }) }),
+        listRow({ title: t('set.perm.notify'), icon: 'bolt', onClick: async () => {
+          const r = await enablePush();
+          if (r === 'on' && crew.local) { try { await enableCrewPush(); } catch { /* the crew switch stays in the crew settings */ } }
+          showToast({ message: t(r === 'on' ? 'set.perm.on' : r === 'denied' ? 'set.perm.denied' : r === 'unsupported' ? 'set.perm.unsupported' : 'set.delete.failed'), duration: 5000 });
+        } }),
+        listRow({ title: t('set.download'), icon: 'download', onClick: async () => {
+          try { const r = await exportBackup(); if (r !== 'cancelled') showToast({ message: t('set.download.done') }); } catch { showToast({ message: t('set.download.failed') }); }
+        } }),
+        listRow({ title: t('privacy.link'), icon: 'shield', onClick: () => { location.hash = '#/privacy'; } }),
       ]),
-      h('section', { class: 'card', style: 'margin-block-start:12px' }, h('h2', { text: t('set.credits') }), h('p', { text: t('set.credits.body') })),
-      h('p', { class: 'row-sub', style: 'padding-block:12px', text: t('set.privacy') }),
-      list([listRow({ title: t('set.reset'), sub: t('set.reset.sub'), icon: 'trash', onClick: resetFlow })]));
+
+      h('div', { class: 'section-label', text: t('set.more') }),
+      list([
+        listRow({ title: t('set.install'), icon: 'download', onClick: installSheet }),
+        listRow({ title: t('set.numbers'), icon: 'info', onClick: () => { location.hash = '#/numbers'; } }),
+        listRow({ title: t('set.credits'), icon: 'shield', onClick: creditsSheet }),
+        listRow({ title: t('app.name'), icon: 'bolt', end: h('span', { class: 'num', dir: 'ltr', text: `${t('profile.version')} ${APP_VERSION}` }) }),
+      ]),
+      h('div', { style: 'padding-block-start:16px' }, list([listRow({ title: t('set.delete'), sub: t('set.delete.sub'), icon: 'trash', onClick: deleteFlow })])));
   }
   draw();
-  storageInfo().then((i) => { info = i; draw(); });
+  getSession().then((x) => { session = x; draw(); resumeDelete(); });
+  const off = onSync(() => { if (root.isConnected) draw(); else off(); });
   return root;
 }

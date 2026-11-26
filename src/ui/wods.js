@@ -103,8 +103,8 @@ export function wodsScreen() {
     h('div', { class: 'section-label', text: t('wods.girls') }),
     h('div', { class: 'stack' }, list.filter((w) => w.kind === 'girl').map(card)),
     h('div', { class: 'section-label', text: t('wods.heroes') }),
-    h('p', { class: 'row-sub', text: he() ? data().wods.heroNoteHe : data().wods.heroNoteEn }),
-    h('div', { class: 'stack' }, list.filter((w) => w.kind === 'hero').map(card)));
+    h('div', { class: 'stack' }, list.filter((w) => w.kind === 'hero').map(card)),
+    h('p', { class: 'row-sub wods-hero-note', text: he() ? data().wods.heroNoteHe : data().wods.heroNoteEn })); // a footnote under the list, not a line above it
   return root;
 }
 

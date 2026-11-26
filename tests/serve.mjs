@@ -16,19 +16,21 @@ const SECURITY = process.env.NO_SECURITY_HEADERS ? [] : (JSON.parse(readFileSync
   .filter((h) => h.key !== 'Strict-Transport-Security')
   .map((h) => [h.key, h.key === 'Content-Security-Policy' ? h.value.replace(/;\s*upgrade-insecure-requests/, '') : h.value]);
 
-export function serve(port = 0) {
+/** serve(port, { locked }): tests get LOCKED as they ask (false unless a test wants the lock); `npm run serve` serves the file as it is. */
+export function serve(port = 0, { locked = false } = {}) {
   const server = createServer(async (req, res) => {
     let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
     if (p.endsWith('/')) p += 'index.html';
     const file = join(root, normalize(p));
     if (!file.startsWith(root)) { res.writeHead(403).end(); return; }
     try {
-      const body = await readFile(file);
+      let body = await readFile(file);
+      if (locked !== null && p === '/src/core/maintenance.mjs') body = Buffer.from(body.toString().replace(/export const LOCKED = (true|false)/, `export const LOCKED = ${locked}`));
       res.writeHead(200, { ...Object.fromEntries(SECURITY), 'Content-Type': TYPES[extname(file)] ?? 'application/octet-stream', 'Cache-Control': 'no-cache' }).end(body);
     } catch { res.writeHead(404).end('not found'); }
   });
   return new Promise((r) => server.listen(port, () => r(server)));
 }
 if (process.argv[1] === new URL(import.meta.url).pathname) {
-  const s = await serve(8080); console.log('http://localhost:' + s.address().port);
+  const s = await serve(8080, { locked: null }); console.log('http://localhost:' + s.address().port);
 }

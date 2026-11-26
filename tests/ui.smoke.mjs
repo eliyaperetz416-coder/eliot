@@ -5,13 +5,14 @@ import { mkdirSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import sharp from 'sharp';
 import { createFakeCrew } from './fake-crew.mjs';
+import { installFakeSupabase } from './fake-supabase.mjs';
 
 const shots = new URL(`../docs/stage-${process.env.STAGE ?? 3}/`, import.meta.url).pathname;
 mkdirSync(shots, { recursive: true });
 const server = await serve(0);
 const base = `http://localhost:${server.address().port}/`;
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-const ROUTES = ['wods', 'wod/fran', 'weakest', 'workout', 'workouts', 'exercises', 'exercise/barbell-bench-press-medium-grip', 'exercise/plank', 'ranks', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'privacy', 'requests', 'calendar', 'crew', 'profile', 'history', 'kit', 'ranks-preview'];
+const ROUTES = ['ladder', 'wods', 'wod/fran', 'weakest', 'workout', 'workouts', 'exercises', 'exercise/barbell-bench-press-medium-grip', 'exercise/plank', 'ranks', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'privacy', 'requests', 'calendar', 'crew', 'profile', 'history', 'kit', 'ranks-preview'];
 const errors = [];
 let failed = 0;
 const ONLY = process.env.ONLY;
@@ -19,29 +20,54 @@ const check = (name, fn) => (ONLY && !name.includes(ONLY) && !name.includes('onb
 const L = (lang, he, en) => (lang === 'he' ? he : en);
 
 async function onboard(page, lang, shotPrefix) {
+  const shot = (n) => (shotPrefix ? page.screenshot({ path: `${shots}${shotPrefix}-onb-${n}.png` }) : null);
+  const head = (he, en) => page.waitForSelector(`.ob-title:text-is("${L(lang, he, en)}")`);
   await page.goto(base);
   await page.waitForSelector('html[data-ready="1"]');
-  await page.waitForSelector('.onboarding');
-  await page.waitForTimeout(500);
-  if (shotPrefix) await page.screenshot({ path: `${shots}${shotPrefix}-onb1.png` });
-  await page.click('.ob-actions .btn-primary');
+  await page.waitForSelector('#google');
+  // On a fresh phone the service worker takes control and the page reloads once (main.js, controllerchange). A screenshot
+  // caught in that reload hangs headless Chromium (about 1 run in 3 before this wait), so let it happen first.
+  await page.waitForFunction(() => !!navigator.serviceWorker?.controller, null, { timeout: 15000 }).catch(() => {});
+  await page.waitForTimeout(600);
+  await page.waitForSelector('html[data-ready="1"] #google');
+  await shot('1-signin');
+  assert.equal(await page.locator('.ob-step .emblem svg').count(), 1, 'the crest on the sign-in screen');
+  assert.equal(await page.locator('.ob-word').textContent(), 'DEMIGOD');
+  assert.ok(await page.locator('#google').isDisabled(), 'Google waits for the consent box');
+  await page.check('#consent');
+  await page.click('#google'); // the fake Auth server sends us back signed in
   await page.waitForSelector('#ob-name');
-  if (shotPrefix) {
-    await page.click('.ob-actions .btn-primary'); // empty -> validation errors
-    await page.waitForSelector('.field-error');
-    await page.waitForTimeout(500);
-    await page.screenshot({ path: `${shots}${shotPrefix}-onb2-errors.png` });
-  }
+  assert.equal(await page.inputValue('#ob-name'), 'Test', 'first name from the Google account');
+  // "about you": name, curve, weight and age on one screen
+  for (const sel of ['#ob-name', '.seg', '#ob-weight', '#ob-age']) assert.equal(await page.locator(sel).count(), 1, `${sel} on the about screen`);
+  await page.fill('#ob-name', '');
+  await page.click('.ob-actions .btn-primary'); // empty -> validation errors, nothing moves on
+  await page.waitForSelector('.field-error:visible');
+  assert.equal(await page.locator('#ob-name').count(), 1);
   await page.fill('#ob-name', 'Elia');
   await page.click('.seg button >> nth=0');
+  assert.equal(await page.getAttribute('.seg button >> nth=0', 'aria-pressed'), 'true', 'the chosen curve is marked');
   await page.fill('#ob-weight', '82,5');
   await page.fill('#ob-age', '30');
-  if (shotPrefix) assert.equal(await page.locator('.field-error:visible').count(), 0, 'errors clear while typing');
-  if (shotPrefix) await page.screenshot({ path: `${shots}${shotPrefix}-onb2.png` });
+  assert.equal(await page.locator('.field-error:visible').count(), 0, 'errors clear while typing');
+  await shot('2-about');
   await page.click('.ob-actions .btn-primary');
+  await page.waitForSelector('.ob-goal');
+  await shot('5-goal');
+  await page.click('.seg button >> nth=3');
+  assert.equal(await page.getAttribute('.seg button >> nth=3', 'aria-pressed'), 'true', 'the chosen goal is marked');
+  assert.equal(await page.locator('.seg button[aria-pressed="true"]').count(), 1);
+  assert.equal(await page.textContent('.ob-goal'), '4');
+  await page.click('.ob-actions .btn-primary');
+  await head('מתקינים את Demigod', 'Install Demigod');
+  await shot('6-install');
+  await page.click('.ob-actions .btn-ghost');
+  await head('להתריע כשהמנוחה נגמרת?', 'Alert you when the rest is over?');
+  await shot('7-notify');
+  await page.click('.ob-actions .btn-ghost');
   await page.waitForSelector('.tour-list');
-  await page.waitForTimeout(500);
-  if (shotPrefix) await page.screenshot({ path: `${shots}${shotPrefix}-onb3.png` });
+  await page.waitForTimeout(400);
+  await shot('8-tour');
   await page.click('.ob-actions .btn-primary');
   await page.waitForSelector('.tabbar');
 }
@@ -61,9 +87,10 @@ async function addExercise(page, query) {
   await page.click('.pick-footer .btn');
   await page.waitForTimeout(150);
 }
-async function logSet(page, cardIndex, weight, reps) {
+async function logSet(page, cardIndex, weight, reps, rowIndex = 0) {
   const card = page.locator('.ent-card').nth(cardIndex);
-  const row = card.locator('.set-row').first();
+  if (!(await card.locator('.set-row').count())) { await card.locator('.ent-row').click(); await card.locator('.set-row').first().waitFor(); } // focus mode: only one exercise is open
+  const row = card.locator('.set-row').nth(rowIndex);
   await row.locator('.set-input').nth(0).fill(String(weight));
   await row.locator('.set-input').nth(1).fill(String(reps));
   await row.locator('.set-v').click();
@@ -93,22 +120,77 @@ async function postThree(page) {
 for (const lang of ['he', 'en']) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: lang === 'he' ? 'he-IL' : 'en-US', hasTouch: true });
   const reqFake = createFakeCrew(); // the exercise-request inbox never reaches the real server in tests
+  const account = await installFakeSupabase(ctx);
   await ctx.route(/supabase\.co\/rest\/v1\/rpc\/(submit_exercise_request|my_exercise_requests)/, reqFake.handle);
   const page = await ctx.newPage();
   page.on('console', (m) => m.type() === 'error' && errors.push(`${lang}: ${m.text()}`));
   page.on('pageerror', (e) => errors.push(`${lang}: ${e.message}`));
 
-  await check(`${lang}: onboarding (3 steps, validation, age optional, profile persists)`, async () => {
+  await check(`${lang}: onboarding (sign-in with consent, "about you" on one screen, profile persists and uploads)`, async () => {
     await page.goto(base);
     await page.waitForSelector('html[data-ready="1"]');
     assert.equal(await page.evaluate(() => document.documentElement.lang), lang);
     assert.equal(await page.evaluate(() => document.documentElement.dir), lang === 'he' ? 'rtl' : 'ltr');
     assert.equal(await page.locator('.tabbar').count(), 0, 'no tab bar during onboarding');
     await onboard(page, lang, lang);
+    assert.equal(await page.evaluate(async () => (await import('./src/ui/storage.js')).getSettings().weeklyGoal), 4, 'the goal from the first run');
+    await page.waitForTimeout(3600); // the debounced first upload
+    assert.ok(account.uploads.length >= 1, 'the profile was uploaded');
+    assert.equal(account.uploads[0].consent_version, '2026-12');
+    assert.equal(account.uploads.at(-1).data.profile.name, 'Elia');
     await page.reload();
     await page.waitForSelector('html[data-ready="1"]');
     await page.waitForSelector('.tabbar');
     assert.equal(await page.locator('.onboarding').count(), 0);
+  });
+
+  await check(`${lang}: Today (crest, week, next workout row, bell, quests, still under reduced motion)`, async () => {
+    await page.goto(`${base}#/workout`);
+    await page.waitForSelector('.today-crest .emblem svg');
+    assert.equal(await page.locator('.today-week .day').count(), 7);
+    assert.equal(await page.locator('.today-week .day.today').count(), 1);
+    assert.equal(await page.locator('.today-next').count(), 0, 'nothing planned yet: no next-workout row');
+    assert.equal(await page.locator('.today-bell .bell-dot').count(), 0, 'nothing new: no dot on the bell');
+    assert.ok(await page.locator('.today-start.choose-other').count() === 1, 'start opens the chooser while nothing is planned');
+    await page.click('.today-bell');
+    await page.waitForSelector('.sheet .bell-list');
+    await page.keyboard.press('Escape');
+    await page.click('.today-quests');
+    await page.waitForSelector('.sheet .quests');
+    await page.evaluate(() => { location.hash = '#/shop'; }); // a link inside a sheet (the streak card's "go to the shop") changes the screen
+    await page.waitForFunction(() => !document.querySelector('.sheet'), null, { timeout: 3000 }); // ...and the sheet goes with the old screen
+    await page.goto(`${base}#/workout`);
+    await page.waitForSelector('.today-quests');
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: `${shots}${lang}-today-dark.png` });
+    // no rubber-band bounce, and the background reaches past both edges (no plain strip under a bounce)
+    assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).overscrollBehaviorY), 'none');
+    const bg = await page.evaluate(() => { const cs = getComputedStyle(document.body, '::before'); return { top: parseFloat(cs.top), h: parseFloat(cs.height), vh: innerHeight }; });
+    assert.ok(bg.top < 0 && bg.top + bg.h > bg.vh, `background ${JSON.stringify(bg)}`);
+    // the floating bar sits inside the screen (never pushed past the bottom edge, where iOS does not draw)
+    assert.ok(await page.evaluate(() => { const b = document.querySelector('.tabbar').getBoundingClientRect(); return b.top >= 0 && b.bottom <= innerHeight; }), 'the whole bar is on screen');
+    // a notched iPhone: Today still fits the screen without scrolling
+    await page.evaluate(() => document.documentElement.style.setProperty('--safe-t', '47px'));
+    await page.waitForTimeout(100);
+    assert.ok(await page.evaluate(() => document.scrollingElement.scrollHeight <= innerHeight + 1), 'Today does not scroll with a notch');
+    await page.evaluate(() => document.documentElement.style.removeProperty('--safe-t'));
+    // iOS "increase contrast" switched on while the app is open takes effect at once
+    await page.emulateMedia({ contrast: 'more' });
+    await page.waitForFunction(() => { const cs = getComputedStyle(document.documentElement); return cs.getPropertyValue('--text-dim').trim() === cs.getPropertyValue('--text').trim(); }, null, { timeout: 3000 });
+    await page.emulateMedia({ contrast: null });
+    await page.waitForFunction(() => { const cs = getComputedStyle(document.documentElement); return cs.getPropertyValue('--text-dim').trim() !== cs.getPropertyValue('--text').trim(); }, null, { timeout: 3000 });
+    await page.evaluate(async () => { const s = await import('./src/ui/storage.js'); await s.updateSettings({ theme: 'marble' }); });
+    await page.reload(); await page.waitForSelector('.today-crest');
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'marble');
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: `${shots}${lang}-today-marble.png` });
+    await page.evaluate(async () => { const s = await import('./src/ui/storage.js'); await s.updateSettings({ theme: 'dark', reducedMotion: true }); });
+    await page.reload(); await page.waitForSelector('.today-crest');
+    await page.waitForTimeout(300);
+    const moving = await page.evaluate(() => document.getAnimations().filter((a) => a.playState === "running").map((a) => `${a.animationName ?? a.transitionProperty} on ${a.effect?.target?.className?.baseVal ?? a.effect?.target?.className}`));
+    assert.equal(moving.join(', '), '', `nothing moves with reduced motion: ${moving.join(', ')}`);
+    await page.evaluate(async () => { const s = await import('./src/ui/storage.js'); await s.updateSettings({ reducedMotion: false }); });
+    await page.reload(); await page.waitForSelector('.today-crest');
   });
 
   for (const r of ROUTES) {
@@ -125,6 +207,79 @@ for (const lang of ['he', 'en']) {
       assert.equal(small, 0);
     });
     await page.screenshot({ path: `${shots}${lang}-${r.replace(/\//g, '_')}.png`, fullPage: r.includes('preview') });
+  }
+
+  // Both themes everywhere (redesign): the same sweep in marble, plus readable text (WCAG AA) in each theme.
+  const readability = (scope = 'main *, .tabbar *, .sheet *') => page.evaluate((scope) => {
+    const parse = (c) => { const m = c.match(/rgba?\(([^)]+)\)/); if (!m) return null; const p = m[1].split(/[ ,/]+/).filter(Boolean).map(Number); return [p[0], p[1], p[2], p[3] ?? 1]; };
+    const lin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+    const lum = ([r, g, b]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+    const over = (top, under) => [0, 1, 2].map((i) => top[i] * top[3] + under[i] * (1 - top[3]));
+    const bgOf = (el) => { // the first solid background up the tree; null when an image or gradient is in the way (not judged)
+      const layers = [];
+      for (let x = el; x; x = x.parentElement) {
+        const cs = getComputedStyle(x);
+        if (x.classList.contains('rankup')) { layers.push([4, 5, 10, 1]); break; } // its gradient ends in near-black (components.css)
+        if (cs.backgroundImage !== 'none') return null;
+        const c = parse(cs.backgroundColor);
+        if (c && c[3] > 0) { layers.push(c); if (c[3] >= 1) break; }
+      }
+      let base = parse(getComputedStyle(document.documentElement).getPropertyValue('--bg').trim().replace(/^#(..)(..)(..)$/, (_, r, g, b) => `rgb(${parseInt(r, 16)} ${parseInt(g, 16)} ${parseInt(b, 16)})`)) ?? [0, 0, 0, 1];
+      for (const l of layers.reverse()) base = [...over(l, base), 1];
+      return base;
+    };
+    const bad = [];
+    for (const el of document.querySelectorAll(scope)) {
+      if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
+      if (el.closest('[aria-hidden="true"], [disabled], .sr-only, svg') || !el.getClientRects().length) continue;
+      const cs = getComputedStyle(el);
+      if (cs.visibility === 'hidden' || Number(cs.opacity) === 0) continue;
+      let op = 1; for (let x = el; x; x = x.parentElement) op *= Number(getComputedStyle(x).opacity);
+      const bg = bgOf(el); const fg = parse(cs.color);
+      if (!bg || !fg) continue;
+      const shown = over([fg[0], fg[1], fg[2], fg[3] * op], bg);
+      const [a, b] = [lum(shown), lum(bg)].sort((m, n) => n - m);
+      const ratio = (a + 0.05) / (b + 0.05);
+      const large = parseFloat(cs.fontSize) >= 24 || (parseFloat(cs.fontSize) >= 18.66 && Number(cs.fontWeight) >= 700);
+      if (ratio < (large ? 3 : 4.5)) bad.push(`${el.className || el.tagName} "${el.textContent.trim().slice(0, 24)}" ${ratio.toFixed(2)}`);
+    }
+    // buttons that are only an outline or a light fill must still show where they are (an edge or a fill against what is behind)
+    for (const el of document.querySelectorAll('.btn-secondary, .icon-btn, .sheet-grab')) {
+      if (!el.getClientRects().length || el.closest('[aria-hidden="true"]')) continue;
+      const cs = getComputedStyle(el); const behind = bgOf(el.parentElement); if (!behind) continue;
+      if (el.matches('.icon-btn') && !(parse(cs.backgroundColor)?.[3] > 0)) continue; // a bare icon (no circle) shows itself
+      const edge = parse(cs.borderTopColor), fill = parse(cs.backgroundColor);
+      const seen = [edge && parseFloat(cs.borderTopWidth) > 0 ? edge : null, fill].filter((c) => c && c[3] > 0).map((c) => { const m = over(c, behind); const [a, b] = [lum(m), lum(behind)].sort((x, y) => y - x); return (a + 0.05) / (b + 0.05); });
+      if (cs.backgroundImage === 'none' && Math.max(0, ...seen) < 1.15) bad.push(`${el.className} edge ${Math.max(0, ...seen).toFixed(2)}`);
+    }
+    return bad;
+  }, scope);
+  for (const theme of ['marble', 'dark']) {
+    await check(`${lang}: ${theme}: every route fits, has 44 px targets and readable text`, async () => {
+      await page.evaluate(async (th) => { const s = await import('./src/ui/storage.js'); await s.updateSettings({ theme: th }); }, theme);
+      const issues = [];
+      for (const r of ROUTES) {
+        await page.goto(`${base}#/${r}`); await page.reload();
+        await page.waitForSelector('.screen');
+        await page.waitForTimeout(500);
+        const o = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, theme: document.documentElement.dataset.theme }));
+        if (o.theme !== theme) issues.push(`#/${r}: theme ${o.theme}`);
+        if (o.sw > o.cw) issues.push(`#/${r}: overflow ${o.sw}`);
+        const small = await page.evaluate(() => [...document.querySelectorAll('button, a.tab, .btn, input:not([type=file]), a.btn')].map((el) => el.getBoundingClientRect()).filter((b) => b.width && b.height < 43.5).length);
+        if (small) issues.push(`#/${r}: ${small} small targets`);
+        for (const x of await readability()) issues.push(`#/${r}: ${x}`);
+        if (theme === 'marble') await page.screenshot({ path: `${shots}${lang}-marble-${r.replace(/\//g, '_')}.png` });
+      }
+      // the rank-up overlay draws its own dark backdrop: its text must read in both themes
+      await page.evaluate(async () => (await import('./src/ui/post-ui.js')).openRankUp({ change: { kind: 'tier', from: { tier: 'silver', division: 'I' }, to: { tier: 'gold', division: 'V' } }, before: 399, after: 401 }));
+      await page.waitForSelector('.rankup');
+      await page.waitForTimeout(1800);
+      for (const x of await readability('.rankup *')) issues.push(`rank-up: ${x}`);
+      await page.click('.rankup button');
+      await page.evaluate(async () => { const s = await import('./src/ui/storage.js'); await s.updateSettings({ theme: 'dark' }); });
+      const kinds = [...new Set(issues.map((x) => x.replace(/"[^"]*"/, '').replace(/^#\/\S+ /, '')))]; // one line per kind of problem
+      assert.equal(issues.length, 0, `${issues.length} issues, ${kinds.length} kinds: ${kinds.slice(0, 40).join(' | ')} — e.g. ${issues.slice(0, 3).join(' | ')}`);
+    });
   }
 
   await check(`${lang}: exercise library lists 320 and searches (incl. gym slang)`, async () => {
@@ -189,7 +344,7 @@ for (const lang of ['he', 'en']) {
     await page.click('.live-actions .btn-secondary');
     await addExercise(page, 'barbell deadlift');
     await logSet(page, 2, 180, 5);
-    assert.equal(await page.locator('.set-v.on').count(), 3);
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('dg.draft')).entries.flatMap((e) => e.sets).filter((x) => x.done).length), 3);
     await page.screenshot({ path: `${shots}${lang}-live-3.png` });
 
     await page.click('.live-head .btn');
@@ -201,12 +356,12 @@ for (const lang of ['he', 'en']) {
     await page.screenshot({ path: `${shots}${lang}-rankup.png` });
     await page.click('.rankup button');
     await page.waitForSelector('main .stats-grid');
+    assert.match(await page.textContent('.result-delta'), /\d/, 'the rating change, big, on top');
     await page.screenshot({ path: `${shots}${lang}-result.png`, fullPage: true });
     await page.click('main .btn-primary');
     await page.goto(`${base}#/ranks`);
-    await page.waitForSelector('.rank-card');
-    assert.equal(await page.locator('.rank-pending').count(), 0);
-    assert.equal(await page.locator('.rank-card .lp').count(), 1, 'overall rank with LP bar after 3 ranked exercises');
+    await page.waitForSelector('.pyramid');
+    assert.equal(await page.locator('.pyramid li[aria-current="step"]').count(), 1, 'ranked after 3 ranked exercises: you are on a step');
     await page.screenshot({ path: `${shots}${lang}-workout-ranked.png` });
 
     // history: open, edit, save (recalculated), delete with confirmation
@@ -227,8 +382,44 @@ for (const lang of ['he', 'en']) {
     await page.click('.sheet .btn-danger');
     await page.waitForSelector('.empty');
     await page.goto(`${base}#/ranks`);
-    await page.waitForSelector('.rank-card');
-    assert.equal(await page.locator('.rank-card .lp').count(), 0, 'rank pending again after deleting the only workout');
+    await page.waitForSelector('.pyramid');
+    assert.equal(await page.locator('.pyramid li[aria-current="step"]').count(), 0, 'rank pending again after deleting the only workout');
+  });
+
+  await check(`${lang}: live focus mode: a finished exercise folds to one row, the next opens, a record keeps a small trophy`, async () => {
+    await page.goto(`${base}#/workout`);
+    await startEmpty(page);
+    await addExercise(page, 'barbell bench press');
+    await page.click('.live-actions .btn-secondary');
+    await addExercise(page, 'barbell squat');
+    await page.waitForSelector('.live-bar');
+    assert.equal(await page.locator('.col-prev, .set-prev').count(), 0, 'no "previous" column: the last numbers are the placeholders');
+    const sets = await page.evaluate(() => JSON.parse(localStorage.getItem('dg.draft')).entries[0].sets.length);
+    for (let i = 0; i < sets; i++) await logSet(page, 0, 150, 5, i);
+    assert.ok(await page.locator('.ent-card').first().locator('.set-fb.flash').count() >= 1, 'the last set shows its feedback too, before the exercise folds');
+    await page.waitForSelector('.ent-card.entry.done .ent-row');
+    assert.equal(await page.locator('.ent-card.entry.done .set-row').count(), 0, 'the finished exercise is one row');
+    // a superset keeps its mark when folded: link the two, open a third exercise
+    await page.click('.live-actions .btn-secondary');
+    await addExercise(page, 'barbell deadlift');
+    await page.evaluate(async () => { const { store, touchDraft } = await import('./src/ui/store.js'); const W = await import('./src/core/workout.mjs'); W.linkSuperset(store.draft, store.draft.entries[0].id); await touchDraft(); window.dispatchEvent(new HashChangeEvent('hashchange')); });
+    await page.waitForTimeout(300);
+    await page.locator('.ent-card').nth(2).locator('.ent-row').click();
+    await page.waitForFunction(() => document.querySelectorAll('.ent-card.entry:not(.open).ss').length === 2);
+    assert.equal(await page.locator('.ent-card.entry:not(.open) .ss-label').count(), 1, 'one superset label over the folded pair');
+    await page.locator('.ent-card').nth(1).locator('.ent-row').click(); // back to the squat
+    await page.waitForFunction(() => document.querySelectorAll('.ent-card').length === 3 && document.querySelectorAll('.ent-card')[1].querySelector('.set-row'));
+    assert.ok(await page.locator('.ent-card').nth(1).locator('.set-row').count() >= 1, 'the next exercise opens');
+    if (await page.locator('.ent-card.entry.done .ent-row').count()) await page.locator('.ent-card.entry.done .ent-row').click(); // tap it to look again (in a superset it opens with its partner)
+    await page.waitForSelector('.ent-card.entry.done .set-row');
+    await page.waitForTimeout(1400); // the feedback line shows for a moment, then only the record mark stays
+    assert.equal(await page.locator('.set-fb.flash').count(), 0);
+    assert.ok(await page.locator('.ent-card').first().locator('.pr-mark').count() >= 1, 'a record set keeps a small trophy');
+    await page.screenshot({ path: `${shots}${lang}-live-focus.png` });
+    await page.click('.live-head .btn-finish');
+    await page.waitForSelector('.sheet .btn-danger'); await page.click('.sheet .btn-danger');
+    await page.waitForSelector('.sheet .btn-danger'); await page.click('.sheet .btn-danger');
+    await page.waitForSelector('.live-head', { state: 'detached' });
   });
 
   await check(`${lang}: discard keeps nothing; empty finish cannot post`, async () => {
@@ -248,23 +439,23 @@ for (const lang of ['he', 'en']) {
   await check(`${lang}: ranks tab with data (map, groups, table, need sheet, recovery), progress, card, exercise best`, async () => {
     await postThree(page);
     await page.goto(`${base}#/ranks`);
-    await page.waitForSelector('.mmap svg');
-    assert.equal(await page.locator('.rank-card .lp').count(), 1);
-    assert.equal(await page.locator('.mmap svg').count(), 2);
-    assert.ok(await page.locator('.mm-glow').count() >= 3, 'ranked muscles glow in their tier colour');
-    await page.click('.mm[data-muscle="chest"] polygon');
-    assert.match(await page.textContent('.mmap-info'), /Platinum|Diamond|Gold|Silver/);
-    await page.waitForSelector('.mmap-panel .row');
-    assert.equal(await page.locator('.group-row').count(), 11);
-    assert.ok(await page.locator('.ex-rank-row').count() >= 3);
+    // three tabs: rank (pyramid + exercises), body (map + groups), numbers (tiles + chart); share goes to the card
+    await page.waitForSelector('.pyramid');
+    assert.equal(await page.locator('.prog-tabs button').count(), 3);
+    assert.equal(await page.locator('.pyramid li').count(), 10);
+    assert.equal(await page.locator('.pyramid li[aria-current="step"]').count(), 1);
+    assert.equal(await page.locator('.prog-share').getAttribute('href'), '#/card');
+    const shown = await page.locator('.ex-rank-row').count();
+    assert.ok(shown >= 3 && shown <= 5, `rows ${shown}`);
     await page.waitForTimeout(400);
     await page.screenshot({ path: `${shots}${lang}-ranks-data.png`, fullPage: true });
-    const o = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
-    assert.ok(o.sw <= o.cw, 'no horizontal overflow with data');
-    // sort
+    // sort (a sheet with four orders)
     const first = await page.locator('.ex-rank-row .row-title').first().textContent();
-    await page.locator('.seg').nth(1).locator('button').nth(1).click(); // sort by name
-    await page.waitForSelector('.ex-rank-row');
+    await page.click('.prog-sort');
+    await page.waitForSelector('.sheet .row');
+    assert.equal(await page.locator('.sheet .row').count(), 4);
+    await page.locator('.sheet .row').nth(1).click(); // by name
+    await page.waitForFunction(() => !document.querySelector('.sheet'));
     const names = await page.locator('.ex-rank-row .row-title').allTextContents();
     assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b)));
     assert.ok(first.length > 0);
@@ -278,13 +469,30 @@ for (const lang of ['he', 'en']) {
     assert.notEqual(await page.locator('.need-load').first().textContent(), kg1, 'load changes with reps');
     await page.screenshot({ path: `${shots}${lang}-need.png` });
     await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !document.querySelector('.sheet'));
+    // body
+    await page.locator('.prog-tabs button').nth(1).click();
+    await page.waitForSelector('.mmap svg');
+    assert.equal(await page.locator('.mmap svg').count(), 2);
+    assert.ok(await page.locator('.mm-glow').count() >= 3, 'ranked muscles glow in their tier colour');
+    await page.click('.mm[data-muscle="chest"] polygon');
+    assert.match(await page.textContent('.mmap-info'), /Platinum|Diamond|Gold|Silver/);
+    await page.waitForSelector('.mmap-panel .row');
+    assert.equal(await page.locator('.group-row').count(), 11);
+    await page.screenshot({ path: `${shots}${lang}-ranks-body.png`, fullPage: true });
+    const o = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
+    assert.ok(o.sw <= o.cw, 'no horizontal overflow with data');
     // recovery mode
-    await page.locator('.seg').first().locator('button').nth(1).click();
+    await page.locator('.prog-body .seg button').nth(1).click();
     await page.waitForSelector('.recov-bar');
     await page.click('.mm[data-muscle="chest"] polygon');
     assert.match(await page.textContent('.mmap-info'), /%/);
     await page.waitForTimeout(300);
     await page.screenshot({ path: `${shots}${lang}-recovery.png`, fullPage: true });
+    // numbers
+    await page.locator('.prog-tabs button').nth(2).click();
+    await page.waitForSelector('main .stats-grid');
+    await page.screenshot({ path: `${shots}${lang}-ranks-numbers.png`, fullPage: true });
     // progress
     await page.goto(`${base}#/progress`);
     await page.waitForSelector('.chart');
@@ -316,7 +524,14 @@ for (const lang of ['he', 'en']) {
     await page.screenshot({ path: `${shots}${lang}-workout-start-s5.png`, fullPage: true });
     await page.goto(`${base}#/routines`);
     await page.waitForSelector('.screen h1');
-    await page.getByRole('button', { name: L(lang, 'אימון חדש', 'New workout'), exact: true }).click();
+    // the Workouts screen: four small tiles, a "+" with three choices, the hint only while there is nothing saved
+    assert.equal(await page.locator('.wk-tiles a').count(), 4);
+    const rows0 = await page.locator('.routine-row').count();
+    assert.equal(await page.locator('.wk-hint').count(), rows0 ? 0 : 1, 'hint only with no saved workouts');
+    await page.click('.wk-add');
+    await page.waitForSelector('.sheet .row');
+    assert.equal(await page.locator('.sheet .row').count(), 3, 'new / from a template / new folder');
+    await page.locator('.sheet .row', { hasText: L(lang, 'אימון חדש', 'New workout') }).click();
     await page.waitForSelector('.routine-name');
     await page.fill('.routine-name', L(lang, 'חזה וכתפיים', 'Chest and shoulders'));
     await page.getByRole('button', { name: L(lang, 'הוספת תרגיל', 'Add exercise') }).click();
@@ -334,13 +549,17 @@ for (const lang of ['he', 'en']) {
     await page.reload();
     await page.waitForSelector('.routine-row');
     assert.equal(await page.locator('.routine-row').count(), 1);
+    assert.equal(await page.locator('.wk-hint').count(), 0, 'no hint once something is saved');
     await page.screenshot({ path: `${shots}${lang}-routines.png`, fullPage: true });
     // templates
-    await page.getByRole('button', { name: L(lang, 'מתבנית מוכנה', 'From a template') }).click();
+    await page.click('.wk-add');
+    await page.locator('.sheet .row', { hasText: L(lang, 'מתבנית מוכנה', 'From a template') }).click();
     await page.waitForSelector('.sheet .row');
     await page.locator('.sheet .row').first().click(); // PPL: 3 workouts in a folder
     await page.waitForFunction(() => document.querySelectorAll('.routine-row').length >= 4);
     assert.equal(await page.locator('.routine-row').count(), 4);
+    const tall = await page.evaluate(() => [...document.querySelectorAll('.routine-row')].map((r) => r.getBoundingClientRect().height).filter((x) => x > 72));
+    assert.deepEqual(tall, [], 'each saved workout is one line');
     // duplicate through the menu
     await page.locator('.routine-row').first().getByRole('button', { name: L(lang, 'אפשרויות תרגיל', 'Exercise options') }).click();
     await page.waitForSelector('.sheet .row');
@@ -391,8 +610,9 @@ for (const lang of ['he', 'en']) {
     await page.screenshot({ path: `${shots}${lang}-plan.png`, fullPage: true });
     await page.locator('.plan-day .btn').first().click();
     await page.waitForSelector('.ent-card');
-    assert.ok(await page.locator('.target-line').count() >= 4);
-    assert.ok(await page.locator('.target-line').count() >= 4);
+    assert.ok(await page.locator('.ent-card').count() >= 4, 'the plan day brings its exercises');
+    assert.equal(await page.locator('.target-line').count(), 1, 'focus mode: the open exercise shows its target');
+    assert.ok(await page.evaluate(() => JSON.parse(localStorage.getItem('dg.draft')).entries.filter((e) => e.target).length >= 4), 'every exercise carries its target');
     await page.screenshot({ path: `${shots}${lang}-plan-day-live.png` });
     const card = page.locator('.ent-card').first();
     await card.locator('.set-row').first().locator('.set-input').nth(0).fill('60');
@@ -406,9 +626,9 @@ for (const lang of ['he', 'en']) {
     await page.click('.sheet .btn-primary');
     await page.waitForSelector('main .stats-grid');
     await page.goto(`${base}#/workout`);
-    await page.waitForSelector('.plan-next');
+    await page.waitForSelector('.today-next.plan-next');
     await page.screenshot({ path: `${shots}${lang}-workout-plan-next.png`, fullPage: true });
-    assert.match(await page.textContent('.plan-next'), /2/);
+    assert.match(await page.textContent('.today-next.plan-next'), /2/);
     await page.goto(`${base}#/plans`);
     await page.locator('.plan-card').first().click();
     await page.waitForSelector('.plan-day.done');
@@ -509,15 +729,17 @@ for (const lang of ['he', 'en']) {
     await page.screenshot({ path: `${shots}${lang}-rewards.png`, fullPage: true });
     // quests and streak on the Workout tab
     await page.goto(`${base}#/workout`);
-    await page.waitForSelector('.home-more');
-    if (!(await page.locator('.home-more[open]').count())) await page.locator('.home-more > summary').click(); // quests are folded unless there is something to claim
-    await page.waitForSelector('.quests');
+    await page.waitForSelector('.today-quests');
+    assert.ok(await page.locator('.today-top .today-ring').count() === 1 && await page.locator('.today-top .today-stat').count() === 2, 'level, streak and drachmas on top');
+    await page.click('.today-quests');
+    await page.waitForSelector('.sheet .quests');
     assert.equal(await page.locator('.quest').count(), 4, '3 daily quests and 1 weekly');
-    assert.ok(await page.locator('.game-strip .game-chip').count() === 3);
     assert.ok(await page.locator('.streak-card').count() === 1);
     const claim = page.locator('.quest .btn-primary');
     if (await claim.count()) { await claim.first().click(); await page.waitForSelector('.toast'); assert.ok(await page.locator('.quest.claimed').count() >= 1); }
     await page.screenshot({ path: `${shots}${lang}-workout-game.png`, fullPage: true });
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !document.querySelector('.sheet'));
     // floating +XP on V
     await startEmpty(page);
     await addExercise(page, 'barbell curl');
@@ -530,7 +752,7 @@ for (const lang of ['he', 'en']) {
     await page.waitForSelector('.live-head', { state: 'detached' });
     // profile: level bar, achievements
     await page.goto(`${base}#/profile`);
-    await page.waitForSelector('.level-bar');
+    await page.waitForSelector('.profile-ring');
     await page.screenshot({ path: `${shots}${lang}-profile-game.png`, fullPage: true });
     await page.goto(`${base}#/achievements`);
     await page.waitForSelector('.ach-row');
@@ -576,12 +798,16 @@ for (const lang of ['he', 'en']) {
     });
     await page.goto(`${base}#/workout`);
     await page.reload();
-    await page.waitForSelector('.streak-broken');
+    await page.waitForSelector('.today-quests .quest-dot');
+    await page.click('.today-quests');
+    await page.waitForSelector('.sheet .streak-broken');
     await page.screenshot({ path: `${shots}${lang}-streak-broken.png`, fullPage: true });
     await page.locator('.streak-broken .btn-primary').click();
     await page.waitForSelector('.streak-card');
     assert.match(await page.textContent('.streak-card'), /12/);
     assert.equal(await page.locator('.streak-broken').count(), 0);
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !document.querySelector('.sheet'));
   });
 
   await check(`${lang}: finish with unticked sets, rename exercise, missing-exercise request`, async () => {
@@ -683,7 +909,7 @@ for (const lang of ['he', 'en']) {
     assert.match(await page.locator('.hist-row').first().textContent(), /Cindy/);
     await page.locator('.hist-row').first().click();
     await page.waitForSelector('.wod-clock-card');
-    await page.goto(`${base}#/ranks`);
+    await page.goto(`${base}#/ladder`);
     await page.waitForSelector('.bonus-card');
     assert.match(await page.locator('.bonus-row', { hasText: T('WOD', 'Benchmark') }).textContent(), /\+10\/40/);
     // clean up so later checks see the same history as before
@@ -845,11 +1071,15 @@ for (const lang of ['he', 'en']) {
 
   await check(`${lang}: crew (friends): create, join, leaderboard, status + chat, unread dot, errors, leave`, async () => {
     const T = (he, en) => L(lang, he, en);
+    // the chat refreshes every few seconds and redraws the strip: a tap that lands mid-redraw is tried again
+    const closeAll = async (pg) => { for (let i = 0; i < 4 && await pg.locator('.sheet').count(); i++) { await pg.keyboard.press('Escape'); await pg.waitForTimeout(350); } };
+    const openBoard = async (pg) => { for (let i = 0; i < 3; i++) { await pg.click('.crew-top3'); if (await pg.waitForSelector('.sheet .crew-board', { timeout: 3000 }).catch(() => null)) return; } throw new Error('the board sheet did not open'); };
     const fake = createFakeCrew();
     await fake.install(ctx);
     // a second friend on another phone
     const ctx2 = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: lang === 'he' ? 'he-IL' : 'en-US', serviceWorkers: 'block' });
     await fake.install(ctx2);
+    await installFakeSupabase(ctx2);
     const p2 = await ctx2.newPage();
     p2.on('pageerror', (e) => errors.push(`crew friend: ${e.message}`));
     await onboard(p2, lang, `crew2-${lang}`);
@@ -858,18 +1088,14 @@ for (const lang of ['he', 'en']) {
       await page.goto(`${base}#/crew`);
       await page.waitForSelector('#crew-nick');
       await page.screenshot({ path: `${shots}${lang}-crew-start.png`, fullPage: true });
-      // only the owner can open a crew: without the owner key there is no "create" tab, and the server refuses too
-      assert.equal(await page.getByRole('button', { name: T('יצירת קבוצה', 'Create a crew') }).count(), 0, 'no create tab for everyone else');
-      const refused = await page.evaluate(async () => { try { await (await import('./src/ui/crew-api.js')).rpc('create_group', { p_name: 'x', p_nick: 'y', p_token: 'a'.repeat(40), p_owner_key: 'nope' }); return 'allowed'; } catch (e) { return e.message; } });
-      assert.equal(refused, 'not_owner');
-      for (let i = errors.length - 1; i >= 0; i--) if (errors[i].includes('status of 400')) errors.splice(i, 1); // that refusal is expected
-      await page.evaluate(async (k) => (await import('./src/ui/db.js')).dbPut('kv', k, 'ownerKey'), fake.OWNER_KEY);
-      await page.reload(); await page.waitForSelector('#crew-nick');
+      // anyone can open a crew (migration 016): the "create" tab is there for everyone, no owner key needed
+      assert.equal(await page.getByRole('button', { name: T('יצירת קבוצה', 'Create a crew') }).count(), 1, 'create for everyone');
+      assert.equal(await page.evaluate(async () => (await (await import('./src/ui/db.js')).dbGet('kv', 'ownerKey')) ?? null), null, 'no owner key on this phone');
       await page.getByRole('button', { name: T('יצירת קבוצה', 'Create a crew') }).click();
       await page.fill('#crew-name', 'Gym bros'); await page.fill('#crew-nick', 'Elia');
       await page.getByRole('button', { name: T('צור את הקבוצה', 'Create the crew') }).click();
       await page.waitForSelector('.crew-gear');
-      await page.locator('.crew-gear').click();
+      await closeAll(page); await page.locator('.crew-gear').click();
       await page.waitForSelector('.sheet .crew-code');
       const code = await page.textContent('.sheet .crew-code');
       assert.ok(await page.locator('.sheet .crew-push').count() === 1, 'notifications are in the group settings');
@@ -890,50 +1116,61 @@ for (const lang of ['he', 'en']) {
       await p2.fill('#crew-nick', 'Dan');
       await p2.getByRole('button', { name: T('הצטרף', 'Join'), exact: true }).click();
       await p2.waitForSelector('#crew-say'); // chat is the first thing you see
+      await p2.waitForSelector('.crew-top3');
+      assert.ok((await p2.textContent('.crew-head-sub')).match(/2/), 'the member count under the name');
       // the board shows both, I am marked
-      await p2.getByRole('button', { name: T('לידרבורד', 'Leaderboard') }).click();
+      await openBoard(p2);
       await p2.waitForFunction(() => document.querySelectorAll('.crew-row').length === 2);
       // friend posts a status and a chat message
-      await p2.getByRole('button', { name: new RegExp(T("צ'אט", 'Chat')) }).click();
+      await p2.keyboard.press('Escape');
       await p2.waitForSelector('#crew-say');
-      await p2.getByRole('button', { name: T('הולך להתאמן', 'Going to train') }).click();
+      await p2.click('.crew-status-btn'); await p2.getByRole('button', { name: T('הולך להתאמן', 'Going to train') }).click();
       await p2.waitForFunction(() => document.querySelectorAll('.crew-msg').length === 1);
       await p2.fill('#crew-say', 'Legs today, who is in?'); await p2.keyboard.press('Enter');
       await p2.waitForFunction(() => document.querySelectorAll('.crew-msg').length === 2);
       // my phone: unread appears on the workout home and the profile tab, then clears when I open the feed
       await page.evaluate(async () => { const m = await import('./src/ui/crew-state.js'); await m.refreshUnread(); });
       await page.goto(`${base}#/workout`);
-      await page.waitForSelector('.crew-unread');
-      assert.ok((await page.textContent('.crew-unread')).includes('2'));
+      await page.waitForSelector('.today-bell .bell-dot');
+      await page.click('.today-bell');
+      await page.waitForSelector('.sheet .crew-unread');
+      assert.ok((await page.textContent('.sheet .crew-unread')).includes('2'));
+      await page.keyboard.press('Escape');
       assert.equal(await page.locator('.tab-dot').count(), 1);
+      assert.equal(await page.locator('.tab[href="#/crew"] .tab-dot').count(), 1, 'the unread dot sits on the crew tab');
       await page.goto(`${base}#/crew`);
       await page.waitForSelector('#crew-say');
-      await page.getByRole('button', { name: T('לידרבורד', 'Leaderboard') }).click();
+      await openBoard(page);
       await page.waitForSelector('.crew-board');
       assert.equal(await page.locator('.crew-row').count(), 2);
       assert.ok(await page.locator('.crew-row.me').count() === 1);
-      await page.getByRole('button', { name: new RegExp(T("צ'אט", 'Chat')) }).click();
+      await page.keyboard.press('Escape');
       await page.waitForFunction(() => document.querySelectorAll('.crew-msg').length === 2);
       await page.screenshot({ path: `${shots}${lang}-crew-feed.png`, fullPage: true });
-      await page.getByRole('button', { name: T('הולך להתאמן', 'Going to train') }).click();
+      await page.click('.crew-status-btn'); await page.getByRole('button', { name: T('הולך להתאמן', 'Going to train') }).click();
       await page.waitForFunction(() => document.querySelectorAll('.crew-msg.mine.status').length >= 1);
       await page.goto(`${base}#/workout`);
       assert.equal(await page.locator('.tab-dot').count(), 0, 'read: no dot');
       // my numbers are on the board, and nothing private is sent
       await page.goto(`${base}#/crew`);
       await page.waitForSelector('#crew-say');
-      await page.getByRole('button', { name: T('לידרבורד', 'Leaderboard') }).click();
-      await page.waitForSelector('.crew-board');
+      await openBoard(page);
+      await page.waitForSelector('.sheet .crew-board');
+      assert.equal(await page.locator('.sheet .crew-podium .crew-pod').count(), 2, 'the podium holds the top three (two of us here)');
       const sent = fake.calls.filter((c) => c.name === 'update_stats').map((c) => Object.keys(c.args.p_stats));
       assert.ok(sent.length >= 1);
       for (const keys of sent) for (const k of keys) assert.ok(['level', 'streak', 'workouts', 'weekVolume', 'monthWorkouts', 'rating', 'tier', 'division', 'recent'].includes(k), `unexpected shared field ${k}`);
-      await page.locator('.crew-gear').click();
+      await page.screenshot({ path: `${shots}${lang}-crew-board.png` });
+      await page.keyboard.press('Escape');
+      await page.waitForFunction(() => !document.querySelector('.sheet'));
+      await closeAll(page); await page.locator('.crew-gear').click();
       await page.waitForSelector('.sheet .crew-push h2');
       await page.keyboard.press('Escape');
       await page.waitForFunction(() => !document.querySelector('.sheet'));
-      await page.screenshot({ path: `${shots}${lang}-crew-board.png`, fullPage: true });
+      await openBoard(page);
+      await page.waitForSelector('.sheet .crew-board');
       // sorting chips work
-      await page.getByRole('button', { name: T('רמה', 'Level'), exact: true }).click();
+      await page.locator('.sheet .crew-board-sheet .seg button').filter({ hasText: new RegExp(`^${T('רמה', 'Level')}$`) }).click();
       await page.waitForSelector('.crew-row');
       // friend profile + plan sharing (off until switched on)
       await page.evaluate(async () => {
@@ -946,7 +1183,7 @@ for (const lang of ['he', 'en']) {
       });
       await p2.goto(`${base}#/crew`);
       await p2.waitForSelector('#crew-say');
-      await p2.getByRole('button', { name: T('לידרבורד', 'Leaderboard') }).click();
+      await openBoard(p2);
       await p2.locator('.crew-row', { hasText: 'Elia' }).click();
       await p2.waitForSelector('.crew-friend');
       assert.ok((await p2.textContent('.crew-friend')).match(/לא שיתף|not shared/), 'plan is private by default');
@@ -954,7 +1191,7 @@ for (const lang of ['he', 'en']) {
       await p2.keyboard.press('Escape');
       await page.reload();
       await page.waitForSelector('#crew-say');
-      await page.locator('.crew-gear').click();
+      await closeAll(page); await page.locator('.crew-gear').click();
       await page.locator('.sheet .crew-share .seg button', { hasText: T('פעיל', 'On') }).click();
       await page.waitForTimeout(400);
       assert.ok(fake.calls.some((c) => c.name === 'update_plan' && c.args.p_plan && c.args.p_plan.days), 'plan sent after switching on');
@@ -962,7 +1199,7 @@ for (const lang of ['he', 'en']) {
       assert.ok(!/weight|sets|exercise|bodyweight/i.test(sentPlan), 'no exercises or weights in the shared plan');
       await p2.reload();
       await p2.waitForSelector('#crew-say');
-      await p2.getByRole('button', { name: T('לידרבורד', 'Leaderboard') }).click();
+      await openBoard(p2);
       await p2.locator('.crew-row', { hasText: 'Elia' }).click();
       await p2.waitForSelector('.crew-plan-row');
       assert.equal(await p2.locator('.crew-plan-row').count(), 7);
@@ -990,12 +1227,13 @@ for (const lang of ['he', 'en']) {
       await page.evaluate(async () => { const { saveSchedule, deleteRoutine } = await import('./src/ui/store.js'); await saveSchedule({ days: {}, done: {} }); await deleteRoutine('r-share'); });
       // leader: chip, tools only for the leader, rename, new code, remove a member, hand over and back
       const ctx3 = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: lang === 'he' ? 'he-IL' : 'en-US', serviceWorkers: 'block' });
+      await installFakeSupabase(ctx3);
       try {
         await fake.install(ctx3);
         const p3 = await ctx3.newPage();
         p3.on('pageerror', (e) => errors.push(`crew third: ${e.message}`));
         await onboard(p3, lang, `crew3-${lang}`);
-        const board = async (pg) => { await pg.reload(); await pg.waitForSelector('#crew-say, .crew-suspended'); await pg.getByRole('button', { name: T('לידרבורד', 'Leaderboard') }).click(); await pg.waitForSelector('.crew-row'); };
+        const board = async (pg) => { await pg.reload(); await pg.waitForSelector('#crew-say, .crew-suspended'); await openBoard(pg); await pg.waitForSelector('.crew-row'); };
         const rowOf = (pg, nick) => pg.locator(`.crew-row[data-nick="${nick}"]`);
         const confirmGo = async (pg) => { await pg.waitForFunction(() => document.querySelectorAll('.sheet').length >= 1); await pg.locator('.sheet').last().locator('.btn-primary, .btn-danger').first().click(); };
         await p3.goto(`${base}#/crew`); await p3.waitForSelector('#crew-code');
@@ -1009,11 +1247,11 @@ for (const lang of ['he', 'en']) {
         await rowOf(p2, 'Elia').click(); await p2.waitForSelector('.crew-friend');
         assert.equal(await p2.locator('.crew-leader-tools').count(), 0, 'members have no leader tools');
         await p2.keyboard.press('Escape');
-        await p2.locator('.crew-gear').click(); await p2.waitForSelector('.sheet .crew-code');
+        await closeAll(p2); await p2.locator('.crew-gear').click(); await p2.waitForSelector('.sheet .crew-code');
         assert.equal(await p2.locator('.sheet .crew-leader-box').count(), 0);
         await p2.keyboard.press('Escape');
         // rename and a new code
-        await page.locator('.crew-gear').click(); await page.waitForSelector('#crew-rename');
+        await closeAll(page); await page.locator('.crew-gear').click(); await page.waitForSelector('#crew-rename');
         await page.screenshot({ path: `${shots}${lang}-crew-leader.png` });
         await page.fill('#crew-rename', 'Gym bros 2');
         await page.locator('.crew-leader-box .btn-secondary').click();
@@ -1033,78 +1271,17 @@ for (const lang of ['he', 'en']) {
         await page.waitForFunction(() => ![...document.querySelectorAll('.crew-row')].some((r) => r.textContent.includes('Eve')));
         await p3.reload();
         await p3.waitForSelector('#crew-code');
-        // suspend Dan from the chat, lift it, adjust his rating, give drachmas
-        const leaderTool = async (nick, toolIndex, chip) => {
-          await board(page);
-          await rowOf(page, nick).click(); await page.waitForSelector('.crew-leader-tools');
-          await page.locator('.crew-leader-tools .btn-secondary').nth(toolIndex).click();
-          await page.waitForSelector('.sheet .chip-select');
-          await page.locator('.sheet .chip-select', { hasText: chip }).last().click();
-          await page.waitForFunction(() => !document.querySelector('.crew-leader-tools'));
-        };
-        const adjustTool = async (nick, pick, quiet = false) => {
-          await board(page); await rowOf(page, nick).click(); await page.waitForSelector('.crew-leader-tools');
-          await page.locator('.crew-leader-tools .btn-secondary').nth(1).click();
-          await page.waitForSelector('.crew-adjust .rank-preview');
-          if (quiet) await page.locator('.sheet .announce-toggle').click();
-          await pick();
-          await page.getByRole('button', { name: T('החל', 'Apply'), exact: true }).click();
-          await page.waitForFunction(() => !document.querySelector('.crew-leader-tools'));
-        };
-        const chipOf = (txt) => page.locator('.crew-adjust .chip-select', { hasText: txt }).first();
-        await leaderTool('Dan', 0, /^1 (שעות|hours)$/);
-        // the ban covers the whole app, not only the chat
-        await p2.reload(); await p2.waitForSelector('.app-lock');
-        assert.ok((await p2.textContent('.app-lock')).length > 20);
-        assert.equal(await p2.locator('.app-lock').evaluate((el) => document.getElementById('app').inert), true, 'the app behind the lock is inert');
-        await p2.screenshot({ path: `${shots}${lang}-crew-suspended.png` });
-        await p2.reload(); await p2.waitForSelector('.app-lock'); // still locked after a reload (kept on the phone)
-        assert.equal(await p2.locator('.app-lock').count(), 1);
+        // the leader keeps only "hand over" and "remove": no rating change, no prize, no suspension (migration 016)
         await board(page);
-        assert.equal(await rowOf(page, 'Dan').locator('.chip-warn').count(), 1, 'the board marks the suspension');
-        await leaderTool('Dan', 0, T('ביטול השעיה', 'Lift the suspension'));
-        await p2.getByRole('button', { name: T('בדוק שוב', 'Check again') }).click();
-        await p2.waitForSelector('.app-lock', { state: 'detached' });
-        await p2.reload(); await p2.waitForSelector('#crew-say');
-        await adjustTool('Dan', async () => { await chipOf(/^-100$/).click(); });
-        await board(page);
-        assert.ok((await rowOf(page, 'Dan').locator('.chip-warn').textContent()).includes('100'), 'the adjustment shows on the board');
-        // the member sees it too: his own Progress rating includes the leader's adjustment, with a note
-        await p2.reload();
-        for (let i = 0; i < 40 && (await p2.evaluate(async () => (await import('./src/ui/store.js')).store.adjust)) !== -100; i++) await p2.waitForTimeout(250);
-        const shown = await p2.evaluate(async () => { const m = await import('./src/ui/store.js'); m.store.overall = { pending: false, rating: 500, strength: 500, bonus: 0, remaining: 0 }; return m.shownOverall(); });
-        assert.deepEqual([shown.rating, shown.rawRating, shown.adjust], [400, 500, -100]);
-        await p2.goto(`${base}#/ranks`); await p2.waitForSelector('.rank-card');
-        await p2.goto(`${base}#/crew`); await p2.waitForSelector('#crew-say, .crew-board, .crew-tabs');
-        await adjustTool('Dan', async () => { await page.getByRole('button', { name: T('איפוס', 'Reset'), exact: true }).click(); });
-        const dracBefore = await p2.evaluate(async () => (await import('./src/ui/store.js')).store.game.drachmas);
-        // a quiet punishment is not announced in the chat
-        const sysBodies = () => [...fake.groups.values()].flatMap((g) => g.messages).filter((m) => m.kind === 'system').map((m) => m.body);
-        await adjustTool('Dan', async () => { await chipOf(/^-50$/).click(); }, true);
-        assert.ok(!sysBodies().includes('adjust:-50'), 'a quiet action is not announced');
-        await adjustTool('Dan', async () => { await page.getByRole('button', { name: T('איפוס', 'Reset'), exact: true }).click(); });
-        // the gift: first the progress review, then the amount (no limit, any number)
-        await board(page); await rowOf(page, 'Dan').click(); await page.waitForSelector('.crew-leader-tools');
-        await page.locator('.crew-leader-tools .btn-secondary').nth(2).click();
-        await page.waitForSelector('.sheet .crew-review #crew-gift-amount');
-        assert.ok(await page.locator('.crew-review .chart-card').count() >= 1, 'the review shows the progress charts');
-        await page.screenshot({ path: `${shots}${lang}-crew-review.png` });
-        await page.fill('#crew-gift-amount', '12345');
-        await page.fill('#crew-gift-bonus', '40');
-        await page.getByRole('button', { name: T('תן את הפרס', 'Give the prize') }).click();
-        await page.waitForFunction(() => !document.querySelector('.crew-leader-tools'));
-        assert.ok(sysBodies().includes('gift:12345') && sysBodies().includes('adjust:40'), 'drachmas and a rating prize are both announced');
-        await board(page);
-        assert.ok((await rowOf(page, 'Dan').locator('.chip-warn').textContent()).includes('+40'), 'the prize shows on the board');
-        await adjustTool('Dan', async () => { await page.getByRole('button', { name: T('איפוס', 'Reset'), exact: true }).click(); });
-        await p2.reload(); await p2.waitForSelector('#crew-say');
-        await p2.waitForFunction(async (b) => (await import('./src/ui/store.js')).store.game.drachmas === b + 12345, dracBefore);
-        await p2.getByRole('button', { name: new RegExp(T("צ'אט", 'Chat')) }).click();
-        const chatText = await p2.textContent('#crew-feed');
-        assert.ok(/הושעה|suspended/i.test(chatText) && /דרכמות|drachmas/i.test(chatText), 'everything is announced in the chat');
-        // hand over to Dan: he gets the tools and Elia loses them
         await rowOf(page, 'Dan').click(); await page.waitForSelector('.crew-leader-tools');
-        await page.locator('.crew-leader-tools .btn-secondary').nth(3).click();
+        assert.equal(await page.locator('.crew-leader-tools button').count(), 2, 'hand over + remove only');
+        await page.keyboard.press('Escape'); await page.waitForTimeout(350);
+        assert.equal(await page.evaluate(async () => { try { await (await import('./src/ui/crew-api.js')).rpc('set_adjust', { p_token: 'x'.repeat(64), p_member_id: '00000000-0000-0000-0000-000000000000', p_value: -10, p_announce: true }); return 'allowed'; } catch (e) { return e.message; } }), 'removed', 'the server refuses it too');
+        for (let i = errors.length - 1; i >= 0; i--) if (errors[i].includes('status of 400')) errors.splice(i, 1); // that refusal is expected
+        // hand over to Dan: he gets the tools and Elia loses them
+        await board(page);
+        await rowOf(page, 'Dan').click(); await page.waitForSelector('.crew-leader-tools');
+        await page.locator('.crew-leader-tools .btn-secondary').first().click();
         await confirmGo(page);
         await board(page);
         assert.equal(await rowOf(page, 'Dan').locator('.chip-leader').count(), 1);
@@ -1114,22 +1291,23 @@ for (const lang of ['he', 'en']) {
         // and back to Elia
         await board(p2);
         await rowOf(p2, 'Elia').click(); await p2.waitForSelector('.crew-leader-tools');
-        await p2.locator('.crew-leader-tools .btn-secondary').nth(3).click();
+        await p2.locator('.crew-leader-tools .btn-secondary').first().click();
         await confirmGo(p2);
         await board(page);
         assert.equal(await rowOf(page, 'Elia').locator('.chip-leader').count(), 1);
-        await page.reload(); await page.waitForSelector('#crew-say'); await page.getByRole('button', { name: T('לידרבורד', 'Leaderboard') }).click();
+        await page.reload(); await page.waitForSelector('#crew-say'); await openBoard(page);
       } finally { await ctx3.close(); }
       // leaving
       await p2.goto(`${base}#/crew`);
-      await p2.locator('.crew-gear').click();
+      await closeAll(p2); await p2.locator('.crew-gear').click();
       await p2.getByRole('button', { name: T('עזוב את הקבוצה', 'Leave the crew') }).click();
       await p2.locator('.sheet .btn-danger').click();
       await p2.waitForSelector('#crew-code');
       await page.reload();
       await page.waitForSelector('#crew-say');
-      await page.getByRole('button', { name: T('לידרבורד', 'Leaderboard') }).click();
+      await openBoard(page);
       await page.waitForFunction(() => document.querySelectorAll('.crew-row').length === 1);
+      await closeAll(page);
     } finally {
       await ctx2.close();
       await ctx.unroute(/supabase\.co\/rest\/v1\/rpc\//);
@@ -1137,130 +1315,105 @@ for (const lang of ['he', 'en']) {
     }
   });
 
-  await check(`${lang}: Habit Coach link: connect, code, sync, never in the backup, disconnect`, async () => {
-    const T = (he, en) => L(lang, he, en);
-    if (ONLY) await postThree(page);
+  await check(`${lang}: Habit Coach is gone: an old link is closed on the server once and forgotten; nothing about it on screen`, async () => {
     const ctx = page.context();
     const fake = createFakeCrew();
     await fake.install(ctx);
     try {
-      await page.goto(`${base}#/settings`);
-      await page.waitForSelector('.screen h1');
-      await page.getByRole('button', { name: T('חיבור ל-Habit Coach', 'Connect to Habit Coach') }).click();
-      await page.waitForSelector('[data-testid="link-code"]');
-      const code = await page.locator('[data-testid="link-code"]').inputValue();
-      assert.match(code, /^DG1-[0-9a-f]{64}$/);
-      const token = code.slice(4);
-      const snap = fake.links.get(token)?.snapshot;
-      assert.ok(snap && snap.v === 1 && snap.counts.total > 0, 'first summary uploaded');
-      for (const word of ['bodyweight', 'notes', 'entries', token]) assert.equal(JSON.stringify(snap).includes(word), false, `not shared: ${word}`);
-      await page.screenshot({ path: `${shots}${lang}-link-code.png` });
-      await page.locator('.sheet .btn-ghost').click();
-      // the token stays out of the backup file
-      const data = await page.evaluate(async () => JSON.stringify(await (await import('./src/ui/backup.js')).collectData()));
-      assert.equal(data.includes(token), false, 'token not in the backup');
-      // update now
-      const before = fake.calls.filter((c) => c.name === 'link_put').length;
-      await page.locator('.row', { hasText: T('עדכון עכשיו', 'Update now') }).click();
-      await page.waitForTimeout(300);
-      assert.ok(fake.calls.filter((c) => c.name === 'link_put').length > before, 'sync now sends');
-      await page.screenshot({ path: `${shots}${lang}-link-settings.png`, fullPage: true });
-      // survives a reload
-      await page.reload(); await page.waitForSelector('.screen h1');
-      assert.equal(await page.locator('.row', { hasText: T('ניתוק', 'Disconnect') }).count(), 1);
-      // disconnect empties the server copy
-      await page.locator('.row', { hasText: T('ניתוק', 'Disconnect') }).click();
-      await page.locator('.sheet .btn-danger').click();
-      await page.getByRole('button', { name: T('חיבור ל-Habit Coach', 'Connect to Habit Coach') }).waitFor();
-      assert.equal(fake.links.get(token).active, false);
-      assert.deepEqual(fake.links.get(token).snapshot, {});
-      assert.equal(await page.evaluate(async () => (await import('./src/ui/db.js')).dbGet('kv', 'link')), null);
-    } finally {
-      await ctx.unroute(/supabase\.co\/rest\/v1\/rpc\//);
-    }
+      await page.evaluate(async () => (await import('./src/ui/db.js')).dbPut('kv', { token: 'k'.repeat(64), connectedMs: 1, lastSyncMs: 1 }, 'link'));
+      await page.goto(`${base}#/settings`); await page.reload(); await page.waitForSelector('.screen h1');
+      await page.waitForFunction(async () => !(await (await import('./src/ui/db.js')).dbGet('kv', 'link')), null, { timeout: 5000 });
+      assert.ok(fake.calls.some((c) => c.name === 'link_revoke' && c.args.p_token === 'k'.repeat(64)), 'the summary is emptied on the server');
+      assert.equal(await page.getByText(/Habit Coach/).count(), 0, 'no Habit Coach anywhere in Settings');
+      const n = fake.calls.filter((c) => c.name === 'link_revoke').length;
+      await page.reload(); await page.waitForSelector('.screen h1'); await page.waitForTimeout(500);
+      assert.equal(fake.calls.filter((c) => c.name === 'link_revoke').length, n, 'only once');
+    } finally { await ctx.unroute(/supabase\.co\/rest\/v1\/rpc\//); }
   });
 
-  await check(`${lang}: settings, backup export + restore, reminder, numbers page, reset`, async () => {
+  await check(`${lang}: settings: account, rest alert switches, download my data, numbers page, delete account (then sign back in)`, async () => {
+    {
+      const T = (he, en) => L(lang, he, en);
+      await page.goto(`${base}#/settings`); await page.waitForSelector('.screen h1');
+      assert.ok(await page.locator('main .row .row-sub').count() <= 2, 'only the account e-mail and "delete" keep a second line');
+      assert.equal(await page.getByText('free-exercise-db').count(), 0, 'the credits are not spread on the page');
+      await page.locator('.row', { hasText: T('קרדיטים ורישיונות', 'Credits and licences') }).click();
+      await page.waitForSelector('.sheet');
+      assert.ok((await page.textContent('.sheet')).includes('free-exercise-db'));
+      await page.keyboard.press('Escape'); await page.waitForFunction(() => !document.querySelector('.sheet'));
+    }
     const T = (he, en) => L(lang, he, en);
     if (ONLY) await postThree(page);
     await page.goto(`${base}#/settings`);
     await page.waitForSelector('.screen h1');
+    await page.waitForSelector(`.row:has-text("tester@example.com")`);
     await page.screenshot({ path: `${shots}${lang}-settings.png`, fullPage: true });
-    // accent + reduced motion
-    await page.getByRole('button', { name: T('צבע קבוע', 'Fixed colour') }).click();
+    assert.ok(!/גיבוי|backup/i.test(await page.textContent('main')), 'no backups anywhere in settings');
+    // colour theme (dark / marble) + reduced motion
+    await page.getByRole('button', { name: T('שיש', 'Marble'), exact: true }).click();
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'marble');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor), 'rgb(234, 228, 217)');
+    await page.screenshot({ path: `${shots}${lang}-settings-marble.png`, fullPage: true });
+    await page.getByRole('button', { name: T('כהה', 'Dark'), exact: true }).click();
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'dark');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor), 'rgb(10, 10, 11)');
     await page.getByRole('button', { name: T('פעיל', 'On'), exact: true }).click();
     assert.equal(await page.evaluate(() => document.documentElement.dataset.motion), 'reduce');
     await page.getByRole('button', { name: T('לפי המכשיר', 'Follow device') }).click();
-    await page.getByRole('button', { name: T('לפי הדרגה שלי', 'Follows my rank') }).click();
-    // export
+    // rest alert: sound off, then back on
+    await page.locator('.seg[aria-label="' + T('צליל', 'Sound') + '"] button', { hasText: T('לא', 'No') }).click();
+    assert.equal(await page.evaluate(async () => (await import('./src/ui/storage.js')).getSettings().restSound), false);
+    await page.locator('.seg[aria-label="' + T('צליל', 'Sound') + '"] button', { hasText: T('כן', 'Yes') }).click();
+    // download my data: a file with everything
     const before = await page.evaluate(async () => { const { dbAll } = await import('./src/ui/db.js'); return (await dbAll('workouts')).length; });
     assert.ok(before > 0, 'workouts exist from earlier checks');
-    const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('.row', { hasText: T('ייצוא גיבוי', 'Export backup') }).click()]);
-    assert.match(dl.suggestedFilename(), /^demigod-backup-\d{4}-\d{2}-\d{2}\.json$/);
-    const path = await dl.path();
-    const { readFileSync, writeFileSync } = await import('node:fs');
-    const text = readFileSync(path, 'utf8');
-    const parsed = JSON.parse(text);
-    assert.equal(parsed.format, 'demigod-backup');
+    const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('.row', { hasText: T('הורד את כל הנתונים שלי', 'Download all my data') }).click()]);
+    const { readFileSync } = await import('node:fs');
+    const parsed = JSON.parse(readFileSync(await dl.path(), 'utf8'));
     assert.equal(parsed.data.workouts.length, before);
-    await page.waitForSelector('.toast');
-    assert.ok(await page.evaluate(() => JSON.parse(localStorage.getItem('dg.settings')).lastExportAt > 0), 'export time saved');
-    // damaged file is refused and nothing changes
-    const bad = JSON.parse(text); bad.data.game.xp += 1;
-    const badPath = `${path}.bad.json`; writeFileSync(badPath, JSON.stringify(bad));
-    await page.locator('[data-testid="import-file"]').setInputFiles(badPath);
-    await page.waitForSelector('.toast');
-    assert.equal(await page.locator('.sheet').count(), 0);
-    assert.equal(await page.evaluate(async () => { const { dbAll } = await import('./src/ui/db.js'); return (await dbAll('workouts')).length; }), before);
-    // not a backup at all
-    const junkPath = `${path}.junk.json`; writeFileSync(junkPath, '{"hello":1}');
-    await page.locator('[data-testid="import-file"]').setInputFiles(junkPath);
-    await page.waitForTimeout(400);
-    assert.equal(await page.locator('.sheet').count(), 0);
-    // merge into existing data changes nothing (same ids)
-    await page.locator('[data-testid="import-file"]').setInputFiles(path);
-    await page.waitForSelector('.sheet');
-    await page.screenshot({ path: `${shots}${lang}-import-sheet.png` });
-    await page.locator('.sheet .row', { hasText: T('מיזוג', 'Merge') }).click();
-    await page.waitForLoadState('load');
-    await page.waitForSelector('.tabbar');
-    assert.equal(await page.evaluate(async () => { const { dbAll } = await import('./src/ui/db.js'); return (await dbAll('workouts')).length; }), before);
-    // reminder card: pretend the last backup was 40 days ago
-    await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('dg.settings')); s.lastExportAt = Date.now() - 40 * 86400000; s.reminderSnoozedUntil = null; localStorage.setItem('dg.settings', JSON.stringify(s)); });
-    await page.goto(`${base}#/workout`); await page.reload();
-    await page.waitForSelector('.backup-reminder');
-    await page.screenshot({ path: `${shots}${lang}-backup-reminder.png` });
-    await page.locator('.backup-reminder .btn-secondary').click();
-    assert.equal(await page.locator('.backup-reminder').count(), 0);
-    await page.reload(); await page.waitForSelector('main .btn-primary');
-    assert.equal(await page.locator('.backup-reminder').count(), 0, 'snoozed');
     // numbers page
     await page.goto(`${base}#/numbers`);
     await page.waitForSelector('.numbers .card');
     assert.ok((await page.locator('.numbers .card').count()) >= 6);
     assert.match(await page.textContent('.numbers'), lang === 'he' ? /Liftoff|דרגות/ : /Verified about Liftoff/);
     await page.screenshot({ path: `${shots}${lang}-numbers.png`, fullPage: true });
-    // reset needs the typed word, then restore from the backup on the first screen
+    // the account holds the latest data before it is deleted (kept here to sign back in for the next checks)
+    await page.evaluate(async () => (await import('./src/ui/sync.js')).syncNow());
+    const saved = account.remote;
+    assert.equal(saved.data.workouts.length, before);
+    // delete account: the last Google sign-in is an hour old, so it first asks to sign in again (and deletes nothing)
+    await page.evaluate(async () => {
+      const { dbGet, dbPut } = await import('./src/ui/db.js');
+      const s = await dbGet('kv', 'session');
+      const old = Math.floor(Date.now() / 1000) - 3600;
+      s.accessToken = `e30.${btoa(JSON.stringify({ amr: [{ method: 'oauth', timestamp: old }] })).replace(/=+$/, '')}.sig`;
+      await dbPut('kv', s, 'session');
+    });
     await page.goto(`${base}#/settings`);
-    await page.locator('.row', { hasText: T('איפוס האפליקציה', 'Reset the app') }).click();
+    await page.reload();
+    await page.locator('.row', { hasText: T('מחיקת החשבון וכל הנתונים', 'Delete account and all data') }).click();
     await page.waitForSelector('.sheet input');
     assert.ok(await page.locator('.sheet .btn-danger').isDisabled());
-    await page.fill('.sheet input', T('לא', 'nope'));
-    assert.ok(await page.locator('.sheet .btn-danger').isDisabled());
-    await page.fill('.sheet input', T('איפוס', 'RESET'));
+    await page.fill('.sheet input', T('מחיקה', 'DELETE'));
     await page.locator('.sheet .btn-danger').click();
-    await page.waitForSelector('.ob-step', { timeout: 8000 });
+    await page.waitForSelector('.sheet .reauth-go', { timeout: 5000 });
+    assert.equal(account.deletes, 0, 'nothing deleted before signing in again');
+    await page.screenshot({ path: `${shots}${lang}-delete-reauth.png` });
+    // sign in again: back in Settings with the delete sheet open; the typed word and the server finish it
+    await page.locator('.sheet .reauth-go').click();
+    await page.waitForSelector('.sheet input', { timeout: 10000 });
+    assert.match(page.url(), /#\/settings/);
+    await page.fill('.sheet input', T('מחיקה', 'DELETE'));
+    await page.screenshot({ path: `${shots}${lang}-delete-account.png` });
+    await page.locator('.sheet .btn-danger').click();
+    await page.waitForSelector('#google', { timeout: 8000 });
+    assert.equal(account.deletes, 1, 'the server deleted the account');
     assert.equal(await page.evaluate(async () => { const { dbAll } = await import('./src/ui/db.js'); return (await dbAll('workouts')).length; }), 0);
-    await page.screenshot({ path: `${shots}${lang}-after-reset.png` });
-    const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.getByRole('button', { name: T('יש לי כבר גיבוי', 'I already have a backup') }).click()]);
-    await chooser.setFiles(path);
-    await page.waitForSelector('.sheet');
-    await page.locator('.sheet .row', { hasText: T('מיזוג', 'Merge') }).click();
-    await page.waitForSelector('.tabbar', { timeout: 8000 });
-    const after = await page.evaluate(async () => { const { dbAll, dbGet } = await import('./src/ui/db.js'); return { w: (await dbAll('workouts')).length, p: (await dbGet('profile', 'me'))?.name, g: (await dbGet('game', 'me'))?.xp }; });
-    assert.equal(after.w, before);
-    assert.equal(after.p, parsed.data.profile.name);
-    assert.equal(after.g, parsed.data.game.xp);
+    // sign back in: the (fake) account still has the data, so the next checks keep their workouts
+    account.remote = saved; account.deletes = 0;
+    await page.check('#consent'); await page.click('#google');
+    await page.waitForSelector('.tabbar', { timeout: 10000 });
+    assert.equal(await page.evaluate(async () => { const { dbAll } = await import('./src/ui/db.js'); return (await dbAll('workouts')).length; }), before);
   });
 
   await check(`${lang}: make-up workout for exercises you did not get to (one-time, nothing saved)`, async () => {
@@ -1279,7 +1432,9 @@ for (const lang of ['he', 'en']) {
     await page.waitForSelector('main .stats-grid');
     if (await page.locator('.rankup').count()) await page.click('.rankup button');
     await page.goto(`${base}#/workout`);
-    await page.waitForSelector('.makeup-card');
+    await page.waitForSelector('.today-bell .bell-dot');
+    await page.click('.today-bell');
+    await page.waitForSelector('.sheet .makeup-card');
     assert.ok((await page.textContent('.makeup-card')).includes(T('סקוואט', 'Squat')));
     await page.screenshot({ path: `${shots}${lang}-makeup.png` });
     await page.locator('.makeup-card .btn-primary').click();
@@ -1291,47 +1446,21 @@ for (const lang of ['he', 'en']) {
     await page.locator('.sheet .btn-danger').click();
     await page.locator('.sheet .btn-danger').last().click();
     await page.goto(`${base}#/workout`);
-    await page.waitForSelector('.hero');
-    assert.equal(await page.locator('.makeup-card').count(), 0);
+    await page.waitForSelector('.today-start');
+    assert.equal(await page.locator('.today-bell .bell-dot').count(), 0, 'the make-up workout is gone from the bell');
     assert.equal(await page.evaluate(async () => (await (await import('./src/ui/db.js')).dbAll('routines')).length), routinesBefore);
   });
 
-  await check(`${lang}: my role model: form, link check, Today card, remove`, async () => {
+  await check(`${lang}: no role model any more (#/model opens Today); the result still compares the weight with something familiar`, async () => {
     const T = (he, en) => L(lang, he, en);
-    await page.goto(`${base}#/profile`);
-    await page.locator('.row', { hasText: T('המודל שלי', 'My role model') }).click();
-    await page.waitForSelector('#model-name');
-    await page.locator('.screen button.btn-primary').click();
-    await page.waitForFunction(() => [...document.querySelectorAll('.field-error')].some((e) => !e.hidden));
-    await page.fill('#model-name', 'Harley Alexander');
-    await page.fill('#model-note', 'Train like him');
-    await page.fill('#model-youtube', 'https://youtube.com/@harleyalexanderr?si=abc');
-    await page.fill('#model-tiktok', 'https://example.com/x');
-    await page.locator('.screen button.btn-primary').click();
-    await page.waitForTimeout(200);
-    assert.ok(await page.locator('#model-tiktok').isVisible(), 'a bad link keeps you on the form');
-    await page.fill('#model-tiktok', 'tiktok.com/@harleyalexander.fit?_r=1');
-    await page.fill('#model-tips', 'Sleep 8 hours\nDrink water\nSleep 8 hours');
-    // a workout from pasted text: known exercises are saved, unknown ones are listed
-    await page.fill('#model-import', 'Name: Push day\n1. Barbell bench press - 4 x 6-8\n2. Holobody curls 3x12');
-    await page.locator('.screen .btn-secondary', { hasText: T('יצירת אימון', 'Create workout') }).click();
-    await page.waitForSelector('a[href^="#/routine/"]');
-    assert.ok((await page.textContent('.screen')).match(/Harley Alexander: Push day|Push day/));
-    assert.ok((await page.textContent('.screen')).includes('Holobody curls'));
-    const imported = await page.evaluate(async () => (await (await import('./src/ui/db.js')).dbAll('routines')).filter((r) => /Push day/.test(r.name)).map((r) => [r.entries.length, r.entries[0].sets, r.entries[0].repsMin, r.entries[0].repsMax]));
-    assert.deepEqual(imported, [[1, 4, 6, 8]]);
-    await page.locator('.screen .chips-wrap .chip-select', { hasText: /^4$/ }).click();
-    await page.screenshot({ path: `${shots}${lang}-model-form.png`, fullPage: true });
-    await page.locator('.screen button.btn-primary').click();
-    await page.waitForSelector('.model-card');
-    assert.ok((await page.textContent('.model-card')).includes('Harley Alexander'));
-    assert.equal(await page.locator('.model-link').first().getAttribute('href'), 'https://youtube.com/@harleyalexanderr');
-    assert.equal(await page.locator('.model-link').count(), 2);
-    assert.match(await page.textContent('.model-tip'), /Sleep 8 hours|Drink water/);
-    assert.match(await page.textContent('.model-goal'), /\/ 4/);
-    await page.screenshot({ path: `${shots}${lang}-model-card.png` });
-    // the result screen quotes your model after a workout
-    await page.goto(`${base}#/workout`);
+    // a role model saved by the old app (with a photo) is cleared from the phone and never travels to the account again
+    await page.evaluate(async () => { const db = await import('./src/ui/db.js'); await db.dbPut('blobs', new Blob(['x'], { type: 'image/png' }), 'model-old'); await db.dbPut('kv', { name: 'Old hero', photoBlobId: 'model-old' }, 'model'); });
+    await page.goto(`${base}#/workout`); await page.reload(); await page.waitForSelector('.today-start');
+    await page.waitForFunction(async () => { const db = await import('./src/ui/db.js'); return !(await db.dbGet('kv', 'model')) && !(await db.dbGet('blobs', 'model-old')); }, null, { timeout: 5000 });
+    assert.equal(await page.evaluate(async () => { const d = await (await import('./src/ui/backup.js')).collectData(); return 'model' in d || Object.keys(d.blobs).some((k) => k.startsWith('model')); }), false, 'no model in what is synced');
+    await page.goto(`${base}#/model`);
+    await page.waitForSelector('.today-start');
+    assert.equal(await page.locator('.model-card, .model-quote').count(), 0);
     await startEmpty(page);
     await addExercise(page, 'barbell bench press');
     await logSet(page, 0, 60, 8);
@@ -1339,19 +1468,11 @@ for (const lang of ['he', 'en']) {
     await page.waitForSelector('.sheet .btn-primary');
     await page.click('.sheet .btn-primary');
     await page.waitForSelector('main .stats-grid');
-    assert.ok((await page.textContent('.model-quote')).includes('Harley Alexander'));
+    assert.equal(await page.locator('.model-quote').count(), 0);
     // 60 kg x 8 = 480 kg: the weight of a horse
     assert.ok((await page.textContent('.compare-card')).includes(T('סוס', 'horse')));
     await page.screenshot({ path: `${shots}${lang}-result-compare.png` });
     if (await page.locator('.rankup').count()) await page.click('.rankup button');
-    await page.goto(`${base}#/model`);
-    await page.locator('.screen .btn-danger').click();
-    await page.waitForFunction(() => location.hash === '#/profile'); // removing goes to Profile by itself (after the save): wait, or it would jump there later
-    await page.goto(`${base}#/workout`);
-    await page.waitForSelector('.hero').catch(async (e) => { console.log('DEBUG (role model): hash', await page.evaluate(() => location.hash), '| app:', (await page.evaluate(() => document.getElementById('app').innerText)).replace(/\s+/g, ' ').slice(0, 300), '| overlays:', await page.evaluate(() => document.getElementById('overlay-root').innerText.slice(0, 200)), '| draft:', await page.evaluate(() => !!localStorage.getItem('dg.draft'))); throw e; });
-    assert.equal(await page.locator('.model-card').count(), 0);
-    await page.evaluate(async () => { const db = await import('./src/ui/db.js'); for (const r of await db.dbAll('routines')) if (/Push day/.test(r.name)) await db.dbDelete('routines', r.id); });
-    await page.reload();
   });
 
   await check(`${lang}: plan my week: several items a day (basketball + a saved workout), rest, done marks`, async () => {
@@ -1376,12 +1497,14 @@ for (const lang of ['he', 'en']) {
     await page.screenshot({ path: `${shots}${lang}-schedule.png`, fullPage: true });
     // Today: the saved workout leads the big card, basketball has its own card with a done button
     await page.goto(`${base}#/workout`);
-    await page.waitForSelector('.sched-card');
-    assert.ok((await page.textContent('.hero')).includes('Sched Day A'));
-    assert.ok((await page.textContent('.hero-kicker')).match(/מתוכנן להיום|Planned for today/));
+    await page.waitForSelector('.today-next');
+    assert.ok((await page.textContent('.today-next')).includes('Sched Day A'), 'planned today: the next-workout row');
+    assert.ok((await page.textContent('.today-next-when')).match(/מתוכנן להיום|Planned for today/));
+    await page.click('.today-bell');
+    await page.waitForSelector('.sheet .sched-card');
     assert.ok((await page.textContent('.sched-card')).match(/כדורסל|Basketball/));
     await page.locator('.sched-card .btn').click();
-    await page.waitForFunction(() => document.querySelector('.week-day.today.on'));
+    await page.waitForFunction(() => document.querySelector('.today-week .day.today.done'));
     await page.screenshot({ path: `${shots}${lang}-schedule-home.png` });
     // a benchmark workout (WOD) in the plan: chosen from the list, shown on today's card with a start button
     await openToday();
@@ -1391,7 +1514,8 @@ for (const lang of ['he', 'en']) {
     await page.locator('.sheet .btn-primary').last().click();
     await page.waitForFunction(() => /Fran/.test(document.querySelector('.sched-row.today')?.textContent ?? ''));
     await page.goto(`${base}#/workout`);
-    await page.waitForSelector('.sched-card');
+    await page.click('.today-bell');
+    await page.waitForSelector('.sheet .sched-card');
     assert.ok((await page.textContent('.sched-card')).includes('Fran'));
     await page.locator('.sched-card .btn', { hasText: T('התחל', 'Start') }).click();
     await page.waitForFunction(() => location.hash === '#/wod/fran');
@@ -1401,9 +1525,12 @@ for (const lang of ['he', 'en']) {
     await page.waitForFunction(() => document.querySelectorAll('.sheet .sched-item').length === 1);
     await page.locator('.sheet .btn-primary').last().click();
     await page.goto(`${base}#/workout`);
-    await page.waitForSelector('.sched-card');
+    await page.waitForSelector('.today-bell');
+    await page.click('.today-bell');
+    await page.waitForSelector('.sheet .sched-card');
     assert.equal(await page.locator('.sched-card .btn').count(), 0);
-    assert.ok(!(await page.textContent('.hero-kicker')).match(/מתוכנן להיום|Planned for today/), 'a rest day does not schedule a workout');
+    await page.keyboard.press('Escape');
+    assert.ok(!((await page.locator('.today-next-when').textContent().catch(() => '')) ?? '').match(/מתוכנן להיום|Planned for today/), 'a rest day does not schedule a workout');
     // limit: four items, then the add options are replaced by a note
     await openToday();
     for (let i = 0; i < 4; i++) await page.locator('.sheet .chip-select').first().click();
@@ -1412,8 +1539,8 @@ for (const lang of ['he', 'en']) {
     // clear the day
     await page.locator('.sheet .btn-ghost').click();
     await page.goto(`${base}#/workout`); await page.reload();
-    await page.waitForSelector('.hero');
-    assert.equal(await page.locator('.sched-card').count(), 0);
+    await page.waitForSelector('.today-bell');
+    assert.equal(await page.locator('.today-bell .bell-dot').count(), 0, 'a cleared day leaves nothing behind the bell');
     await page.evaluate(async () => { const { dbDelete } = await import('./src/ui/db.js'); await dbDelete('routines', 'r-sched'); });
     await page.reload();
   });
@@ -1430,6 +1557,9 @@ for (const lang of ['he', 'en']) {
     await rowOf(T('ארגמן', 'Crimson')).locator('.btn').first().click();
     await page.waitForFunction(() => getComputedStyle(document.documentElement).getPropertyValue('--accent-rgb').trim().startsWith('255 77 94'));
     await page.screenshot({ path: `${shots}${lang}-shop-themes.png`, fullPage: true });
+    await page.goto(`${base}#/workout`); await page.waitForSelector('.today-start');
+    assert.ok(!/221, 186, 102|176, 138, 60/.test(await page.evaluate(() => getComputedStyle(document.querySelector('.today-start')).backgroundImage)), 'the start button follows the bought colour, no gold edges');
+    await page.goto(`${base}#/shop`); await page.waitForSelector('.shop-row');
     // title: buy and equip, then it shows on the profile
     await rowOf(T('צייד חזרות', 'Rep Hunter')).locator('.btn').click();
     await page.waitForTimeout(250);
@@ -1479,24 +1609,25 @@ for (const lang of ['he', 'en']) {
       await db.dbPut('kv', { days: { [tomorrow]: [{ id: 'u1', kind: 'workout', ref: 'r-upper' }] }, done: {} }, 'schedule');
     });
     await page.goto(`${base}#/workout`); await page.reload();
-    await page.waitForSelector('.hero');
-    assert.ok((await page.textContent('.hero')).includes('Upper UU'), 'the planned one, not the last added');
-    assert.ok(!(await page.textContent('.hero')).includes('Full body FF'));
-    assert.ok((await page.textContent('.hero-kicker')).match(/למחר|tomorrow/i));
+    await page.waitForSelector('.today-next');
+    assert.ok((await page.textContent('.today-next')).includes('Upper UU'), 'the planned one, not the last added');
+    assert.ok(!(await page.textContent('.today-next')).includes('Full body FF'));
+    assert.ok((await page.textContent('.today-next-when')).match(/למחר|tomorrow/i));
     await page.screenshot({ path: `${shots}${lang}-next-planned.png` });
     await page.evaluate(async () => { const db = await import('./src/ui/db.js'); await db.dbDelete('routines', 'r-upper'); await db.dbDelete('routines', 'r-full'); await db.dbPut('kv', { days: {}, done: {} }, 'schedule'); });
     await page.reload();
   });
 
-  await check(`${lang}: rank path: strip on Progress, full ladder with you marked`, async () => {
+  await check(`${lang}: rank path: pyramid on Progress, full ladder with you marked`, async () => {
     const T = (he, en) => L(lang, he, en);
     if (ONLY) await postThree(page);
     await page.goto(`${base}#/ranks`);
-    await page.waitForSelector('.ladder-strip');
-    assert.equal(await page.locator('.ladder-dot').count(), 10);
-    assert.equal(await page.locator('.ladder-dot.current').count(), 1);
+    await page.waitForSelector('.pyramid');
+    // five exercises, then "+N more" opens the rest in place
+    assert.ok(await page.locator('.ex-rank-row').count() <= 5);
+    if (await page.locator('.more-rows').count()) { await page.click('.more-rows'); await page.waitForFunction(() => document.querySelectorAll('.ex-rank-row').length > 5); assert.equal(await page.locator('.more-rows').count(), 0); }
     await page.screenshot({ path: `${shots}${lang}-ladder-strip.png` });
-    await page.locator('.ladder-strip').click();
+    await page.locator('.pyramid li[aria-current="step"] a').click();
     await page.waitForSelector('.ladder-row');
     assert.equal(await page.locator('.ladder-row').count(), 10);
     assert.equal(await page.locator('.ladder-row.current').count(), 1);
@@ -1517,17 +1648,64 @@ for (const lang of ['he', 'en']) {
   });
 
   await check(`${lang}: every sub-screen has a back link`, async () => {
-    const subs = ['wods', 'wod/fran', 'wod/nope', 'ladder', 'exercises', 'exercise/plank', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'privacy', 'requests', 'calendar', 'crew', 'history', 'history/nope', 'routine/nope', 'plan/nope', 'exercise/nope', 'ranks-preview', 'model', 'schedule', 'ladder'];
+    const subs = ['wods', 'wod/fran', 'wod/nope', 'ladder', 'exercises', 'exercise/plank', 'progress', 'card', 'routines', 'plans', 'plan/new', 'custom/new', 'achievements', 'shop', 'settings', 'numbers', 'privacy', 'requests', 'calendar', 'history', 'history/nope', 'routine/nope', 'plan/nope', 'exercise/nope', 'ranks-preview', 'schedule', 'ladder'];
     for (const r of subs) {
       await page.goto(`${base}#/${r}`);
       await page.waitForSelector('main');
       assert.ok(await page.locator('main .back-link').count() >= 1, `no back link on #/${r}`);
     }
-    for (const r of ['workout', 'workouts', 'ranks', 'profile']) {
+    for (const r of ['workout', 'workouts', 'ranks', 'crew', 'profile']) {
       await page.goto(`${base}#/${r}`);
       await page.waitForSelector('main');
       assert.equal(await page.locator('main > .back-link').count(), 0, `unexpected back link on tab root #/${r}`);
     }
+  });
+
+  await check(`${lang}: ranks-preview crest (a symbol per tier, wreath metal by tier, solid shield, glow, division diamonds, crown, unique ids)`, async () => {
+    await page.goto(`${base}#/ranks-preview`);
+    await page.waitForSelector('main .emblem svg');
+    const r = await page.evaluate(() => {
+      const out = [];
+      document.querySelectorAll('main .emblem').forEach((em) => {
+        const svg = em.querySelector('svg');
+        const tier = [...em.classList].find((c) => c.startsWith('emblem-')).slice(7);
+        const div = Number(em.dataset.division);
+        out.push({ tier, div, wreath: em.dataset.wreath, leaves: svg.querySelectorAll('path.leaf').length, rim: svg.querySelectorAll('path.rim').length, glow: svg.querySelectorAll('.glyph-glow').length, glyph: em.dataset.glyph, glyphShapes: svg.querySelectorAll('.glyph *').length,
+          dia: svg.querySelectorAll('.dia').length, crown: svg.querySelectorAll('.crown').length, thinWhite: [...svg.querySelectorAll('[stroke="#FFFFFF"], [stroke="#fff"]')].length });
+      });
+      const ids = [...document.querySelectorAll('[id]')].map((e) => e.id);
+      return { out, dupes: ids.filter((x, i) => ids.indexOf(x) !== i) };
+    });
+    assert.ok(r.out.length >= 41, `emblems ${r.out.length}`);
+    const glyphOf = { wood: 'target', bronze: 'delapouite/spartan-helmet', silver: 'lorc/winged-sword', gold: 'lorc/laurel-crown', platinum: 'lorc/eagle-emblem', diamond: 'lorc/winged-shield', champion: 'lorc/crown', titan: 'lorc/crowned-skull', olympian: 'lorc/hydra', greekgod: 'temple-bolts' };
+    const metal = { unranked: 'iron', wood: 'bronze', bronze: 'bronze', silver: 'silver', gold: 'gold', platinum: 'gold', diamond: 'gold', champion: 'gold', titan: 'gold', olympian: 'gold', greekgod: 'divine' };
+    for (const e of r.out) {
+      assert.equal(e.leaves, 50, `${e.tier} leaves (12 pairs and a tip on each branch)`);
+      assert.equal(e.rim, 1, `${e.tier} solid shield`);
+      assert.equal(e.glow, 1, `${e.tier} the symbol glows`);
+      assert.ok(e.glyphShapes > 0, `${e.tier} a symbol is drawn`);
+      assert.equal(e.glyph, e.tier === 'unranked' ? 'bolt' : glyphOf[e.tier], `${e.tier} symbol`);
+      assert.equal(e.thinWhite, 0, `${e.tier} no thin white line on the shield`);
+      assert.equal(e.wreath, metal[e.tier], `${e.tier} wreath metal`);
+      if (e.tier === 'greekgod') { assert.equal(e.crown, 1, 'crown'); assert.equal(e.dia, 0, 'gg diamonds'); }
+      else assert.equal(e.dia, 5 - e.div, `${e.tier} ${e.div} diamonds`);
+    }
+    assert.deepEqual(r.dupes, [], 'unique ids');
+    await page.screenshot({ path: `${shots}${lang}-ranks-preview.png`, fullPage: true });
+  });
+
+  await check(`${lang}: inner screens: one big thing on top, no explanation line under a label when the section has items`, async () => {
+    const bad = [];
+    for (const r of ['shop', 'achievements', 'calendar', 'history', 'wods', 'plans', 'schedule', 'exercises']) {
+      await page.goto(`${base}#/${r}`);
+      await page.waitForSelector('main h1');
+      await page.waitForTimeout(250);
+      bad.push(...await page.evaluate((r) => [...document.querySelectorAll('main .section-label + p.row-sub')]
+        .filter((p) => p.nextElementSibling && !p.nextElementSibling.matches('.section-label'))
+        .map((p) => `${r}: ${p.textContent.slice(0, 50)}`), r));
+      if (['shop', 'achievements', 'calendar'].includes(r) && await page.locator('main .screen-hero').count() !== 1) bad.push(`${r}: no big number on top`);
+    }
+    assert.equal(bad.join(' | '), '', `inner screens: ${bad.join(' | ')}`);
   });
 
   await check(`${lang}: accessibility basics (names, labels, language, landmarks)`, async () => {
@@ -1557,9 +1735,26 @@ for (const lang of ['he', 'en']) {
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('.sheet').count(), 0);
     await page.goto(`${base}#/workout`);
+    // the floating glass bar: five icon tabs, each named for screen readers
+    assert.equal(await page.locator('.tabbar a.tab').count(), 5, 'five tabs');
+    assert.equal(await page.locator('.tabbar a.tab:not([aria-label])').count(), 0, 'every tab has an aria-label');
     await page.click('.tab[href="#/ranks"]');
     await page.waitForSelector('.tab[aria-current="page"][href="#/ranks"]', { timeout: 3000 });
-    await page.goto(`${base}#/profile`);
+    await page.goto(`${base}#/crew`);
+    await page.waitForSelector('.tab[aria-current="page"][href="#/crew"]', { timeout: 3000 });
+    await page.goto(`${base}#/history`);
+    await page.waitForSelector('.tab[aria-current="page"][href="#/workouts"]', { timeout: 3000 });
+    // nothing hides under the bar: the end of each long screen scrolls clear of it
+    for (const r of ['workouts', 'ranks']) {
+      await page.goto(`${base}#/${r}`);
+      await page.waitForSelector('main');
+      await page.waitForTimeout(200);
+      await page.evaluate(() => scrollTo(0, 1e6));
+      await page.waitForTimeout(150);
+      const { end, top } = await page.evaluate(() => ({ end: document.querySelector('main').lastElementChild.getBoundingClientRect().bottom, top: document.querySelector('.tabbar').getBoundingClientRect().top }));
+      assert.ok(end <= top, `#/${r}: last block ends at ${end}, bar starts at ${top}`);
+    }
+    await page.goto(`${base}#/settings`);
     await page.getByRole('button', { name: L(lang, 'English', 'עברית') }).click();
     assert.equal(await page.evaluate(() => document.documentElement.dir), lang === 'he' ? 'ltr' : 'rtl');
     await page.getByRole('button', { name: L(lang, 'עברית', 'English') }).click();
@@ -1567,31 +1762,25 @@ for (const lang of ['he', 'en']) {
 
   await check(`${lang}: profile edit saves, bodyweight history grows`, async () => {
     await page.goto(`${base}#/profile`);
-    await page.waitForSelector('.profile-head, .screen-head');
+    await page.waitForSelector('.profile-head');
+    // three tiles (achievements, shop, calendar); no role model and no Zip
+    assert.equal(await page.locator('.profile-tiles a').count(), 3);
+    assert.equal(await page.getByText(L(lang, 'המודל שלי', 'My role model')).count(), 0);
+    assert.equal(await page.locator('.zip-host, .zip').count(), 0, 'Zip is gone');
+    await page.screenshot({ path: `${shots}${lang}-profile.png`, fullPage: true });
     await page.getByRole('button', { name: L(lang, 'עריכת פרופיל', 'Edit profile') }).click();
     await page.waitForSelector('.sheet #pe-weight');
     await page.fill('#pe-weight', '84');
     await page.click('.sheet .btn-primary');
     await page.waitForSelector('.toast');
-    await page.waitForSelector('.list .row .num');
-    await page.screenshot({ path: `${shots}${lang}-profile-edited.png`, fullPage: true });
-  });
-
-  await check(`${lang}: Zip the mascot lives only on Profile, above the tab bar, and his bubble stays on screen`, async () => {
-    await page.goto(`${base}#/profile`);
-    await page.waitForSelector('.zip-host:not([hidden])');
-    const host = await page.locator('.zip-host').boundingBox();
-    const nav = await page.locator('#nav-root > *').first().boundingBox();
-    assert.ok(host.y + host.height <= nav.y + 1, 'Zip stands above the tab bar');
-    assert.ok(host.x >= 0 && host.x + host.width <= 390, 'inside the screen');
-    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.zip-host')).direction), lang === 'he' ? 'rtl' : 'ltr');
-    await page.mouse.click(host.x + host.width / 2, host.y + host.height / 2);
-    await page.waitForSelector('.zip-bubble:not([hidden])');
-    const b = await page.locator('.zip-bubble').boundingBox();
-    assert.ok(b.x >= 0 && b.x + b.width <= 390 && b.y >= 0, 'the bubble stays on screen');
-    await page.screenshot({ path: `${shots}${lang}-zip.png` });
-    await page.goto(`${base}#/workout`);
-    await page.waitForFunction(() => document.querySelector('.zip-host')?.hidden === true);
+    await page.waitForFunction(() => !document.querySelector('.sheet'));
+    // the body-weight history lives in the edit sheet
+    await page.getByRole('button', { name: L(lang, 'עריכת פרופיל', 'Edit profile') }).click();
+    await page.waitForSelector('.sheet .bw-hist .row .num');
+    assert.ok(await page.locator('.sheet .bw-hist .row').count() >= 2, 'bodyweight history grows');
+    await page.screenshot({ path: `${shots}${lang}-profile-edited.png` });
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !document.querySelector('.sheet'));
   });
 
   await check(`${lang}: manifest + service worker + works offline after first load`, async () => {
@@ -1610,6 +1799,306 @@ for (const lang of ['he', 'en']) {
   });
   await ctx.close();
 }
+
+const phone = (over = {}) => browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'he-IL', serviceWorkers: 'block', ...over });
+const IPHONE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
+/** A phone that already has data from before accounts: profile, 2 workouts, a crew spot. */
+async function seedOldPhone(page) {
+  await page.goto(base); await page.waitForSelector('html[data-ready="1"]');
+  await page.evaluate(async () => {
+    const { dbPut } = await import('./src/ui/db.js');
+    const { bodyweightEntry } = await import('./src/core/profile.mjs');
+    await dbPut('profile', { id: 'me', name: 'Old', sex: 'm', age: 40, lang: 'he', createdAt: new Date().toISOString(), schemaVersion: 1 }, 'me');
+    await dbPut('bodyweight', bodyweightEntry(90));
+    for (const id of ['old-1', 'old-2']) await dbPut('workouts', { id, startedMs: Date.now() - 86400000, finishedMs: Date.now() - 86000000, entries: [], stats: { workingSets: 0 } });
+    await dbPut('kv', { token: 't'.repeat(64), code: 'ABCDEFGH', name: 'Crew', nickname: 'Old', memberId: 'm1', lastSeenId: 0 }, 'crew');
+  });
+  await page.reload(); await page.waitForSelector('#google');
+}
+
+await check('accounts: iPhone in Safari sees the install screen before sign-in', async () => {
+  const c = await phone({ userAgent: IPHONE_UA }); await installFakeSupabase(c);
+  const p = await c.newPage(); await p.goto(base); await p.waitForSelector('.onboarding .tour-list');
+  assert.equal(await p.locator('#google').count(), 0);
+  await p.screenshot({ path: `${shots}he-onb-0-ios-install.png` });
+  await p.click('.ob-actions .btn-ghost'); await p.waitForSelector('#google');
+  await c.close();
+});
+
+await check('accounts: an old phone moves its data (and crew spot) to the account, then opens the app', async () => {
+  const c = await phone(); const acct = await installFakeSupabase(c);
+  const p = await c.newPage(); p.on('pageerror', (e) => errors.push(`old phone: ${e.message}`));
+  await seedOldPhone(p);
+  await p.check('#consent'); await p.click('#google');
+  await p.waitForSelector('.tabbar', { timeout: 10000 });
+  assert.ok(acct.uploads.length >= 1);
+  const up = acct.uploads[0];
+  assert.deepEqual(up.data.workouts.map((w) => w.id).sort(), ['old-1', 'old-2']);
+  assert.equal(up.data.crew.code, 'ABCDEFGH');
+  assert.equal(up.consent_version, '2026-12');
+  await c.close();
+});
+
+await check('accounts: when the upload fails, nothing is lost and the app still opens', async () => {
+  const c = await phone(); await installFakeSupabase(c, { failUploads: true });
+  const p = await c.newPage(); p.on('pageerror', (e) => errors.push(`failing upload: ${e.message}`));
+  await seedOldPhone(p);
+  await p.check('#consent'); await p.click('#google');
+  await p.waitForSelector('.ob-actions .btn-ghost', { timeout: 10000 }); // retry / continue for now
+  await p.screenshot({ path: `${shots}he-onb-migrate-failed.png` });
+  await p.click('.ob-actions .btn-ghost');
+  await p.waitForSelector('.tabbar');
+  await p.goto(`${base}#/history`); await p.waitForSelector('.screen');
+  assert.equal(await p.evaluate(async () => (await (await import('./src/ui/db.js')).dbAll('workouts')).length), 2);
+  await c.close();
+});
+
+await check('accounts: a new phone signs in and gets the account data', async () => {
+  const remote = { updatedAt: Date.now() - 1000, data: { profile: { id: 'me', name: 'Cloud', sex: 'f', age: null, lang: 'he', createdAt: new Date().toISOString(), schemaVersion: 1 }, bodyweight: [{ dateKeyTime: '2026-11-01T00000000000001', dateKey: '2026-11-01', at: new Date().toISOString(), ms: 1, kg: 60 }], workouts: [{ id: 'cloud-1', startedMs: Date.now() - 5e6, finishedMs: Date.now() - 4e6, entries: [], stats: { workingSets: 0 } }], routines: [], folders: [], plans: [], custom: [], blobs: {}, game: null, settings: { weeklyGoal: 5 }, renames: {}, requests: [], bases: {}, model: null, schedule: null, crew: null } };
+  const c = await phone(); await installFakeSupabase(c, { remote });
+  const p = await c.newPage(); await p.goto(base); await p.waitForSelector('#google');
+  await p.check('#consent'); await p.click('#google');
+  await p.waitForSelector('.tabbar', { timeout: 10000 });
+  const got = await p.evaluate(async () => { const { dbGet, dbAll } = await import('./src/ui/db.js'); return { name: (await dbGet('profile', 'me'))?.name, w: (await dbAll('workouts')).length }; });
+  assert.deepEqual(got, { name: 'Cloud', w: 1 });
+  await c.close();
+});
+
+const cloudData = (ids) => ({ profile: { id: 'me', name: 'Cloud', sex: 'f', age: null, lang: 'he', createdAt: new Date().toISOString(), schemaVersion: 1 }, bodyweight: [{ dateKeyTime: '2026-11-01T00000000000001', dateKey: '2026-11-01', at: new Date().toISOString(), ms: 1, kg: 60 }], workouts: ids.map((id, i) => ({ id, startedMs: Date.now() - 5e6 - i, finishedMs: Date.now() - 4e6, entries: [], stats: { workingSets: 0 } })), routines: [], folders: [], plans: [], custom: [], blobs: {}, game: null, settings: {}, renames: {}, requests: [], bases: {}, model: null, schedule: null, crew: null });
+const localIds = (p) => p.evaluate(async () => (await (await import('./src/ui/db.js')).dbAll('workouts')).map((w) => w.id).sort());
+const syncAndSettle = async (p) => { await p.evaluate(() => { import('./src/ui/sync.js').then((m) => m.syncNow()); }); await p.waitForTimeout(2500); await p.waitForSelector('.tabbar'); };
+
+await check('accounts: two phones — an old phone pulls newer data (never pushes its stale copy); when both changed, nothing is lost', async () => {
+  const c = await phone(); const acct = await installFakeSupabase(c, { remote: { data: cloudData(['a-1']), version: 1 } });
+  const p = await c.newPage(); p.on('pageerror', (e) => errors.push(`two phones: ${e.message}`));
+  await p.goto(base); await p.waitForSelector('#google'); await p.check('#consent'); await p.click('#google');
+  await p.waitForSelector('.tabbar', { timeout: 10000 });
+  await p.waitForTimeout(1500); // the start-up sync after the pull
+  assert.deepEqual(await localIds(p), ['a-1']);
+  const uploads0 = acct.uploads.length;
+  // another phone writes; this phone only starts and discards a workout (a change that leaves the data as it was)
+  acct.remote = { data: cloudData(['a-1', 'b-1']), version: acct.remote.version + 1 };
+  await p.evaluate(async () => { const s = await import('./src/ui/store.js'); s.setDraft({ id: 'tmp', name: '', startedMs: Date.now(), entries: [] }); await s.clearDraft(); });
+  await syncAndSettle(p);
+  assert.deepEqual(await localIds(p), ['a-1', 'b-1'], 'pulled the newer data');
+  assert.equal(acct.uploads.length, uploads0, 'did not push its stale copy');
+  // both change: a workout here, another one on the other phone -> merged, both kept everywhere
+  await p.evaluate(async () => { const { dbPut } = await import('./src/ui/db.js'); await dbPut('workouts', { id: 'here-1', startedMs: Date.now(), finishedMs: Date.now(), entries: [], stats: { workingSets: 0 } }); });
+  acct.remote = { data: cloudData(['a-1', 'b-1', 'b-2']), version: acct.remote.version + 1 };
+  await syncAndSettle(p);
+  assert.deepEqual(await localIds(p), ['a-1', 'b-1', 'b-2', 'here-1'], 'merged on this phone');
+  assert.deepEqual(acct.remote.data.workouts.map((w) => w.id).sort(), ['a-1', 'b-1', 'b-2', 'here-1'], 'merged on the server');
+  // a lost session never locks the app: it keeps working and offers to sign in again
+  await p.evaluate(async () => { const { dbDelete } = await import('./src/ui/db.js'); await dbDelete('kv', 'session'); });
+  await p.reload(); await p.waitForSelector('.tabbar');
+  assert.equal(await p.locator('.signin-banner').count(), 1);
+  assert.equal(await p.locator('.onboarding').count(), 0);
+  await p.screenshot({ path: `${shots}he-signin-banner.png` });
+  await c.close();
+});
+
+await check('accounts: a new phone whose first account check fails waits and retries, instead of starting as a new person', async () => {
+  const c = await phone(); await installFakeSupabase(c, { remote: { data: cloudData(['a-1']) }, failReads: 1 });
+  const p = await c.newPage(); await p.goto(base); await p.waitForSelector('#google');
+  await p.check('#consent'); await p.click('#google');
+  await p.waitForSelector('.ob-title:text-is("לא הצלחנו לבדוק את החשבון. בדוק חיבור ונסה שוב.")', { timeout: 10000 });
+  assert.equal(await p.locator('#ob-name').count(), 0, 'no new-person questions');
+  await p.click('.onboarding .ob-actions .btn-primary');
+  await p.waitForSelector('.tabbar', { timeout: 10000 });
+  assert.deepEqual(await localIds(p), ['a-1']);
+  await c.close();
+});
+
+await check('accounts: coming back from Google with no saved key shows "sign-in did not finish"', async () => {
+  const c = await phone(); await installFakeSupabase(c);
+  const p = await c.newPage(); await p.goto(`${base}?code=stray`);
+  await p.waitForSelector('.onboarding .field-error');
+  assert.match(await p.textContent('.onboarding .field-error'), /הכניסה לא הסתיימה/);
+  assert.equal(new URL(p.url()).search, '', 'the code is removed from the address');
+  await c.close();
+});
+
+await check('accounts: the rest reminder is sent to the server, cancelled on skip, and the end flashes the screen', async () => {
+  const c = await phone(); const acct = await installFakeSupabase(c);
+  const p = await c.newPage(); p.on('pageerror', (e) => errors.push(`rest: ${e.message}`));
+  await onboard(p, 'he');
+  await p.evaluate(async () => { const { setDraft } = await import('./src/ui/store.js'); setDraft({ id: 'rest-test', name: '', startedMs: Date.now(), entries: [] }); });
+  const t0 = Date.now();
+  await p.evaluate(async () => (await import('./src/ui/rest-timer.js')).startRestTimer(20, 'לחיצת חזה'));
+  await p.waitForTimeout(500);
+  const post = acct.alarms.find((a) => a.method === 'POST');
+  assert.ok(post, 'reminder posted');
+  assert.ok(Math.abs(Date.parse(post.body.fire_at) - (t0 + 20000)) < 2000, 'fires at the end of the rest');
+  assert.match(post.body.body, /לחיצת חזה/);
+  await p.evaluate(async () => (await import('./src/ui/rest-timer.js')).skipRest());
+  await p.waitForTimeout(300);
+  assert.ok(acct.alarms.some((a) => a.method === 'DELETE'), 'skip cancels it');
+  await p.evaluate(async () => (await import('./src/ui/rest-timer.js')).startRestTimer(20, 'סקוואט'));
+  await p.evaluate(async () => { const { store } = await import('./src/ui/store.js'); store.draft.timer.endAt = Date.now() + 300; });
+  await p.waitForSelector('.rest-done', { timeout: 3000 });
+  assert.match(await p.textContent('.rest-done'), /סקוואט/);
+  await p.screenshot({ path: `${shots}he-rest-done.png` });
+  await c.close();
+});
+
+await check('accounts: an older app never writes over a newer one; data that is not ours never replaces the phone', async () => {
+  const c = await phone(); const acct = await installFakeSupabase(c);
+  const p = await c.newPage(); p.on('pageerror', (e) => errors.push(`old-app: ${e.message}`));
+  await onboard(p, 'he');
+  await p.evaluate(async () => (await import('./src/ui/sync.js')).syncNow());
+  const n = acct.uploads.length;
+  assert.ok(n >= 1 && acct.remote.app_version, 'the app version is stored with the data');
+  // a newer app wrote last: this one keeps its change on the phone and says so
+  acct.remote.app_version = '99.0.0'; acct.remote.version += 1;
+  const st = await p.evaluate(async () => { const s = await import('./src/ui/storage.js'); await s.updateSettings({ weeklyGoal: 6 }); return (await import('./src/ui/sync.js')).syncNow(); });
+  assert.equal(st, 'old-app');
+  assert.equal(acct.uploads.length, n, 'nothing written');
+  // something that is not our data comes down: it is refused, the phone keeps its own
+  acct.remote = { data: { workouts: 'broken' }, version: acct.remote.version + 1, app_version: null };
+  const st2 = await p.evaluate(async () => { await (await import('./src/ui/db.js')).dbPut('kv', { ...(await (await import('./src/ui/db.js')).dbGet('kv', 'sync')), syncedVersion: 1 }, 'sync'); return (await import('./src/ui/sync.js')).syncNow(); });
+  assert.equal(st2, 'rejected');
+  assert.equal(await p.evaluate(async () => (await (await import('./src/ui/db.js')).dbGet('profile', 'me'))?.name), 'Elia');
+  await c.close();
+});
+
+await check('accounts: two refreshes at once use the single-use refresh token once (nobody is signed out)', async () => {
+  const c = await phone(); const acct = await installFakeSupabase(c);
+  const p = await c.newPage();
+  await onboard(p, 'he');
+  const ok = await p.evaluate(async () => {
+    const db = await import('./src/ui/db.js');
+    const s = await db.dbGet('kv', 'session'); await db.dbPut('kv', { ...s, expiresAt: Date.now() - 1000 }, 'session');
+    const auth = await import(`./src/ui/auth.js?fresh=${Date.now()}`); // a fresh module reads the stored (expired) session
+    const r = await Promise.all([auth.getSession(), auth.getSession(), auth.getSession()]);
+    return r.every((x) => x && x.accessToken);
+  });
+  assert.equal(acct.refreshes, 1, 'one refresh');
+  assert.ok(ok, 'still signed in');
+  await c.close();
+});
+
+await check('accounts: deleting the account leaves the crew first; if that fails nothing is deleted', async () => {
+  const c = await phone(); const acct = await installFakeSupabase(c);
+  const order = [];
+  await c.route(/supabase\.co\/rest\/v1\/rpc\/leave_group/, (r) => { order.push('leave'); return r.fulfill({ status: 503, body: '{}' }); });
+  const p = await c.newPage();
+  await onboard(p, 'he');
+  await p.evaluate(async () => { await (await import('./src/ui/db.js')).dbPut('kv', { token: 't'.repeat(64), code: 'ABCDEFGH', name: 'Crew', nickname: 'Me', memberId: 'm1', lastSeenId: 0 }, 'crew'); });
+  await p.reload(); await p.waitForSelector('.tabbar');
+  const del = async () => {
+    await p.goto(`${base}#/settings`);
+    await p.locator('.row', { hasText: 'מחיקת החשבון וכל הנתונים' }).click();
+    await p.fill('.sheet input', 'מחיקה');
+    await p.locator('.sheet .btn-danger').click();
+  };
+  await del();
+  await p.waitForSelector('.toast');
+  assert.equal(acct.deletes, 0, 'the account stays while the crew spot could not be removed');
+  await c.unroute(/supabase\.co\/rest\/v1\/rpc\/leave_group/);
+  await c.route(/supabase\.co\/rest\/v1\/rpc\/leave_group/, (r) => { order.push('leave'); return r.fulfill({ status: 200, contentType: 'application/json', body: 'null' }); });
+  await c.route(/supabase\.co\/rest\/v1\/rpc\/delete_my_account/, (r) => { order.push('delete'); acct.deletes++; return r.fulfill({ status: 204 }); });
+  await p.keyboard.press('Escape'); await p.waitForTimeout(400);
+  await del();
+  await p.waitForSelector('#google', { timeout: 8000 });
+  assert.deepEqual(order.slice(-2), ['leave', 'delete']);
+  await c.close();
+});
+
+await check('accounts: the rest reminder goes to the phone you train on, is withdrawn when the app is on screen at the end, and a rest cut to 0 sends none', async () => {
+  const c = await phone(); const acct = await installFakeSupabase(c);
+  const p = await c.newPage();
+  await onboard(p, 'he');
+  await p.evaluate(async () => {
+    const fakeSub = { endpoint: 'https://push.example/this-phone', toJSON: () => ({ endpoint: 'https://push.example/this-phone', keys: { p256dh: 'x', auth: 'y' } }) };
+    Object.defineProperty(Notification, 'permission', { get: () => 'granted' });
+    Object.defineProperty(navigator.serviceWorker, 'ready', { value: Promise.resolve({ pushManager: { getSubscription: async () => fakeSub } }) });
+    const { setDraft } = await import('./src/ui/store.js'); setDraft({ id: 'rest-2', name: '', startedMs: Date.now(), entries: [] });
+    await (await import('./src/ui/rest-timer.js')).startRestTimer(15, 'x'); // the shortest rest
+  });
+  await p.waitForTimeout(600);
+  assert.ok(acct.pushes.some((x) => x?.sub?.endpoint === 'https://push.example/this-phone'), 'this phone claims the push address');
+  const posts = acct.alarms.filter((a) => a.method === 'POST').length;
+  assert.ok(posts >= 1);
+  await p.waitForTimeout(12000); // 3 s before the end, on screen: withdrawn
+  assert.equal(acct.alarms.at(-1).method, 'DELETE', `withdrawn while the app is on screen: ${acct.alarms.map((a) => a.method).join(',')} vis=${await p.evaluate(() => document.visibilityState)}`);
+  // a rest cut to (almost) nothing: no reminder in the past, the old one is withdrawn
+  await p.evaluate(async () => (await import('./src/ui/rest-timer.js')).startRestTimer(10, 'y'));
+  await p.waitForTimeout(400);
+  await p.locator('.rest-bar .rest-btn', { hasText: '−15' }).click();
+  await p.waitForTimeout(800);
+  assert.equal(acct.alarms.at(-1).method, 'DELETE', `cut to 0: ${acct.alarms.map((a) => `${a.method}${a.body ? Math.round((Date.parse(a.body.fire_at) - Date.now()) / 1000) : ''}`).join(',')} left=${await p.evaluate(async () => { const { store } = await import('./src/ui/store.js'); return store.draft?.timer ? store.draft.timer.endAt - Date.now() : 'none'; })}`);
+  assert.ok(!acct.alarms.some((a) => a.method === 'POST' && Date.parse(a.body.fire_at) < Date.now() - 1000), 'never a reminder in the past');
+  await c.close();
+});
+
+await check('accounts: the morning reminder gets the seven messages from the week plan, and the time from Settings', async () => {
+  const c = await phone(); const acct = await installFakeSupabase(c);
+  const p = await c.newPage();
+  await onboard(p, 'he');
+  await p.evaluate(async () => {
+    const { saveRoutine, saveSchedule } = await import('./src/ui/store.js');
+    await saveRoutine({ id: 'r-legs', schemaVersion: 1, name: 'יום רגליים', folderId: null, notes: '', createdMs: 1, updatedMs: 1, entries: [] });
+    await saveSchedule({ days: { [new Date().getDay()]: [{ id: 'x1', kind: 'workout', ref: 'r-legs' }] }, done: {} });
+  });
+  const msgs = () => acct.pushes.filter((b) => Array.isArray(b?.morning_msgs));
+  await p.waitForFunction(() => true); await p.waitForTimeout(3000);
+  const last = msgs().at(-1);
+  assert.ok(last, 'sent to the server');
+  assert.equal(last.morning_msgs.length, 7);
+  assert.match(last.morning_msgs[new Date().getDay()].title, /יום רגליים/, "today's message names the planned workout");
+  assert.equal(last.morning_minute, 480, '08:00 by default');
+  assert.ok(last.tz && last.morning_on === true);
+  await p.goto(`${base}#/settings`); await p.waitForSelector('#morning-time');
+  await p.fill('#morning-time', '07:30'); await p.locator('#morning-time').dispatchEvent('change');
+  await p.waitForTimeout(3000);
+  assert.equal(msgs().at(-1).morning_minute, 450, 'the new time');
+  await c.close();
+});
+
+await check('maintenance lock: only "Updating." with the return time, no button or link, in he / en / other languages; it stays (no reload)', async () => {
+  const lockServer = await serve(0, { locked: true });
+  const lockBase = `http://localhost:${lockServer.address().port}/`;
+  try {
+    for (const [locale, title] of [['he-IL', 'מתעדכנים.'], ['en-US', 'Updating.'], ['ru-RU', 'Updating.']]) {
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale, serviceWorkers: 'block' });
+      const page = await ctx.newPage();
+      await page.goto(lockBase);
+      await page.waitForSelector('html[data-ready="1"]');
+      assert.equal((await page.textContent('main.maint h1')).trim(), title, locale);
+      assert.match(await page.textContent('.maint-back'), /\d\d:\d\d/, `${locale}: the time`);
+      assert.equal(await page.locator('#app button, #app a').count(), 0, `${locale}: no button or link`);
+      assert.equal(await page.evaluate(() => document.getElementById('nav-root').childElementCount + document.getElementById('rest-root').childElementCount), 0);
+      if (locale !== 'ru-RU') await page.screenshot({ path: `${shots}lock-${locale.slice(0, 2)}.png` });
+      if (locale === 'he-IL') {
+        const url = page.url();
+        await page.waitForTimeout(10000); // boot-guard.js reloads a page that never got ready after 9 s
+        assert.equal(page.url(), url);
+        assert.equal(await page.locator('main.maint').count(), 1, 'still the lock after 10 s');
+      }
+      await ctx.close();
+    }
+  } finally { lockServer.close(); }
+});
+
+await check('installed iPhone app with a short screen (iOS reports it shorter by the status bar): the bar drops to the edge and casts no shadow into the strip', async () => {
+  const c = await phone({ viewport: { width: 393, height: 793 }, screen: { width: 393, height: 852 } });
+  await installFakeSupabase(c);
+  const p = await c.newPage();
+  await onboard(p, 'he');
+  await c.addInitScript(() => { Object.defineProperty(navigator, 'standalone', { get: () => true }); }); // opened from the home screen from now on
+  await p.reload(); await p.waitForSelector('.tabbar');
+  await p.waitForTimeout(300);
+  assert.equal(await p.evaluate(() => document.documentElement.dataset.shortvp), '1', 'the short screen is noticed');
+  const r = await p.evaluate(() => { const b = document.querySelector('.tabbar').getBoundingClientRect(); return { gap: innerHeight - b.bottom, shadow: getComputedStyle(document.querySelector('.tabbar')).boxShadow }; });
+  assert.ok(r.gap <= 8, `the bar sits at the edge (gap ${r.gap})`);
+  assert.ok(!/0px 18px 44px/.test(r.shadow), 'no shadow falling into the strip');
+  await c.close();
+  // a normal screen (or a normal browser tab) keeps the usual gap
+  const c2 = await phone(); await installFakeSupabase(c2);
+  const p2 = await c2.newPage(); await onboard(p2, 'he'); await p2.waitForTimeout(300);
+  assert.equal(await p2.evaluate(() => document.documentElement.dataset.shortvp ?? ''), '');
+  await c2.close();
+});
 
 await check('start-up: a failed first request is retried; if it keeps failing there is a message and a button, not a black page', async () => {
   const c1 = await browser.newContext({ serviceWorkers: 'block' });

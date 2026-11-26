@@ -52,7 +52,7 @@ export function calendarScreen() {
     root.replaceChildren(
       h('a', { class: 'back-link', href: '#/profile' }, icon('chevron', 'chev back-chev'), t('tab.profile')),
       h('header', { class: 'screen-head' }, h('h1', { text: t('cal.title') })),
-      h('div', { class: 'cal-nav' },
+      h('div', { class: 'cal-nav screen-hero' },
         h('button', { class: 'icon-btn cal-prev', type: 'button', 'aria-label': t('cal.prev'), disabled: atStart(), onclick: () => go(-1) }, icon('chevron')),
         h('div', { class: 'cal-month', 'aria-live': 'polite', text: title }),
         h('button', { class: 'icon-btn cal-next', type: 'button', 'aria-label': t('cal.next'), disabled: atEnd(), onclick: () => go(1) }, icon('chevron'))),

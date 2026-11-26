@@ -67,3 +67,10 @@ export function completeFilled({ workout, now, bodyweightKg, sex, workouts, byId
   }
   return list.length;
 }
+
+/** Focus mode: an exercise is finished when its working sets are all done; one with only warm-ups when those are all
+ *  done; one with no sets has nothing left (so it never holds the next exercise back). */
+export function entryFinished(e) {
+  const working = e.sets.filter((x) => x.type !== 'warmup');
+  return (working.length ? working : e.sets).every((x) => x.done);
+}

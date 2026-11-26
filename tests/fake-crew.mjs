@@ -13,7 +13,7 @@ export function createFakeCrew() {
   const month = () => new Date().toISOString().slice(0, 7);
   const fns = {
     create_group({ p_name, p_nick, p_token, p_owner_key }) {
-      if (p_owner_key !== OWNER_KEY) fail('not_owner');
+      if (p_owner_key === undefined) fail('not_owner'); // like the server: the old 3-argument function refuses; anyone may call the 4-argument one (migration 016)
       if (byToken.has(p_token)) fail('already_member');
       const nick = String(p_nick ?? '').trim(); if (!nick) fail('bad_nick');
       const code = Math.random().toString(36).slice(2, 8).toUpperCase().padEnd(6, 'X');
@@ -100,22 +100,9 @@ export function createFakeCrew() {
       const t = g.members.find((y) => y.id === p_member_id && y.active); if (!t || t.id === m.id) fail('bad_target');
       m.leader = false; t.leader = true; if (p_announce) add(g, t, 'system', 'leader'); return null;
     },
-    suspend_member({ p_token, p_member_id, p_hours, p_announce = true }) {
-      const { group: g, member: m } = me(p_token); if (!m.leader) fail('not_leader');
-      const t = g.members.find((y) => y.id === p_member_id && y.active); if (!t || t.id === m.id) fail('bad_target');
-      t.suspendedUntil = p_hours > 0 ? Date.now() + p_hours * 3600000 : null;
-      if (p_announce) g.messages.push({ id: ++msgId, member_id: m.id, nickname: t.nickname, kind: 'system', body: p_hours > 0 ? `suspended:${p_hours}` : 'unsuspended', created_at: new Date().toISOString() }); return null;
-    },
-    set_adjust({ p_token, p_member_id, p_value, p_announce = true }) {
-      const { group: g, member: m } = me(p_token); if (!m.leader) fail('not_leader');
-      const t = g.members.find((y) => y.id === p_member_id && y.active); if (!t || t.id === m.id || p_value > 100000 || p_value < -100000) fail('bad_target');
-      t.adjust = p_value; if (p_announce) g.messages.push({ id: ++msgId, member_id: m.id, nickname: t.nickname, kind: 'system', body: `adjust:${p_value}`, created_at: new Date().toISOString() }); return null;
-    },
-    give_drachmas({ p_token, p_member_id, p_amount, p_announce = true }) {
-      const { group: g, member: m } = me(p_token); if (!m.leader) fail('not_leader');
-      const t = g.members.find((y) => y.id === p_member_id && y.active); if (!t || t.id === m.id || !(p_amount >= 1 && p_amount <= 10000000)) fail('bad_target');
-      t.gifts = (t.gifts ?? 0) + p_amount; if (p_announce) g.messages.push({ id: ++msgId, member_id: m.id, nickname: t.nickname, kind: 'system', body: `gift:${p_amount}`, created_at: new Date().toISOString() }); return null;
-    },
+    suspend_member() { fail('removed'); },
+    set_adjust() { fail('removed'); },
+    give_drachmas() { fail('removed'); },
     claim_gifts({ p_token }) { const m = me(p_token).member; const n = m.gifts ?? 0; m.gifts = 0; return n; },
     rename_group({ p_token, p_name }) {
       const { group: g, member: m } = me(p_token); if (!m.leader) fail('not_leader');

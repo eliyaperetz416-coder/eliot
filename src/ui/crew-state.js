@@ -1,16 +1,17 @@
 // The crew on this phone: membership (kept in IndexedDB), unread count, and sending your numbers after workouts.
 import { dbGet, dbPut } from './db.js';
-import { rpc, newToken, vapidKey } from './crew-api.js';
+import { rpc, newToken } from './crew-api.js';
+import { ensureSubscription } from './push.js';
 import { store, todayKey, saveGame } from './store.js';
 import { showToast } from './components.js';
 import { t } from '../core/i18n.mjs';
-import { statsFromState, planPayload, unreadCount, errorKey, base64UrlToBytes } from '../core/crew.mjs';
+import { statsFromState, planPayload, unreadCount, errorKey } from '../core/crew.mjs';
 import { view } from '../core/streak.mjs';
 import { getSettings } from './storage.js';
 import { data } from './data.js';
 import { nextPlanDay } from '../core/generator.mjs';
 
-export const crew = { local: null, unread: 0, ownerKey: null, returnsUsed: 0, lockUntil: null };
+export const crew = { local: null, unread: 0, returnsUsed: 0 };
 const listeners = new Set();
 export const onCrew = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
 const emit = () => listeners.forEach((fn) => fn());
@@ -18,9 +19,8 @@ const persist = () => dbPut('kv', crew.local, 'crew');
 
 export async function initCrew() {
   crew.local = (await dbGet('kv', 'crew').catch(() => null)) ?? null;
-  crew.ownerKey = (await dbGet('kv', 'ownerKey').catch(() => null)) ?? null;
-  crew.lockUntil = (await dbGet('kv', 'lock').catch(() => null)) ?? null;
-  store.adjust = (await dbGet('kv', 'adjust').catch(() => null)) ?? 0;
+  // the leader's rating change and suspension are gone (Elia, 25.11): forget what an older version kept on this phone
+  for (const k of ['adjust', 'lock']) if (await dbGet('kv', k).catch(() => null)) await dbPut('kv', null, k).catch(() => {});
   if (crew.local) { fetchView().catch(() => {}); refreshUnread(); syncStats(true); claimGifts(); }
 }
 
@@ -33,15 +33,14 @@ async function enter(fn, args, nickname) {
   await syncStats(true);
   emit();
 }
-/** Only the owner can open a crew: the server hands his phone a key (see supabase/migrations/007) and refuses create_group without it. */
-export const createCrew = (name, nickname) => enter('create_group', { p_name: name, p_nick: nickname, p_owner_key: crew.ownerKey }, nickname);
+/** Anyone can open a crew (supabase/migrations/016). p_owner_key: null picks the 4-argument function (the old 3-argument one refuses). */
+export const createCrew = (name, nickname) => enter('create_group', { p_name: name, p_nick: nickname, p_owner_key: null }, nickname);
 export const joinCrew = (code, nickname) => enter('join_group', { p_code: code, p_nick: nickname }, nickname);
 
 export async function leaveCrew() {
   if (!crew.local) return;
   try { await rpc('leave_group', { p_token: crew.local.token }); } catch (e) { if (errorKey(e) !== 'not_member') throw e; }
   crew.local = null; crew.unread = 0;
-  await setAdjustLocal(0);
   await dbPut('kv', null, 'crew');
   emit();
 }
@@ -54,12 +53,6 @@ export const kickMember = (id, announce = true) => rpc('kick_member', { p_token:
 export const makeLeader = (id, announce = true) => rpc('make_leader', { p_token: tok(), p_member_id: id, p_announce: announce });
 export async function renameGroup(name) { const n = await rpc('rename_group', { p_token: tok(), p_name: name }); crew.local = { ...crew.local, name: n }; await persist(); emit(); return n; }
 export async function newInviteCode() { const c = await rpc('new_code', { p_token: tok() }); crew.local = { ...crew.local, code: c }; await persist(); emit(); return c; }
-/** More leader tools: suspend (hours; 0 lifts it), rating adjustment (0 or lower), a drachma gift. No limits; the leader decides for each one whether the chat is told (announce). */
-export const suspendMember = (id, hours, announce = true) => rpc('suspend_member', { p_token: tok(), p_member_id: id, p_hours: hours, p_announce: announce });
-export const setAdjust = (id, value, announce = true) => rpc('set_adjust', { p_token: tok(), p_member_id: id, p_value: value, p_announce: announce });
-export const giveDrachmas = (id, amount, announce = true) => rpc('give_drachmas', { p_token: tok(), p_member_id: id, p_amount: amount, p_announce: announce });
-/** The member's daily history and latest heavy sets, for the leader to look at before a gift or a punishment. */
-export const fetchReview = (id) => rpc('get_member_review', { p_token: tok(), p_member_id: id });
 /** Counts one shop return on the server (2 per month). Throws 'return_limit' or 'offline'. */
 export async function recordReturn() { const n = Number(await rpc('record_return', { p_token: tok() })) || 0; crew.returnsUsed = n; return n; }
 /** Drachmas the leader gave you since the last time: the server hands each gift over once. */
@@ -78,28 +71,10 @@ export async function syncGroupInfo(group) {
   crew.local = { ...crew.local, name: group.name, code: group.code };
   await persist();
 }
-/** The ban end time (ms) is kept on the phone so the lock screen also holds offline. null = not banned. */
-async function setAdjustLocal(n) {
-  n = Number(n) || 0;
-  if (n === store.adjust) return;
-  store.adjust = n;
-  await dbPut('kv', n, 'adjust').catch(() => {});
-  emit();
-}
-async function setLock(ms) {
-  if ((ms ?? null) === (crew.lockUntil ?? null)) return;
-  crew.lockUntil = ms ?? null;
-  await dbPut('kv', crew.lockUntil, 'lock').catch(() => {});
-  emit();
-}
 export async function fetchView() {
   let v;
-  try { v = await rpc('my_group', { p_token: tok() }); } catch (e) { if (String(e?.message).includes('not_member')) { await setLock(null); await setAdjustLocal(0); } throw e; }
-  await setAdjustLocal(v?.me?.adjust);
-  await setLock(v?.me?.suspended_until ? Date.parse(v.me.suspended_until) : null);
+  v = await rpc('my_group', { p_token: tok() });
   crew.returnsUsed = Number(v?.me?.returns_used) || 0;
-  const key = v?.me?.owner_key;
-  if (key && key !== crew.ownerKey) { crew.ownerKey = key; await dbPut('kv', key, 'ownerKey').catch(() => {}); emit(); }
   return v;
 }
 export const fetchMessages = (after = 0, limit = 60) => rpc('get_messages', { p_token: tok(), p_after: after, p_limit: limit });
@@ -170,16 +145,12 @@ export async function pushStatus() {
 export async function enablePush() {
   if (!crew.local) throw new Error('not_member');
   if (await pushStatus() === 'unsupported') throw new Error('unsupported');
-  const perm = await Notification.requestPermission();
-  if (perm !== 'granted') throw new Error('denied');
-  const reg = await navigator.serviceWorker.ready;
-  let sub = await reg.pushManager.getSubscription();
-  sub ??= await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64UrlToBytes(await vapidKey()) });
+  const sub = await ensureSubscription(); // the same subscription serves the account (rest alarm) and the crew
   await rpc('save_push', { p_token: tok(), p_sub: sub.toJSON() });
   crew.local.push = true; await persist(); emit();
 }
 
 export async function disablePush() {
-  try { const reg = await navigator.serviceWorker.getRegistration(); const sub = await reg?.pushManager.getSubscription(); await sub?.unsubscribe(); } catch { /* ignore */ }
+  // The phone's subscription is shared with the account's rest alarm (push.js), so only the crew's copy is removed here.
   if (crew.local) { try { await rpc('delete_push', { p_token: tok() }); } catch { /* offline: it is switched off locally anyway */ } crew.local.push = false; await persist(); emit(); }
 }

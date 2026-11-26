@@ -8,6 +8,8 @@ import { t } from '../core/i18n.mjs';
 const SECTIONS = ['s1', 's2', 's3', 's4', 's5', 's6'];
 /** Where privacy requests go (shown under "Your rights"; approved by Elia, v1.47.1). */
 export const PRIVACY_CONTACT = 'eliyaperetz416@gmail.com';
+/** The version of this policy that a person agrees to when signing in (saved with the account). */
+export const PRIVACY_VERSION = '2026-12';
 
 function body(text) {
   const out = [];

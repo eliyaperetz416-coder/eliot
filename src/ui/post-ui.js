@@ -3,7 +3,7 @@ import { h } from './dom.js';
 import { icon } from './icons.js';
 import { t, getLanguage } from '../core/i18n.mjs';
 import * as W from '../core/workout.mjs';
-import { postWorkout, rankIndex } from '../core/post.mjs';
+import { postWorkout, rankIndex, ratingDelta } from '../core/post.mjs';
 import { filledOpenSets, completeFilled } from '../core/live.mjs';
 import { applyPost } from '../core/gamestate.mjs';
 import { rewardsCard } from './game-ui.js';
@@ -13,14 +13,12 @@ import { data } from './data.js';
 import { store, commitPost, clearDraft, bodyweightKg, saveRoutine, saveMakeup } from './store.js';
 import { getSettings } from './storage.js';
 import { crew, syncStats, sendMessage } from './crew-state.js';
-import { syncLink } from './link-state.js';
 import { showToast } from './components.js';
 import { bumpPlannedWeights, missedEntries } from '../core/routines.mjs';
 import { skipRest } from './rest-timer.js';
 import { keepAwake } from './wakelock.js';
 import { emblem } from './emblem.js';
 import { rankCard } from './rank-card.js';
-import { modelQuote } from './model.js';
 import { compareVolume } from '../core/compare.mjs';
 import { formatDuration, formatNum, formatKg } from './format.js';
 
@@ -64,7 +62,6 @@ export function openFinishSheet() {
     await commitPost(result, g.game);
     if (missed.length) await saveMakeup({ name: w.name || '', entries: missed, createdMs: now });
     syncStats(true);
-    syncLink(true);
     lastResult = { ...result, game: g.game, rewards: g.rewards, routineUpdate: await updateSavedWorkout(result.workout) };
     skipRest(); keepAwake(false);
     sh.close();
@@ -133,6 +130,21 @@ export function compareCard(volume) {
       c.next ? h('div', { class: 'row-sub', text: t('cmp.next', { kg: formatNum(c.remaining, 0), name: t(`cmp.${c.next.id}`) }) }) : null));
 }
 
+/** The rating change, big, on top (OUR DESIGN, redesign): "+12", or your first rating. Nothing while the rank is still pending. */
+function deltaBlock(s) {
+  const d = ratingDelta(s.overallBefore, s.overallAfter);
+  if (!d) return null;
+  const n = d.kind === 'first' ? formatNum(d.n, 0) : `${d.n > 0 ? '+' : '−'}${formatNum(Math.abs(d.n), 0)}`;
+  return h('div', { class: 'result-delta' }, h('span', { class: 'result-delta-n num', dir: 'ltr', text: n }), h('span', { class: 'result-delta-l', text: t(d.kind === 'first' ? 'res.delta.first' : 'res.delta') }));
+}
+
+function prList(s, byId) {
+  if (!s.prs.length) return [];
+  return [h('div', { class: 'section-label', text: t('res.prs') }),
+    h('div', { class: 'list' }, s.prs.map((p) => h('div', { class: 'row' }, h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: nameOf(byId[p.exerciseId]) })),
+      h('span', { class: `pr-badge pr-${p.kind === 'allTime' ? 'all' : p.kind === 'weekly' ? 'week' : 'first'}`, text: t(p.kind === 'allTime' ? 'fb.pr.all' : p.kind === 'weekly' ? 'fb.pr.week' : 'fb.pr.first') }))))];
+}
+
 export function resultScreen() {
   const r = lastResult;
   const byId = data().byId;
@@ -141,7 +153,8 @@ export function resultScreen() {
   const kids = [
     backLink('#/workout', t('workout.title')),
     h('header', { class: 'screen-head' }, icon('check', 'mark'), h('h1', { text: t('res.title') })),
-    modelQuote(),
+    deltaBlock(s),
+    ...prList(s, byId),
     compareCard(s.stats.volume),
     h('div', { class: 'stats-grid' },
       statTile(t('fin.duration'), formatDuration(s.stats.durationSec)), statTile(t('fin.sets'), String(s.stats.workingSets)),
@@ -165,11 +178,6 @@ export function resultScreen() {
         return h('div', { class: 'row' }, h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: nameOf(byId[c.exerciseId]) }),
           h('span', { class: 'row-sub' }, h('bdi', { class: 'num', text: `${c.before ? formatNum(c.before, 0) : '–'} → ${formatNum(c.after, 0)} · ${t(`tier.${tr.tier}`)}${tr.division ? ` ${tr.division}` : ''}` }))), icon('bolt', 'up-icon'));
       })));
-  }
-  if (s.prs.length) {
-    kids.push(h('div', { class: 'section-label', text: t('res.prs') }),
-      h('div', { class: 'list' }, s.prs.map((p) => h('div', { class: 'row' }, h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: nameOf(byId[p.exerciseId]) })),
-        h('span', { class: `pr-badge pr-${p.kind === 'allTime' ? 'all' : p.kind === 'weekly' ? 'week' : 'first'}`, text: t(p.kind === 'allTime' ? 'fb.pr.all' : p.kind === 'weekly' ? 'fb.pr.week' : 'fb.pr.first') })))));
   }
   if (crew.local) {
     kids.push(h('div', { class: 'stack', style: 'padding-block-start:16px' }, button({ label: t('crew.share.workout'), icon: 'share', variant: 'secondary', block: true, onClick: async (e) => {

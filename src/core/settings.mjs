@@ -1,14 +1,19 @@
 // Settings schema + migrations. Pure; storage lives in src/ui/storage.js.
-export const SETTINGS_VERSION = 2;
+export const SETTINGS_VERSION = 3;
 export const DEFAULT_SETTINGS = Object.freeze({
   schemaVersion: SETTINGS_VERSION,
   lang: null,            // null = detect from the device on first run
-  accentMode: 'fixed',   // 'rank' | 'fixed' (fixed purple is the default since v2)
+  theme: 'dark',         // 'dark' | 'marble' (OUR DESIGN, v3: replaces the accent-by-rank choice)
   reducedMotion: false,
   dumbbellTotal: false,    // OUR DESIGN: type the total of both dumbbells (stored per hand); off = type one dumbbell
   sharePlan: false,        // OUR DESIGN: show your weekly plan to your crew (off until you switch it on)
   weeklyGoal: 3,           // OUR DESIGN: training days per week you aim for; each week you reach it adds rank points
   autoRoutineWeight: true, // raise the planned weight of a saved workout when you lift more
+  restSound: true,         // OUR DESIGN (accounts): end-of-rest sound
+  restVibrate: true,       // end-of-rest vibration (Android)
+  restPush: true,          // end-of-rest notification when the phone is locked
+  morningReminder: true,   // OUR DESIGN (25.11): a morning notification with today's plan
+  morningTime: '08:00',    // when it comes (the phone's own time zone)
   lastExportAt: null,
   reminderSnoozedUntil: null, // export reminder hidden until this time
 });
@@ -18,6 +23,8 @@ const migrations = {
   0: (s) => ({ ...DEFAULT_SETTINGS, ...s, schemaVersion: 1 }),
   // 1 -> 2: one steady accent colour (OUR DESIGN); rank colours stay available in Settings.
   1: (s) => ({ ...s, accentMode: 'fixed', schemaVersion: 2 }),
+  // 2 -> 3: the redesign. Colour themes (dark / marble) replace the accent-by-rank choice.
+  2: (s) => { const { accentMode, ...rest } = s; return { ...rest, theme: 'dark', schemaVersion: 3 }; },
 };
 
 export function migrateSettings(raw) {

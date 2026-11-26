@@ -12,6 +12,7 @@ import { ratingsOf } from '../core/post.mjs';
 import { isDuration, TIER_COLORS } from '../core/ranks.mjs';
 import { weakestGroups, bonusTips } from '../core/weakest.mjs';
 import { formatKg, formatNum } from './format.js';
+import { tierInk } from '../core/themes.mjs';
 
 const nameOf = (ex) => (ex ? (getLanguage() === 'he' ? ex.nameHe : ex.nameEn) : '');
 const tierName = (x) => `${t(`tier.${x.tier}`)}${x.division ? ` ${x.division}` : ''}`;
@@ -37,7 +38,7 @@ export function weakestScreen() {
       emblem({ tier: row.tier ? row.tier.tier : 'unranked', divisionIndex: row.tier?.divisionIndex ?? 0, size: 48, label: groupName(row.group) }),
       h('span', { class: 'weak-main' },
         h('span', { class: 'row-title' }, groupName(row.group), i === 0 ? h('span', { class: 'chip chip-warn', text: t('weak.weakest') }) : null),
-        h('span', { class: 'row-sub', style: hasRating ? `color:${TIER_COLORS[row.tier.tier]}` : '', text: hasRating ? `${tierName(row.tier)} · ${formatNum(row.rating, 0)}` : t('weak.untrained') }),
+        h('span', { class: 'row-sub', style: hasRating ? `color:${tierInk(TIER_COLORS[row.tier.tier], document.documentElement.dataset.theme)}` : '', text: hasRating ? `${tierName(row.tier)} · ${formatNum(row.rating, 0)}` : t('weak.untrained') }),
         h('span', { class: 'weak-next', text: targetText(row) })),
       icon('chevron', 'chev'));
   };

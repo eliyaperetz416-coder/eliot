@@ -1,7 +1,13 @@
-// OUR DESIGN: rank emblem family. One crest per tier, five division pips (V lowest), Greek God gets a bolt crown.
+// OUR DESIGN: the rank crest (artboard E5, made solid on 26.11 — Elia: "too plain, and in places you can see it is a line,
+// not a shape"; the louder versions with rays and wings were "too much"). A laurel wreath of full leaves on a stem around a
+// solid metal shield: a frame in the tier colour, a darker bevel step, enamel inside, a soft sheen (no hard highlight
+// line), and in the middle each tier's own symbol in gold with a glow in the tier colour (crest-icons.js; the same bolt for
+// every tier "looked lazy"). Unranked keeps a dim bolt. The division is the gems above (V = 1 ... I = 5).
+// The only thing that grows with the tier is the wreath's metal: bronze (Wood, Bronze), silver (Silver), gold (Gold to
+// Olympian), white-gold to cyan (Greek God, who wears a crown of three bolts instead of gems). Unranked: iron, a dim bolt.
 import { TIER_COLORS, GREEK_GOD_GRADIENT } from '../core/ranks.mjs';
+import { ICONS, GLYPH_OF } from './crest-icons.js';
 
-const NS = 'http://www.w3.org/2000/svg';
 let uid = 0;
 
 function shade(hex, amt) { // amt -1..1
@@ -12,71 +18,114 @@ function shade(hex, amt) { // amt -1..1
 }
 const reduced = () => document.documentElement.dataset.motion === 'reduce' || matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-const SHIELD = 'M80 8 L128 24 V76 C128 112 106 134 80 146 C54 134 32 112 32 76 V24 Z';
-const PLATE = 'M80 18 L118 31 V76 C118 106 100 124 80 134 C60 124 42 106 42 76 V31 Z';
-const WING = 'M32 42 C14 38 4 52 2 66 C12 60 20 62 26 66 C14 70 10 82 10 92 C18 84 26 84 32 88 C24 94 24 106 28 114 C36 102 42 96 50 96 Z';
-
-function leaves(color) {
-  let s = '';
-  for (const side of [1, -1]) {
-    for (let i = 0; i < 7; i++) {
-      const deg = 100 + i * 20;
-      const th = (deg * Math.PI) / 180;
-      const x = 80 + side * 30 * Math.cos(th) * -1, y = 82 + 30 * Math.sin(th) * -1 * -1;
-      const rot = side * (deg - 90) * -1 + (side === 1 ? 20 : -20);
-      s += `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="3.2" ry="8" transform="rotate(${rot.toFixed(0)} ${x.toFixed(1)} ${y.toFixed(1)})" fill="${color}"/>`;
-    }
-  }
-  return s;
+/** The wreath's metal for a tier: 'iron' | 'bronze' | 'silver' | 'gold' | 'divine'. */
+export function wreathMetal(tier) {
+  if (tier === 'greekgod') return 'divine';
+  if (tier === 'wood' || tier === 'bronze') return 'bronze';
+  if (tier === 'silver') return 'silver';
+  return TIER_COLORS[tier] ? 'gold' : 'iron';
+}
+const WREATH_BASE = { iron: '#7c8190', bronze: '#c4874c', silver: '#c3ccda', gold: '#e3b84f' };
+function wreathStops(metal) {
+  if (metal === 'divine') return '<stop offset="0" stop-color="#ffffff"/><stop offset=".4" stop-color="#fff1b8"/><stop offset="1" stop-color="#5fd6e6"/>';
+  const m = WREATH_BASE[metal];
+  return `<stop offset="0" stop-color="${shade(m, 0.6)}"/><stop offset=".5" stop-color="${m}"/><stop offset="1" stop-color="${shade(m, -0.5)}"/>`;
 }
 
-function glyph(tier, c, light) {
-  const st = `fill="none" stroke="${c}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"`;
-  switch (tier) {
-    case 'wood': return `<g fill="none" stroke="${c}" stroke-width="3.5"><circle cx="80" cy="76" r="8"/><circle cx="80" cy="76" r="16"/><circle cx="80" cy="76" r="24" stroke-dasharray="40 10"/></g><circle cx="80" cy="76" r="3" fill="${c}"/>`;
-    case 'bronze': return `<path d="M60 86 L80 64 L100 86" ${st}/>`;
-    case 'silver': return `<path d="M60 78 L80 58 L100 78" ${st}/><path d="M60 98 L80 78 L100 98" ${st}/>`;
-    case 'gold': return `<path d="M60 70 L80 52 L100 70" ${st}/><path d="M60 88 L80 70 L100 88" ${st}/><path d="M60 106 L80 88 L100 106" ${st}/>`;
-    case 'platinum': return `<path d="M80 50 L104 70 L80 108 L56 70 Z" fill="${c}"/><path d="M56 70 H104 M80 50 L68 70 L80 108 L92 70 Z" fill="none" stroke="${light}" stroke-width="2" stroke-linejoin="round" opacity=".8"/>`;
-    case 'diamond': return `<path d="M80 46 L110 68 L80 112 L50 68 Z" fill="${c}"/><path d="M50 68 H110 M66 68 L80 46 L94 68 L80 112 Z" fill="none" stroke="${light}" stroke-width="2" stroke-linejoin="round"/><path d="M104 44 l2.500 7 7 2.500 -7 2.500 -2.500 7 -2.500 -7 -7 -2.500 7 -2.500 Z" fill="${light}"/>`;
-    case 'champion': return `<path d="M52 102 L56 62 L69 80 L80 54 L91 80 L104 62 L108 102 Z" fill="${c}"/><rect x="52" y="104" width="56" height="8" rx="3" fill="${c}"/><circle cx="56" cy="60" r="3.500" fill="${light}"/><circle cx="80" cy="52" r="3.500" fill="${light}"/><circle cx="104" cy="60" r="3.500" fill="${light}"/>`;
-    case 'titan': return `<path d="M50 62 C48 82 60 92 80 98 C100 92 112 82 110 62 C102 74 92 78 80 78 C68 78 58 74 50 62 Z" fill="${c}"/><path d="M80 52 L89 98 L80 112 L71 98 Z" fill="${light}"/>`;
-    case 'olympian': return `${leaves(c)}<path d="M80 50 C94 68 96 82 80 104 C64 82 66 68 80 50 Z" fill="${light}"/><path d="M80 70 C86 80 85 88 80 96 C75 88 74 80 80 70 Z" fill="${c}"/>`;
-    case 'greekgod': return `<path d="M48 108 H112 L106 119 H54 Z" fill="url(#GG)"/><path d="M58 62 L45 84 H55 L48 102 L68 76 H58 Z M102 62 L115 84 H105 L112 102 L92 76 H102 Z" fill="url(#GG)" opacity=".8"/><path d="M90 34 L58 84 H79 L66 114 L108 64 H87 Z" fill="url(#GG)" stroke="#fff" stroke-width="1.500" stroke-linejoin="round"/>`;
-    default: return `<text x="80" y="90" text-anchor="middle" font-size="40" fill="${c}" font-family="Cinzel,serif">?</text>`;
-  }
+// One branch (the left one; the right one mirrors it around x = 130): a stem on an arc, 12 pairs of leaves pointing up
+// along it (bigger at the bottom) and one leaf at the tip. Built once; every crest fills it with its own gradient.
+const LEAF = 'M0 0 C4 -5.2 12 -5.6 18 0 C12 5.6 4 5.2 0 0 Z';
+const CX = 130, CY = 116, R = 96, FROM = 104, TO = 228, PAIRS = 12;
+const at = (deg) => [CX + R * Math.cos(deg * Math.PI / 180), CY + R * Math.sin(deg * Math.PI / 180)];
+const f1 = (n) => n.toFixed(1);
+function leafAt(deg, side, k) {
+  const [x, y] = at(deg);
+  return `<g transform="translate(${f1(x)} ${f1(y)}) rotate(${f1(deg + 90 + side * 32)}) scale(${k.toFixed(2)})"><path class="leaf" d="${LEAF}" stroke="none"/><path d="M2.5 0 Q9 -.4 15 0" fill="none" stroke="rgba(40,24,0,.38)" stroke-width=".9"/></g>`;
 }
+const BRANCH = (() => {
+  const [x0, y0] = at(FROM), [x1, y1] = at(TO);
+  let s = `<path d="M${f1(x0)} ${f1(y0)} A${R} ${R} 0 0 1 ${f1(x1)} ${f1(y1)}" fill="none" stroke-width="2.6" stroke-linecap="round"/>`;
+  for (let i = 0; i < PAIRS; i++) {
+    const deg = FROM + (TO - FROM) * (i / (PAIRS - 1)), k = 1.2 - 0.45 * (i / (PAIRS - 1));
+    s += leafAt(deg, -1, k) + leafAt(deg, 1, k);
+  }
+  const [tx, ty] = at(TO + 6);
+  return s + `<g transform="translate(${f1(tx)} ${f1(ty)}) rotate(${f1(TO + 96)}) scale(.7)"><path class="leaf" d="${LEAF}" stroke="none"/></g>`;
+})();
 
-/** emblem({tier, divisionIndex (0=V..4=I), size}) -> element. tier 'unranked' is a dim outline. */
+const SHIELD = 'M130 40 L186 58 V107 C186 149 162 175 130 191 C98 175 74 149 74 107 V58 Z';
+const BEVEL = 'M130 47 L180 63 V107 C180 145 158 169 130 184 C102 169 80 145 80 107 V63 Z';
+const INNER = 'M130 53 L174 67 V107 C174 141 155 162 130 176 C105 162 86 141 86 107 V67 Z';
+const SHEEN = 'M86 67 L130 53 L174 67 V84 C150 75 108 78 86 94 Z';
+const BOLT = 'M139 70 L111 121 H127 L121 165 L151 108 H134 L143 70 Z';
+const FACET = 'M139 70 L111 121 H118 L140 76 Z';
+const ICON_SCALE = 0.1482; // a 512 icon -> about 76 px, centred at (130, 118) in the shield
+
+/** The tier's symbol painted with `paint` (a colour or url(#..)). `key` keeps the hydra's clip id unique on the page. */
+function glyph(name, paint, key) {
+  const icon = (n, extra = '') => `<g transform="translate(130 118) scale(${ICON_SCALE}) translate(-256 -256)" fill="${paint}"${extra}>${ICONS[n].map((d) => `<path d="${d}"/>`).join('')}</g>`;
+  if (name === 'bolt') return `<path d="${BOLT}" fill="${paint}"/>`;
+  if (name === 'target') { // our own (the old Wood symbol), in the old 160-wide drawing's units
+    return `<g transform="translate(130 118) scale(1.12) translate(-80 -78)"><g fill="none" stroke="${paint}" stroke-width="3.5"><circle cx="80" cy="76" r="8"/><circle cx="80" cy="76" r="16"/><circle cx="80" cy="76" r="24" stroke-dasharray="40 10"/></g><circle cx="80" cy="76" r="3" fill="${paint}"/></g>`;
+  }
+  if (name === 'temple-bolts') { // the Greek temple with three of our bolts above it
+    const bolt = (x, y, k) => `<path transform="translate(${x} ${y}) scale(${k})" d="${CROWN_BOLT}" fill="${paint}"/>`;
+    return `<g transform="translate(130 118) scale(1.15) translate(-80 -78)"><g transform="translate(0 13) translate(80 78) scale(.7) translate(-80 -78)"><g transform="translate(80 78) scale(.1289) translate(-256 -256)" fill="${paint}">${ICONS['delapouite/greek-temple'].map((d) => `<path d="${d}"/>`).join('')}</g></g>${bolt(63, 44, 0.95)}${bolt(78, 33, 1.22)}${bolt(95, 44, 0.95)}</g>`;
+  }
+  if (name === 'lorc/hydra') { // the icon's necks end in a straight cut on the left: round it into a body
+    return `<defs><clipPath id="hc${key}"><ellipse cx="320" cy="310" rx="302" ry="275"/><rect x="300" y="0" width="212" height="512"/></clipPath></defs>${icon(name, ` clip-path="url(#hc${key})"`)}`;
+  }
+  return icon(name);
+}
+const KNOT = 'M107 208 Q118 206 127 199 L129 202 Q121 210 108 212 Z M153 208 Q142 206 133 199 L131 202 Q139 210 152 212 Z';
+const CROWN_BOLT = 'M3 0 L-5 12 H0 L-3 22 L7 7 H2 L6 0 Z';
+
+/** emblem({tier, divisionIndex (0=V..4=I), size, label}) -> element. `size` is the width in px. */
 export function emblem({ tier = 'unranked', divisionIndex = 0, size = 96, label }) {
-  const id = ++uid; // gradient ids (g, p, GG) carry it: ids must be unique when several emblems share a screen
-  const gg = tier === 'greekgod';
-  const base = tier === 'unranked' ? '#59607d' : TIER_COLORS[tier];
-  const light = shade(base, 0.5), dark = shade(base, -0.55), mid = shade(base, -0.25);
-  const wings = ['titan', 'olympian', 'greekgod'].includes(tier);
+  const id = ++uid; // gradient ids carry it: ids must stay unique when several crests share a screen
+  const gg = tier === 'greekgod', un = !gg && !TIER_COLORS[tier];
+  const base = un ? '#6B7080' : gg ? GREEK_GOD_GRADIENT[1] : TIER_COLORS[tier];
+  const metal = wreathMetal(un ? 'unranked' : tier);
+  const sym = un ? 'bolt' : GLYPH_OF[tier];
   const anim = gg && !reduced()
-    ? `<animate attributeName="stop-color" values="${GREEK_GOD_GRADIENT[0]};${GREEK_GOD_GRADIENT[1]};${GREEK_GOD_GRADIENT[0]}" dur="3.6s" repeatCount="indefinite"/>`
+    ? `<animate attributeName="stop-color" values="#ffffff;${GREEK_GOD_GRADIENT[1]};#ffffff" dur="3.6s" repeatCount="indefinite"/>`
     : '';
-  const ggStops = `<stop offset="0" stop-color="${GREEK_GOD_GRADIENT[0]}">${anim}</stop><stop offset="1" stop-color="${GREEK_GOD_GRADIENT[1]}"/>`;
-  const pips = !gg && tier !== 'unranked'
-    ? [52, 66, 80, 94, 108].map((x, i) => `<circle cx="${x}" cy="158" r="4" fill="${i <= divisionIndex ? base : 'none'}" stroke="${base}" stroke-width="1.500" opacity="${i <= divisionIndex ? 1 : 0.5}"/>`).join('')
-    : '';
-  const wingSvg = wings ? `<g fill="${gg ? `url(#GG${id})` : base}" opacity=".85"><path d="${WING}"/><path d="${WING}" transform="translate(160 0) scale(-1 1)"/></g>` : '';
+  const frameStops = gg
+    ? `<stop offset="0" stop-color="#ffffff">${anim}</stop><stop offset=".35" stop-color="${GREEK_GOD_GRADIENT[0]}"/><stop offset=".7" stop-color="${GREEK_GOD_GRADIENT[1]}"/><stop offset="1" stop-color="#d9fbff"/>`
+    : `<stop offset="0" stop-color="${shade(base, 0.65)}"/><stop offset=".38" stop-color="${base}"/><stop offset=".7" stop-color="${shade(base, -0.45)}"/><stop offset="1" stop-color="${shade(base, 0.35)}"/>`;
+  const div = Math.max(0, Math.min(4, divisionIndex | 0));
+  const n = gg || un ? 0 : 5 - div;
+  const gems = Array.from({ length: n }, (_, i) => {
+    const x = 130 + (i - (n - 1) / 2) * 15;
+    return `<g class="dia" transform="translate(${x} 26)"><path d="M0 -6 L6 0 L0 6 L-6 0 Z" fill="url(#w${id})"/><path d="M0 -6 L6 0 L0 0 Z" fill="#fff" opacity=".5"/><path d="M-6 0 L0 0 L0 6 Z" fill="#000" opacity=".25"/></g>`;
+  }).join('');
+  const crown = gg ? `<g class="crown" fill="url(#b${id})">${[[112, 14, 0.9], [130, 4, 1.15], [148, 14, 0.9]].map(([x, y, k]) => `<path transform="translate(${x} ${y}) scale(${k})" d="${CROWN_BOLT}"/>`).join('')}</g>` : '';
   const body = `
     <defs>
-      <linearGradient id="g${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${light}"/><stop offset=".5" stop-color="${base}"/><stop offset="1" stop-color="${mid}"/></linearGradient>
-      <linearGradient id="GG${id}" x1="0" y1="0" x2="1" y2="1">${ggStops}</linearGradient>
-      <radialGradient id="p${id}" cx=".5" cy=".3" r=".8"><stop offset="0" stop-color="${shade(base, -0.7)}"/><stop offset="1" stop-color="#0b0c14"/></radialGradient>
+      <linearGradient id="r${id}" x1="0" y1="0" x2="1" y2="1">${frameStops}</linearGradient>
+      <linearGradient id="w${id}" x1="0" y1="0" x2="0" y2="1">${wreathStops(metal)}</linearGradient>
+      <radialGradient id="e${id}" cx=".5" cy=".28" r=".85"><stop offset="0" stop-color="${gg ? '#1f4553' : shade(base, -0.5)}"/><stop offset=".55" stop-color="${gg ? '#0b1a22' : shade(base, -0.8)}"/><stop offset="1" stop-color="#05070b"/></radialGradient>
+      <linearGradient id="s${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+      <linearGradient id="b${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fffaf0"/><stop offset=".4" stop-color="${gg ? '#c6fbff' : '#f6cf6a'}"/><stop offset="1" stop-color="${gg ? '#2aa9c8' : '#9a6a18'}"/></linearGradient>
+      <filter id="f${id}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4.5"/></filter>
     </defs>
-    ${wingSvg}
-    <path d="${SHIELD}" fill="${tier === 'unranked' ? 'none' : `url(#g${id})`}" stroke="${gg ? `url(#GG${id})` : light}" stroke-width="${tier === 'unranked' ? 3 : 2}" stroke-linejoin="round" ${tier === 'unranked' ? 'stroke-dasharray="6 6"' : ''}/>
-    ${tier === 'unranked' ? '' : `<path d="${PLATE}" fill="url(#p${id})" stroke="${dark}" stroke-width="2"/>`}
-    ${glyph(tier, base, light).replace(/url\(#GG\)/g, `url(#GG${id})`)}
-    ${pips}`;
+    <g fill="url(#w${id})" stroke="url(#w${id})">${BRANCH}</g>
+    <g fill="url(#w${id})" stroke="url(#w${id})" transform="translate(260 0) scale(-1 1)">${BRANCH}</g>
+    <path d="${KNOT}" fill="url(#w${id})"/><circle cx="130" cy="200" r="4.5" fill="url(#w${id})"/>
+    <path class="rim" d="${SHIELD}" fill="url(#r${id})"/>
+    <path d="${BEVEL}" fill="${shade(base, -0.55)}" opacity=".55"/>
+    <path d="${INNER}" fill="url(#e${id})"/>
+    <g class="glyph-glow" filter="url(#f${id})" opacity="${un ? 0.25 : 0.7}">${glyph(sym, base, `g${id}`)}</g>
+    <g class="glyph"${un ? ' opacity=".45"' : ''}>${glyph(sym, `url(#b${id})`, `m${id}`)}${un ? `<path d="${FACET}" fill="#fff" opacity=".28"/>` : ''}</g>
+    <path d="${SHEEN}" fill="url(#s${id})"/>
+    ${gems}${crown}`;
   const wrap = document.createElement('span');
-  wrap.className = `emblem emblem-${tier}`;
-  wrap.style.setProperty('--em-glow', gg ? '#7df9ff' : base);
+  wrap.className = `emblem emblem-${un ? 'unranked' : tier}`;
+  wrap.dataset.division = String(div);
+  wrap.dataset.wreath = metal;
+  wrap.dataset.glyph = sym;
+  wrap.style.setProperty('--em-glow', gg ? GREEK_GOD_GRADIENT[1] : base);
   wrap.style.width = `${size}px`;
-  wrap.innerHTML = `<svg viewBox="0 0 160 168" width="${size}" height="${size * 168 / 160}" role="img" aria-label="${String(label ?? tier).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)}">${body}</svg>`;
+  wrap.innerHTML = `<svg viewBox="0 0 260 230" width="${size}" height="${Math.round(size * 230 / 260)}" role="img" aria-label="${String(label ?? tier).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)}">${body}</svg>`;
   return wrap;
 }

@@ -105,3 +105,14 @@ test('dateKey is the local calendar date', () => {
   assert.equal(W.dateKey(d.getTime()), '2026-03-29');
   assert.equal(W.dateKey(new Date(2026, 0, 1, 0, 0).getTime()), '2026-01-01');
 });
+
+test('entryFinished: working sets all done; an entry with only warm-ups (or no sets) never blocks the next one', async () => {
+  const { entryFinished } = await import('../src/core/live.mjs');
+  const set = (type, done) => ({ type, done });
+  assert.equal(entryFinished({ sets: [set('warmup', true), set('normal', true)] }), true);
+  assert.equal(entryFinished({ sets: [set('warmup', false), set('normal', true)] }), true, 'a skipped warm-up does not hold the exercise open');
+  assert.equal(entryFinished({ sets: [set('normal', true), set('normal', false)] }), false);
+  assert.equal(entryFinished({ sets: [set('warmup', true), set('warmup', true)] }), true, 'only warm-ups, all done');
+  assert.equal(entryFinished({ sets: [set('warmup', false)] }), false);
+  assert.equal(entryFinished({ sets: [] }), true, 'no sets: nothing to do here');
+});

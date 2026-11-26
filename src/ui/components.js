@@ -31,7 +31,10 @@ export function segmented({ options, value, onChange, label }) {
   for (const o of options) {
     root.append(h('button', {
       type: 'button', 'aria-pressed': String(o.value === value), lang: o.lang,
-      onclick: () => onChange(o.value),
+      onclick: (e) => { // mark the choice right away (a caller that redraws gets the same result)
+        for (const b of root.children) b.setAttribute('aria-pressed', String(b === e.currentTarget));
+        onChange(o.value);
+      },
     }, o.label));
   }
   return root;
@@ -70,9 +73,10 @@ export function backLink(href, label) {
 
 export function tabBar({ tabs, current, badges = {} }) {
   return h('nav', { class: 'tabbar', 'aria-label': t('nav.label') },
-    tabs.map((tab) => h('a', {
+    tabs.map((tab) => h('a', { // icon only (E5): the name is for screen readers; the open tab has a small dot under it
       class: 'tab', href: `#/${tab.id}`, 'aria-current': tab.id === current ? 'page' : null,
-    }, icon(tab.icon), badges[tab.id] ? h('i', { class: 'tab-dot', 'aria-label': t('crew.unread.label') }) : null, h('span', { text: t(`tab.${tab.id}`) }))));
+      'aria-label': badges[tab.id] ? `${t(`tab.${tab.id}`)}, ${t('crew.unread.label')}` : t(`tab.${tab.id}`),
+    }, icon(tab.icon), badges[tab.id] ? h('i', { class: 'tab-dot', 'aria-hidden': 'true' }) : null, h('i', { class: 'tab-on', 'aria-hidden': 'true' }))));
 }
 
 /* ---------- sheet ---------- */
@@ -96,13 +100,15 @@ export function openSheet({ title, content, tall = false }) {
   const sheet = h('div', { class: `sheet${tall ? ' sheet-tall' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': title }, grab, head, content);
   const ov = h('div', { class: 'overlay' }, bg, sheet);
   const onKey = (e) => { if (e.key === 'Escape') close(); };
+  const onNav = () => close(); // a sheet belongs to its screen: a link inside it (or the back button) takes it away
 
   function close(velocity = 0) {
     if (closed) return;
     closed = true;
     document.removeEventListener('keydown', onKey);
+    window.removeEventListener('hashchange', onNav);
     openSheets = Math.max(0, openSheets - 1);
-    if (!openSheets && !document.querySelector('.app-lock')) for (const el of behind()) el.inert = false; // a lock screen keeps them locked
+    if (!openSheets) for (const el of behind()) el.inert = false;
     prevFocus?.focus?.();
     // leaves the DOM's `.sheet` / `.overlay` names at once, so nothing can talk to a sheet that is on its way out
     sheet.classList.replace('sheet', 'sheet-exit'); sheet.removeAttribute('role'); ov.classList.replace('overlay', 'overlay-exit'); ov.inert = true;
@@ -158,7 +164,7 @@ export function openSheet({ title, content, tall = false }) {
   root.append(ov);
   openSheets += 1;
   for (const el of behind()) el.inert = true;
-  document.addEventListener('keydown', onKey);
+  document.addEventListener('keydown', onKey); window.addEventListener('hashchange', onNav);
   if (!tall) closeBtn.focus();
   return { close: () => close() };
 }

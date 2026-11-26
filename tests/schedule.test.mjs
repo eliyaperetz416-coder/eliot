@@ -75,3 +75,19 @@ test('next scheduled workout: the nearest planned one, today counts unless done,
   n = nextScheduledWorkout(sched, '2026-10-17', { usable });
   assert.deepEqual([n.offset, n.entry.ref], [3, 'upper'], 'wraps into next week');
 });
+
+test('workoutSize: exercises, sets and a rough length for the "next workout" row', async () => {
+  const { workoutSize } = await import('../src/core/schedule.mjs');
+  const six = Array.from({ length: 6 }, (_, i) => ({ exerciseId: `e${i}`, sets: 3 }));
+  assert.deepEqual(workoutSize(six), { exercises: 6, sets: 18, minutes: 45 });
+  assert.deepEqual(workoutSize([{ exerciseId: 'a', sets: 1 }]), { exercises: 1, sets: 1, minutes: 10 }, 'never under 10 minutes');
+  assert.deepEqual(workoutSize([{ exerciseId: 'a', sets: [{}, {}, {}, {}] }]), { exercises: 1, sets: 4, minutes: 10 }, 'sets as an array count too');
+  assert.equal(workoutSize([]), null, 'nothing in it: no row');
+  assert.equal(workoutSize(undefined), null);
+});
+
+test('workoutSize: warm-up sets do not count (sets given as an array)', async () => {
+  const { workoutSize } = await import('../src/core/schedule.mjs');
+  const sets = [{ type: 'warmup' }, { type: 'warmup' }, { type: 'normal' }, { type: 'normal' }, { type: 'normal' }, { type: 'normal' }];
+  assert.deepEqual(workoutSize([{ exerciseId: 'a', sets }, { exerciseId: 'b', sets }]), { exercises: 2, sets: 8, minutes: 20 });
+});

@@ -157,37 +157,41 @@ function folderSheet(folder, rerender) {
 }
 
 /** The Workouts tab: your saved workouts first, then plan my week, plans and the exercise library (OUR DESIGN). */
+/** The "+" on Workouts: a new workout, one from a template, or a new folder (OUR DESIGN, redesign). */
+function addSheet(redraw) {
+  const sh = openSheet({ title: t('wk.add'), content: list([
+    listRow({ title: t('routines.new'), icon: 'workout', onClick: () => { sh.close(); go('#/routine/new'); } }),
+    listRow({ title: t('routines.fromTemplate'), icon: 'bolt', onClick: () => { sh.close(); templateSheet(); } }),
+    listRow({ title: t('folder.new'), icon: 'plus', onClick: () => { sh.close(); folderSheet(null, redraw); } }),
+  ]) });
+}
+
 export function workoutsScreen() {
   const root = h('main', { class: 'screen' });
+  const tile = (href, ic, label, n) => h('a', { class: 'wk-tile', href }, icon(ic), h('span', { class: 'wk-tile-label', text: label }), n != null ? h('span', { class: 'wk-tile-n num', text: String(n) }) : null);
   function draw() {
+    const empty = !store.routines.length && !store.folders.length;
     const kids = [
-      h('header', { class: 'screen-head' }, icon('bolt', 'mark'), h('h1', { text: t('tab.workouts') })),
-      h('p', { class: 'row-sub', text: t('routines.hint') }),
-      h('div', { class: 'stack', style: 'padding-block:12px' },
-        button({ label: t('routines.new'), icon: 'workout', block: true, onClick: () => go('#/routine/new') }),
-        h('div', { class: 'btn-pair' },
-          button({ label: t('routines.fromTemplate'), variant: 'secondary', onClick: templateSheet }),
-          button({ label: t('folder.new'), variant: 'secondary', onClick: () => folderSheet(null, draw) }))),
+      h('header', { class: 'screen-head' }, h('h1', { text: t('tab.workouts') }),
+        h('a', { class: 'icon-btn', href: '#/history', 'aria-label': t('hist.title') }, icon('history')),
+        h('button', { class: 'icon-btn wk-add', type: 'button', 'aria-label': t('wk.add'), onclick: () => addSheet(draw) }, icon('plus'))),
+      h('nav', { class: 'wk-tiles', 'aria-label': t('wk.more') },
+        tile('#/wods', 'flame', t('wods.title'), data().wods?.wods?.length ?? 0),
+        tile('#/schedule', 'calendar', t('home.sched.plan')),
+        tile('#/plans', 'bolt', t('plans.title'), store.plans.length || null),
+        tile('#/exercises', 'exercises', t('wk.library'), data().exercises.length)),
     ];
-    if (!store.routines.length && !store.folders.length) kids.push(emptyState({ icon: 'workout', title: t('routines.empty.title'), body: t('routines.empty.body') }));
+    if (empty) kids.push(h('p', { class: 'row-sub wk-hint', text: t('routines.hint') }), emptyState({ icon: 'workout', title: t('routines.empty.title'), body: t('routines.empty.body') }));
     for (const g of R.groupByFolder(store.folders, store.routines)) {
       if (!g.folder && !g.routines.length) continue;
       if (g.folder) kids.push(h('div', { class: 'folder-head' }, h('span', { class: 'section-label', text: g.folder.name }), h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('folder.rename'), onclick: () => folderSheet(g.folder, draw) }, icon('more'))));
       if (!g.routines.length) { kids.push(h('p', { class: 'row-sub', text: t('folder.empty') })); continue; }
       kids.push(h('div', { class: 'list' }, g.routines.map((r) => h('div', { class: 'row routine-row' },
-        exThumb(data().byId[r.entries[0]?.exerciseId], 48),
         h('a', { class: 'row-main routine-link', href: `#/routine/${r.id}` }, h('span', { class: 'row-title', text: r.name || t('routines.untitled') }),
-          h('span', { class: 'row-sub', text: r.entries.slice(0, 3).map((e) => nameOf(data().byId[e.exerciseId])).join(' · ') || t('routines.count', { n: 0 }) })),
-        h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('routines.start'), onclick: () => startFromRoutine(r), disabled: !r.entries.length }, icon('bolt')),
+          h('span', { class: 'row-sub num', text: t('routines.count', { n: r.entries.length }) })),
+        h('button', { class: 'icon-btn wk-play', type: 'button', 'aria-label': t('routines.start'), onclick: () => startFromRoutine(r), disabled: !r.entries.length }, icon('play')),
         h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('entry.menu'), onclick: () => routineMenu(r, draw) }, icon('more'))))));
     }
-    kids.push(h('div', { class: 'section-label', text: t('wk.more') }),
-      list([
-        listRow({ title: t('wods.title'), sub: t('wods.row.sub'), icon: 'flame', end: h('span', { class: 'num', text: String(data().wods?.wods?.length ?? 0) }), onClick: () => go('#/wods') }),
-        listRow({ title: t('home.sched.plan'), sub: t('home.sched.row.sub'), icon: 'history', onClick: () => go('#/schedule') }),
-        listRow({ title: t('plans.title'), sub: t('plans.sub'), icon: 'bolt', end: h('span', { class: 'num', text: String(store.plans.length) }), onClick: () => go('#/plans') }),
-        listRow({ title: t('wk.library'), sub: t('wk.library.sub'), icon: 'exercises', end: h('span', { class: 'num', text: String(data().exercises.length) }), onClick: () => go('#/exercises') }),
-      ]));
     root.replaceChildren(...kids);
   }
   draw();
