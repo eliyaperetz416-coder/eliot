@@ -25,7 +25,7 @@
   "lang.en": "English",
   "maint.title": "Updating.",
   "maint.body": "Something new is on the way. Your workouts are safe.",
-  "maint.back": "Back today around {time}",
+  "maint.back": "Back tomorrow morning around {time}",
   "update.ready": "A new version is ready",
   "update.reload": "Refresh",
   "offline.title": "You're offline",

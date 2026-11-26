@@ -3,8 +3,8 @@
 // (LOCKED = false) removes it, and the lock screen takes that release in by itself.
 // Tests serve the app with LOCKED = false (tests/serve.mjs); users always get this file as it is.
 export const LOCKED = false; // launch day: true in the lock release, false again in the release after it
-/** The time shown on the lock screen ("back today around 22:00"), on the launch day, Israel time. */
-export const BACK_AT = '00:15';
+/** The time shown on the lock screen ("back tomorrow morning around 07:00"), Israel time. */
+export const BACK_AT = '07:00';
 
 /** "HH:MM" -> the same text; anything else -> '' (no time is better than a wrong one). */
 export const backAtLabel = (hhmm) => (/^([01]\d|2[0-3]):[0-5]\d$/.test(String(hhmm ?? '')) ? hhmm : '');

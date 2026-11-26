@@ -25,7 +25,7 @@
   "lang.en": "English",
   "maint.title": "מתעדכנים.",
   "maint.body": "משהו חדש בדרך. האימונים שלך שמורים.",
-  "maint.back": "חוזרים היום בערך ב־{time}",
+  "maint.back": "חוזרים מחר בבוקר בערך ב־{time}",
   "update.ready": "יש גרסה חדשה",
   "update.reload": "רענון",
   "offline.title": "אין חיבור",
