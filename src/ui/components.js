@@ -108,7 +108,7 @@ export function openSheet({ title, content, tall = false }) {
     document.removeEventListener('keydown', onKey);
     window.removeEventListener('hashchange', onNav);
     openSheets = Math.max(0, openSheets - 1);
-    if (!openSheets && !document.querySelector('.app-lock')) for (const el of behind()) el.inert = false; // a lock screen keeps them locked
+    if (!openSheets) for (const el of behind()) el.inert = false;
     prevFocus?.focus?.();
     // leaves the DOM's `.sheet` / `.overlay` names at once, so nothing can talk to a sheet that is on its way out
     sheet.classList.replace('sheet', 'sheet-exit'); sheet.removeAttribute('role'); ov.classList.replace('overlay', 'overlay-exit'); ov.inert = true;

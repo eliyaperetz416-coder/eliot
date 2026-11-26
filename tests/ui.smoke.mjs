@@ -1088,13 +1088,9 @@ for (const lang of ['he', 'en']) {
       await page.goto(`${base}#/crew`);
       await page.waitForSelector('#crew-nick');
       await page.screenshot({ path: `${shots}${lang}-crew-start.png`, fullPage: true });
-      // only the owner can open a crew: without the owner key there is no "create" tab, and the server refuses too
-      assert.equal(await page.getByRole('button', { name: T('יצירת קבוצה', 'Create a crew') }).count(), 0, 'no create tab for everyone else');
-      const refused = await page.evaluate(async () => { try { await (await import('./src/ui/crew-api.js')).rpc('create_group', { p_name: 'x', p_nick: 'y', p_token: 'a'.repeat(40), p_owner_key: 'nope' }); return 'allowed'; } catch (e) { return e.message; } });
-      assert.equal(refused, 'not_owner');
-      for (let i = errors.length - 1; i >= 0; i--) if (errors[i].includes('status of 400')) errors.splice(i, 1); // that refusal is expected
-      await page.evaluate(async (k) => (await import('./src/ui/db.js')).dbPut('kv', k, 'ownerKey'), fake.OWNER_KEY);
-      await page.reload(); await page.waitForSelector('#crew-nick');
+      // anyone can open a crew (migration 016): the "create" tab is there for everyone, no owner key needed
+      assert.equal(await page.getByRole('button', { name: T('יצירת קבוצה', 'Create a crew') }).count(), 1, 'create for everyone');
+      assert.equal(await page.evaluate(async () => (await (await import('./src/ui/db.js')).dbGet('kv', 'ownerKey')) ?? null), null, 'no owner key on this phone');
       await page.getByRole('button', { name: T('יצירת קבוצה', 'Create a crew') }).click();
       await page.fill('#crew-name', 'Gym bros'); await page.fill('#crew-nick', 'Elia');
       await page.getByRole('button', { name: T('צור את הקבוצה', 'Create the crew') }).click();
@@ -1275,78 +1271,17 @@ for (const lang of ['he', 'en']) {
         await page.waitForFunction(() => ![...document.querySelectorAll('.crew-row')].some((r) => r.textContent.includes('Eve')));
         await p3.reload();
         await p3.waitForSelector('#crew-code');
-        // suspend Dan from the chat, lift it, adjust his rating, give drachmas
-        const leaderTool = async (nick, toolIndex, chip) => {
-          await board(page);
-          await rowOf(page, nick).click(); await page.waitForSelector('.crew-leader-tools');
-          await page.locator('.crew-leader-tools .btn-secondary').nth(toolIndex).click();
-          await page.waitForSelector('.sheet .chip-select');
-          await page.locator('.sheet .chip-select', { hasText: chip }).last().click();
-          await page.waitForFunction(() => !document.querySelector('.crew-leader-tools'));
-        };
-        const adjustTool = async (nick, pick, quiet = false) => {
-          await board(page); await rowOf(page, nick).click(); await page.waitForSelector('.crew-leader-tools');
-          await page.locator('.crew-leader-tools .btn-secondary').nth(1).click();
-          await page.waitForSelector('.crew-adjust .rank-preview');
-          if (quiet) await page.locator('.sheet .announce-toggle').click();
-          await pick();
-          await page.getByRole('button', { name: T('החל', 'Apply'), exact: true }).click();
-          await page.waitForFunction(() => !document.querySelector('.crew-leader-tools'));
-        };
-        const chipOf = (txt) => page.locator('.crew-adjust .chip-select', { hasText: txt }).first();
-        await leaderTool('Dan', 0, /^1 (שעות|hours)$/);
-        // the ban covers the whole app, not only the chat
-        await p2.reload(); await p2.waitForSelector('.app-lock');
-        assert.ok((await p2.textContent('.app-lock')).length > 20);
-        assert.equal(await p2.locator('.app-lock').evaluate((el) => document.getElementById('app').inert), true, 'the app behind the lock is inert');
-        await p2.screenshot({ path: `${shots}${lang}-crew-suspended.png` });
-        await p2.reload(); await p2.waitForSelector('.app-lock'); // still locked after a reload (kept on the phone)
-        assert.equal(await p2.locator('.app-lock').count(), 1);
+        // the leader keeps only "hand over" and "remove": no rating change, no prize, no suspension (migration 016)
         await board(page);
-        assert.equal(await rowOf(page, 'Dan').locator('.chip-warn').count(), 1, 'the board marks the suspension');
-        await leaderTool('Dan', 0, T('ביטול השעיה', 'Lift the suspension'));
-        await p2.getByRole('button', { name: T('בדוק שוב', 'Check again') }).click();
-        await p2.waitForSelector('.app-lock', { state: 'detached' });
-        await p2.reload(); await p2.waitForSelector('#crew-say');
-        await adjustTool('Dan', async () => { await chipOf(/^-100$/).click(); });
-        await board(page);
-        assert.ok((await rowOf(page, 'Dan').locator('.chip-warn').textContent()).includes('100'), 'the adjustment shows on the board');
-        // the member sees it too: his own Progress rating includes the leader's adjustment, with a note
-        await p2.reload();
-        for (let i = 0; i < 40 && (await p2.evaluate(async () => (await import('./src/ui/store.js')).store.adjust)) !== -100; i++) await p2.waitForTimeout(250);
-        const shown = await p2.evaluate(async () => { const m = await import('./src/ui/store.js'); m.store.overall = { pending: false, rating: 500, strength: 500, bonus: 0, remaining: 0 }; return m.shownOverall(); });
-        assert.deepEqual([shown.rating, shown.rawRating, shown.adjust], [400, 500, -100]);
-        await p2.goto(`${base}#/ranks`); await p2.waitForSelector('.pyramid');
-        await p2.goto(`${base}#/crew`); await p2.waitForSelector('#crew-say, .crew-board, .crew-tabs');
-        await adjustTool('Dan', async () => { await page.getByRole('button', { name: T('איפוס', 'Reset'), exact: true }).click(); });
-        const dracBefore = await p2.evaluate(async () => (await import('./src/ui/store.js')).store.game.drachmas);
-        // a quiet punishment is not announced in the chat
-        const sysBodies = () => [...fake.groups.values()].flatMap((g) => g.messages).filter((m) => m.kind === 'system').map((m) => m.body);
-        await adjustTool('Dan', async () => { await chipOf(/^-50$/).click(); }, true);
-        assert.ok(!sysBodies().includes('adjust:-50'), 'a quiet action is not announced');
-        await adjustTool('Dan', async () => { await page.getByRole('button', { name: T('איפוס', 'Reset'), exact: true }).click(); });
-        // the gift: first the progress review, then the amount (no limit, any number)
-        await board(page); await rowOf(page, 'Dan').click(); await page.waitForSelector('.crew-leader-tools');
-        await page.locator('.crew-leader-tools .btn-secondary').nth(2).click();
-        await page.waitForSelector('.sheet .crew-review #crew-gift-amount');
-        assert.ok(await page.locator('.crew-review .chart-card').count() >= 1, 'the review shows the progress charts');
-        await page.screenshot({ path: `${shots}${lang}-crew-review.png` });
-        await page.fill('#crew-gift-amount', '12345');
-        await page.fill('#crew-gift-bonus', '40');
-        await page.getByRole('button', { name: T('תן את הפרס', 'Give the prize') }).click();
-        await page.waitForFunction(() => !document.querySelector('.crew-leader-tools'));
-        assert.ok(sysBodies().includes('gift:12345') && sysBodies().includes('adjust:40'), 'drachmas and a rating prize are both announced');
-        await board(page);
-        assert.ok((await rowOf(page, 'Dan').locator('.chip-warn').textContent()).includes('+40'), 'the prize shows on the board');
-        await adjustTool('Dan', async () => { await page.getByRole('button', { name: T('איפוס', 'Reset'), exact: true }).click(); });
-        await p2.reload(); await p2.waitForSelector('#crew-say');
-        await p2.waitForFunction(async (b) => (await import('./src/ui/store.js')).store.game.drachmas === b + 12345, dracBefore);
-        await p2.keyboard.press('Escape');
-        const chatText = await p2.textContent('#crew-feed');
-        assert.ok(/הושעה|suspended/i.test(chatText) && /דרכמות|drachmas/i.test(chatText), 'everything is announced in the chat');
-        // hand over to Dan: he gets the tools and Elia loses them
         await rowOf(page, 'Dan').click(); await page.waitForSelector('.crew-leader-tools');
-        await page.locator('.crew-leader-tools .btn-secondary').nth(3).click();
+        assert.equal(await page.locator('.crew-leader-tools button').count(), 2, 'hand over + remove only');
+        await page.keyboard.press('Escape'); await page.waitForTimeout(350);
+        assert.equal(await page.evaluate(async () => { try { await (await import('./src/ui/crew-api.js')).rpc('set_adjust', { p_token: 'x'.repeat(64), p_member_id: '00000000-0000-0000-0000-000000000000', p_value: -10, p_announce: true }); return 'allowed'; } catch (e) { return e.message; } }), 'removed', 'the server refuses it too');
+        for (let i = errors.length - 1; i >= 0; i--) if (errors[i].includes('status of 400')) errors.splice(i, 1); // that refusal is expected
+        // hand over to Dan: he gets the tools and Elia loses them
+        await board(page);
+        await rowOf(page, 'Dan').click(); await page.waitForSelector('.crew-leader-tools');
+        await page.locator('.crew-leader-tools .btn-secondary').first().click();
         await confirmGo(page);
         await board(page);
         assert.equal(await rowOf(page, 'Dan').locator('.chip-leader').count(), 1);
@@ -1356,7 +1291,7 @@ for (const lang of ['he', 'en']) {
         // and back to Elia
         await board(p2);
         await rowOf(p2, 'Elia').click(); await p2.waitForSelector('.crew-leader-tools');
-        await p2.locator('.crew-leader-tools .btn-secondary').nth(3).click();
+        await p2.locator('.crew-leader-tools .btn-secondary').first().click();
         await confirmGo(p2);
         await board(page);
         assert.equal(await rowOf(page, 'Elia').locator('.chip-leader').count(), 1);
@@ -2068,6 +2003,30 @@ await check('accounts: the rest reminder goes to the phone you train on, is with
   await p.waitForTimeout(800);
   assert.equal(acct.alarms.at(-1).method, 'DELETE', `cut to 0: ${acct.alarms.map((a) => `${a.method}${a.body ? Math.round((Date.parse(a.body.fire_at) - Date.now()) / 1000) : ''}`).join(',')} left=${await p.evaluate(async () => { const { store } = await import('./src/ui/store.js'); return store.draft?.timer ? store.draft.timer.endAt - Date.now() : 'none'; })}`);
   assert.ok(!acct.alarms.some((a) => a.method === 'POST' && Date.parse(a.body.fire_at) < Date.now() - 1000), 'never a reminder in the past');
+  await c.close();
+});
+
+await check('accounts: the morning reminder gets the seven messages from the week plan, and the time from Settings', async () => {
+  const c = await phone(); const acct = await installFakeSupabase(c);
+  const p = await c.newPage();
+  await onboard(p, 'he');
+  await p.evaluate(async () => {
+    const { saveRoutine, saveSchedule } = await import('./src/ui/store.js');
+    await saveRoutine({ id: 'r-legs', schemaVersion: 1, name: 'יום רגליים', folderId: null, notes: '', createdMs: 1, updatedMs: 1, entries: [] });
+    await saveSchedule({ days: { [new Date().getDay()]: [{ id: 'x1', kind: 'workout', ref: 'r-legs' }] }, done: {} });
+  });
+  const msgs = () => acct.pushes.filter((b) => Array.isArray(b?.morning_msgs));
+  await p.waitForFunction(() => true); await p.waitForTimeout(3000);
+  const last = msgs().at(-1);
+  assert.ok(last, 'sent to the server');
+  assert.equal(last.morning_msgs.length, 7);
+  assert.match(last.morning_msgs[new Date().getDay()].title, /יום רגליים/, "today's message names the planned workout");
+  assert.equal(last.morning_minute, 480, '08:00 by default');
+  assert.ok(last.tz && last.morning_on === true);
+  await p.goto(`${base}#/settings`); await p.waitForSelector('#morning-time');
+  await p.fill('#morning-time', '07:30'); await p.locator('#morning-time').dispatchEvent('change');
+  await p.waitForTimeout(3000);
+  assert.equal(msgs().at(-1).morning_minute, 450, 'the new time');
   await c.close();
 });
 

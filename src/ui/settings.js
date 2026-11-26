@@ -82,6 +82,15 @@ export function settingsScreen({ onLanguage }) {
       h('div', { class: 'field' }, h('label', { text: t('set.rest.vibrate') }), yesNo(t('set.rest.vibrate'), 'restVibrate')),
       h('div', { class: 'field' }, h('label', { text: t('set.rest.push') }), yesNo(t('set.rest.push'), 'restPush', (on) => setRestPush(on))),
 
+      h('div', { class: 'section-label', text: t('set.morning') }),
+      h('div', { class: 'field' }, h('label', { text: t('set.morning') }), yesNo(t('set.morning'), 'morningReminder', () => draw())),
+      s.morningReminder === false ? null : h('div', { class: 'field' }, h('label', { for: 'morning-time', text: t('set.morning.time') }),
+        h('div', { class: 'field-box' }, (() => {
+          const el = h('input', { class: 'text-input', type: 'time', id: 'morning-time', value: s.morningTime ?? '08:00', step: 300, dir: 'ltr' });
+          el.addEventListener('change', async () => { if (/^\d{2}:\d{2}$/.test(el.value)) await updateSettings({ morningTime: el.value }); });
+          return el;
+        })())),
+
       h('div', { class: 'section-label', text: t('set.look') }),
       h('div', { class: 'field' }, h('label', { text: t('set.language') }),
         segmented({ label: t('set.language'), value: getLanguage(), onChange: (l) => onLanguage(l), options: [{ value: 'he', label: t('lang.he'), lang: 'he' }, { value: 'en', label: t('lang.en'), lang: 'en' }] })),

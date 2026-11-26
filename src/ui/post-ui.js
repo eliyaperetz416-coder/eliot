@@ -132,7 +132,7 @@ export function compareCard(volume) {
 
 /** The rating change, big, on top (OUR DESIGN, redesign): "+12", or your first rating. Nothing while the rank is still pending. */
 function deltaBlock(s) {
-  const d = ratingDelta(s.overallBefore, s.overallAfter, store.adjust);
+  const d = ratingDelta(s.overallBefore, s.overallAfter);
   if (!d) return null;
   const n = d.kind === 'first' ? formatNum(d.n, 0) : `${d.n > 0 ? '+' : '−'}${formatNum(Math.abs(d.n), 0)}`;
   return h('div', { class: 'result-delta' }, h('span', { class: 'result-delta-n num', dir: 'ltr', text: n }), h('span', { class: 'result-delta-l', text: t(d.kind === 'first' ? 'res.delta.first' : 'res.delta') }));

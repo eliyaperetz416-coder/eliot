@@ -3,17 +3,14 @@ import { h } from './dom.js';
 import { icon } from './icons.js';
 import { t, getLanguage } from '../core/i18n.mjs';
 import { button, exThumb, list, listRow, openSheet, segmented, showToast } from './components.js';
-import { crew, createCrew, joinCrew, leaveCrew, fetchView, fetchMessages, sendMessage, markSeen, syncStats, syncPlan, onCrew, pushStatus, enablePush, disablePush, kickMember, makeLeader, renameGroup, newInviteCode, syncGroupInfo, fetchPlanDetail, suspendMember, setAdjust, giveDrachmas, fetchReview } from './crew-state.js';
-import { lineChart, chartCard } from './charts.js';
+import { crew, createCrew, joinCrew, leaveCrew, fetchView, fetchMessages, sendMessage, markSeen, syncStats, syncPlan, onCrew, pushStatus, enablePush, disablePush, kickMember, makeLeader, renameGroup, newInviteCode, syncGroupInfo, fetchPlanDetail } from './crew-state.js';
 import { data } from './data.js';
 import { newRoutine, routineEntry } from '../core/routines.mjs';
-import { publicUrl } from './crew-api.js';
-import { sortBoard, applyAdjust, SORTS, errorKey, normalizeCode, validNick, inviteText, planRows, reviewSummary, MAX_MESSAGE } from '../core/crew.mjs';
+import { sortBoard, SORTS, errorKey, normalizeCode, validNick, inviteText, planRows, MAX_MESSAGE } from '../core/crew.mjs';
 import { ACTIVITIES } from '../core/schedule.mjs';
 import { getSettings, updateSettings } from './storage.js';
 import { saveRoutine, todayKey } from './store.js';
-import { TIER_COLORS, tierFor } from '../core/ranks.mjs';
-import { emblem } from './emblem.js';
+import { TIER_COLORS } from '../core/ranks.mjs';
 import { tierInk } from '../core/themes.mjs';
 import { shareViaWhatsApp } from './share.js';
 import { formatDateTime, formatNum } from './format.js';
@@ -29,19 +26,6 @@ function announceBox() {
   return { el: h('div', { class: 'stack' }, h('div', { class: 'row-sub', text: t('crew.announce.label') }), b), get: () => on };
 }
 
-/** A sheet with a few number choices (hours, points). `custom` adds a box for any number you like. onPick(value, announce) runs the action; the sheet closes when it worked. */
-function choiceSheet({ title, body, options, custom = null, onPick }) {
-  const ann = announceBox();
-  const run = async (value) => { try { await onPick(value, ann.get()); sh.close(); } catch (e) { showToast({ message: errText(e) }); } };
-  const box = custom ? h('input', { class: 'text-input', type: 'number', inputmode: 'numeric', dir: 'ltr', min: 1, placeholder: custom.placeholder, 'aria-label': custom.label, id: 'crew-custom' }) : null;
-  const content = h('div', { class: 'stack' }, h('p', { text: body }), ann.el,
-    h('div', { class: 'chips-wrap' }, options.map(([value, label]) => h('button', { class: 'chip chip-select', type: 'button', onclick: () => run(value) }, label))),
-    custom ? h('div', { class: 'field' }, h('label', { for: 'crew-custom', text: custom.label }), h('div', { class: 'field-box' }, box)) : null,
-    custom ? button({ label: custom.go, variant: 'secondary', block: true, onClick: () => { const n = Math.floor(Number(box.value)); if (n >= 1) run(custom.map(n)); else showToast({ message: t('crew.err.bad_target') }); } }) : null,
-    button({ label: t('common.cancel'), variant: 'ghost', block: true, onClick: () => sh.close() }));
-  const sh = openSheet({ title, content });
-}
-
 /** A small "are you sure" sheet with the announce switch. onGo(announce) */
 function confirmSheet({ title, body, label, danger = false, announce = true, onGo }) {
   const ann = announceBox();
@@ -51,97 +35,10 @@ function confirmSheet({ title, body, label, danger = false, announce = true, onG
   const sh = openSheet({ title, content });
 }
 
-const tierName = (tr) => `${t(`tier.${tr.tier}`)}${tr.division ? ` ${tr.division}` : ''}`;
-/** Before and after of a member's rank for a rating change (OUR DESIGN): emblem, tier, division and rating, so the leader sees what he is about to do. */
-function rankPreview(rawRating, fromAdjust, toAdjust) {
-  const at = (adj) => (rawRating == null ? null : Math.max(1, rawRating + adj));
-  const side = (r, label) => {
-    const tr = r == null ? null : tierFor(r);
-    return h('div', { class: 'rp-side' }, emblem({ tier: tr?.tier ?? 'unranked', divisionIndex: tr?.divisionIndex ?? 0, size: 56, label: tr ? tierName(tr) : t('crew.unranked') }),
-      h('div', { class: 'row-sub', text: label }), h('b', { class: 'num', dir: 'ltr', text: tr ? `${tierName(tr)} · ${formatNum(r, 0)}` : '–' }));
-  };
-  return h('div', { class: 'rank-preview' }, side(at(fromAdjust), t('crew.preview.now')), h('span', { class: 'rp-arrow', 'aria-hidden': 'true', text: '→' }), side(at(toAdjust), t('crew.preview.after')));
-}
-
-/** The rating penalty / prize screen: the member's level, the effect of each choice before you apply it. */
-function adjustSheet(m, done) {
-  const cur = Number(m.adjust) || 0;
-  let target = cur;
-  const s = m.stats ?? {};
-  const ann = announceBox();
-  const preview = h('div'), note = h('p', { class: 'row-sub num', dir: 'auto' });
-  const box = h('input', { class: 'text-input', type: 'number', inputmode: 'numeric', dir: 'ltr', id: 'crew-adjust-delta', placeholder: t('crew.adjust.custom.ph'), 'aria-label': t('crew.adjust.custom') });
-  const apply = button({ label: t('crew.adjust.apply'), variant: 'primary', block: true, onClick: async () => { try { await setAdjust(m.id, target, ann.get()); sh.close(); done(); } catch (e) { showToast({ message: errText(e) }); } } });
-  const chips = [-500, -200, -100, -50, 50, 100, 200, 500].map((n) => h('button', { class: 'chip chip-select', type: 'button', 'aria-pressed': 'false', onclick: (e) => { target = cur + n; box.value = ''; refresh(e.currentTarget); } }, signed(n)));
-  const refresh = (pressed = null) => {
-    chips.forEach((c) => c.setAttribute('aria-pressed', String(c === pressed)));
-    preview.replaceChildren(rankPreview(m.rawRating, cur, target));
-    note.textContent = t('crew.adjust.state', { now: signed(cur), after: signed(target) });
-    apply.disabled = target === cur;
-  };
-  box.addEventListener('input', () => { target = cur + (Math.trunc(Number(box.value)) || 0); refresh(); });
-  const sh = openSheet({ title: t('crew.adjust.title'), tall: true, content: h('div', { class: 'stack crew-adjust' },
-    h('p', { text: t('crew.adjust.body', { name: m.nickname }) }),
-    h('div', { class: 'row-sub' }, s.rating != null ? t('crew.adjust.level', { tier: s.tier ? tierName(s) : '–', raw: formatNum(m.rawRating ?? s.rating, 0), level: s.level ?? 1 }) : t('crew.adjust.unranked')),
-    preview, note,
-    h('div', { class: 'chips-wrap' }, chips),
-    h('div', { class: 'field' }, h('label', { for: 'crew-adjust-delta', text: t('crew.adjust.custom') }), h('div', { class: 'field-box' }, box)),
-    button({ label: t('crew.adjust.reset'), variant: 'ghost', block: true, onClick: () => { target = 0; box.value = ''; refresh(); } }),
-    ann.el, apply, button({ label: t('common.cancel'), variant: 'ghost', block: true, onClick: () => sh.close() })) });
-  refresh();
-}
-
-/**
- * Before a gift (OUR DESIGN): the leader sees how the member has been doing - rating, weekly volume and workouts over time, a short summary,
- * and the heaviest sets from their latest workouts - and then decides the amount. The sets and history are readable by the leader only.
- */
-function giftSheet(m, done) {
-  const body = h('div', { class: 'stack crew-review' }, h('p', { class: 'row-sub', text: t('crew.review.loading') }));
-  const sh = openSheet({ title: t('crew.gift.title'), tall: true, content: body });
-  const nameOf = (r) => { const ex = data().byId[r.e]; return ex ? (getLanguage() === 'he' ? ex.nameHe : ex.nameEn) : r.n || t('exercise.unknown'); };
-  const ms = (day) => Date.parse(`${day}T12:00:00Z`);
-  const show = (rv) => {
-    const rows = rv.history ?? [];
-    const sum = reviewSummary(rows);
-    const series = (key) => rows.filter((r) => r[key] != null).map((r) => ({ t: ms(r.day), v: r[key] }));
-    const charts = rows.length
-      ? [chartCard({ title: t('crew.review.rating'), chart: lineChart({ series: series('rating'), title: t('crew.review.rating') }), empty: series('rating').length ? null : t('progress.nodata') }),
-        chartCard({ title: t('crew.review.week'), chart: lineChart({ series: series('week'), unit: t('unit.kg'), title: t('crew.review.week') }) }),
-        chartCard({ title: t('crew.review.workouts'), chart: lineChart({ series: series('workouts'), title: t('crew.review.workouts') }) })]
-      : [h('p', { class: 'row-sub', text: t('crew.review.empty') })];
-    const recent = (rv.recent ?? []).length
-      ? h('div', { class: 'list' }, rv.recent.map((r) => h('div', { class: 'row' }, h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: nameOf(r) }), h('span', { class: 'row-sub num', dir: 'ltr', text: `${formatNum(r.w, 1)} ${t('unit.kg')} × ${r.r} · ${r.d}` })))))
-      : h('p', { class: 'row-sub', text: t('crew.review.noSets') });
-    let amount = 0, bonus = 0;
-    const bprev = h('div');
-    const showPrev = () => bprev.replaceChildren(bonus > 0 ? rankPreview(m.rawRating, Number(m.adjust) || 0, (Number(m.adjust) || 0) + bonus) : h('span'));
-    const ann = announceBox();
-    const bbox = h('input', { class: 'text-input', type: 'number', inputmode: 'numeric', dir: 'ltr', min: 1, id: 'crew-gift-bonus', 'aria-label': t('crew.gift.bonus.custom'), placeholder: t('crew.gift.bonus.custom') });
-    const bchips = [25, 50, 100, 250].map((n) => h('button', { class: 'chip chip-select', type: 'button', 'aria-pressed': 'false', onclick: (e) => { bonus = n; bbox.value = ''; bchips.forEach((c) => c.setAttribute('aria-pressed', String(c === e.currentTarget))); showPrev(); } }, `+${n}`));
-    bbox.addEventListener('input', () => { bonus = Math.floor(Number(bbox.value)) || 0; bchips.forEach((c) => c.setAttribute('aria-pressed', 'false')); showPrev(); });
-    const box = h('input', { class: 'text-input', type: 'number', inputmode: 'numeric', dir: 'ltr', min: 1, id: 'crew-gift-amount', 'aria-label': t('crew.gift.custom'), placeholder: t('crew.gift.custom') });
-    const chips = [50, 100, 250, 500, 1000].map((n) => h('button', { class: 'chip chip-select', type: 'button', 'aria-pressed': 'false', onclick: (e) => { amount = n; box.value = ''; chips.forEach((c) => c.setAttribute('aria-pressed', String(c === e.currentTarget))); } }, String(n)));
-    box.addEventListener('input', () => { amount = Math.floor(Number(box.value)) || 0; chips.forEach((c) => c.setAttribute('aria-pressed', 'false')); });
-    body.replaceChildren(
-      h('p', { text: t('crew.gift.body', { name: m.nickname }) }),
-      ...charts,
-      sum ? h('p', { class: 'card crew-review-sum', text: t('crew.review.sum', { name: m.nickname, days: sum.days, w: sum.workouts, r: sum.rating >= 0 ? `+${sum.rating}` : String(sum.rating), v: formatNum(sum.week, 0), s: sum.streak }) }) : null,
-      h('div', { class: 'section-label', text: t('crew.review.sets') }), recent,
-      h('div', { class: 'section-label', text: t('crew.gift.amount') }),
-      h('div', { class: 'chips-wrap' }, chips), h('div', { class: 'field' }, h('div', { class: 'field-box' }, box)),
-      h('div', { class: 'section-label', text: t('crew.gift.bonus') }), h('p', { class: 'row-sub', text: t('crew.gift.bonus.note') }),
-      h('div', { class: 'chips-wrap' }, bchips), h('div', { class: 'field' }, h('div', { class: 'field-box' }, bbox)), bprev, ann.el,
-      button({ label: t('crew.gift.go'), variant: 'primary', block: true, onClick: async () => { if (amount < 1 && bonus < 1) { showToast({ message: t('crew.err.bad_target') }); return; } try { if (amount >= 1) await giveDrachmas(m.id, amount, ann.get()); if (bonus >= 1) await setAdjust(m.id, (Number(m.adjust) || 0) + bonus, ann.get()); sh.close(); done(); } catch (e) { showToast({ message: errText(e) }); } } }),
-      button({ label: t('common.cancel'), variant: 'ghost', block: true, onClick: () => sh.close() }));
-  };
-  fetchReview(m.id).then(show).catch((e) => body.replaceChildren(h('p', { class: 'field-error', text: errText(e) }), button({ label: t('common.cancel'), variant: 'ghost', block: true, onClick: () => sh.close() })));
-}
-
 export function crewScreen() {
   const root = h('main', { class: 'screen crew' });
   let sort = 'rating', boardRender = null;
   let view = null, messages = [], timer = null, busy = false, formMode = 'join';
-  if (!crew.ownerKey) formMode = 'join';
   const off = onCrew(() => { if (!crew.local) draw(); });
 
   /* ---------- not in a crew ---------- */
@@ -167,7 +64,7 @@ export function crewScreen() {
     const go2 = button({ label: t(formMode === 'join' ? 'crew.join.go' : 'crew.create.go'), block: true, onClick: (e) => go(e.currentTarget) });
     return [
       h('p', { text: t('crew.intro') }),
-      crew.ownerKey ? segmented({ label: t('crew.title'), value: formMode, onChange: (v) => { formMode = v; draw(); }, options: [{ value: 'join', label: t('crew.join') }, { value: 'create', label: t('crew.create') }] }) : h('p', { class: 'row-sub', text: t('crew.owner.only') }),
+      segmented({ label: t('crew.title'), value: formMode, onChange: (v) => { formMode = v; draw(); }, options: [{ value: 'join', label: t('crew.join') }, { value: 'create', label: t('crew.create') }] }),
       h('div', { class: 'stack', style: 'padding-block-start:12px' },
         formMode === 'join' ? h('div', { class: 'field' }, h('label', { for: 'crew-code', text: t('crew.code') }), h('div', { class: 'field-box' }, code)) : h('div', { class: 'field' }, h('label', { for: 'crew-name', text: t('crew.name') }), h('div', { class: 'field-box' }, name)),
         h('div', { class: 'field' }, h('label', { for: 'crew-nick', text: t('crew.nick') }), h('div', { class: 'field-box' }, nick)),
@@ -180,7 +77,7 @@ export function crewScreen() {
   const metric = { rating: (s) => (s.rating != null ? formatNum(s.rating, 0) : '–'), level: (s) => t('game.level', { n: s.level ?? 1 }), week: (s) => `${formatNum(s.weekVolume ?? 0, 0)} ${t('unit.kg')}`, streak: (s) => t('game.streakDays', { n: s.streak ?? 0 }) };
 
   function boardView() {
-    const members = sortBoard(view.members.map(applyAdjust), sort);
+    const members = sortBoard(view.members, sort);
     return [
       segmented({ label: t('crew.sort'), value: sort, onChange: (v) => { sort = v; boardRender?.(); }, options: SORTS.map((s) => ({ value: s, label: t(`crew.sort.${s}`) })) }),
       h('div', { class: 'list crew-board', style: 'margin-block-start:12px' }, members.map((m, i) => {
@@ -189,7 +86,7 @@ export function crewScreen() {
         return h('button', { class: `row crew-row${mine ? ' me' : ''}`, type: 'button', 'data-nick': m.nickname, onclick: () => friendSheet(m, mine) },
           h('span', { class: 'crew-pos display num', text: String(i + 1) }),
           h('span', { class: 'row-main' },
-            h('span', { class: 'row-title' }, mine ? `${m.nickname} · ${t('crew.you')}` : m.nickname, m.leader ? leaderChip() : null, m.suspended ? h('span', { class: 'chip chip-warn', text: t('crew.suspended') }) : null, m.adjust ? h('span', { class: 'chip chip-warn num', dir: 'ltr', text: signed(m.adjust), title: t('crew.adjust.title') }) : null),
+            h('span', { class: 'row-title' }, mine ? `${m.nickname} · ${t('crew.you')}` : m.nickname, m.leader ? leaderChip() : null),
             h('span', { class: 'row-sub' }, s.tier ? h('span', { style: `color:${tierInk(TIER_COLORS[s.tier], document.documentElement.dataset.theme)}`, text: tierLabel(s) }) : t('crew.unranked'), ` · ${t('game.level', { n: s.level ?? 1 })} · `, h('bdi', { class: 'num', text: `${formatNum(s.weekVolume ?? 0, 0)} ${t('unit.kg')}` }))),
           h('span', { class: 'crew-val display num' }, h('bdi', { text: metric[sort](s) })));
       })),
@@ -198,7 +95,7 @@ export function crewScreen() {
   }
 
   const dotColor = (s) => (s?.tier === 'greekgod' ? '#7df9ff' : TIER_COLORS[s?.tier] ?? 'var(--text-mute)');
-  const byRating = () => sortBoard(view.members.map(applyAdjust), 'rating');
+  const byRating = () => sortBoard(view.members, 'rating');
 
   /** The top three under the header (place, nickname, tier dot). Tap it for the podium and the whole board. */
   function top3Strip() {
@@ -277,14 +174,9 @@ export function crewScreen() {
         stat(t('crew.sort.level'), String(s.level ?? 1)), stat(t('crew.sort.streak'), t('game.streakDays', { n: s.streak ?? 0 })),
         stat(t('crew.p.week'), `${formatNum(s.weekVolume ?? 0, 0)} ${t('unit.kg')}`), stat(t('crew.p.month'), String(s.monthWorkouts ?? 0))),
       m.leader ? h('div', { class: 'row-sub' }, leaderChip(), ' ', t('crew.leader.is', { name: m.nickname })) : null,
-      m.adjust ? h('div', { class: 'row-sub' }, t('crew.adjust.note', { raw: formatNum(m.rawRating ?? 0, 0), n: signed(m.adjust) })) : null,
-      m.suspended ? h('div', { class: 'row-sub' }, t('crew.suspended.until', { time: formatDateTime(Date.parse(m.suspended_until)) })) : null,
       h('div', { class: 'section-label', text: t('crew.p.plan') }), plan,
       isLeader() && !mine ? h('div', { class: 'stack crew-leader-tools' },
         h('div', { class: 'section-label', text: t('crew.leader.tools') }),
-        button({ label: t('crew.suspend'), variant: 'secondary', block: true, onClick: () => choiceSheet({ title: t('crew.suspend'), body: t('crew.suspend.body', { name: m.nickname }), options: [[1, t('crew.hours', { n: 1 })], [24, t('crew.days', { n: 1 })], [72, t('crew.days', { n: 3 })], [168, t('crew.days', { n: 7 })], [720, t('crew.days', { n: 30 })], [PERMANENT_HOURS, t('crew.permanent')], ...(m.suspended ? [[0, t('crew.suspend.lift')]] : [])], custom: { label: t('crew.suspend.custom'), placeholder: t('crew.suspend.custom.ph'), go: t('crew.suspend.custom.go'), map: (n) => n * 24 }, onPick: async (v, announce) => { await suspendMember(m.id, v, announce); sh.close(); await afterLeaderAction(); } }) }),
-        button({ label: t('crew.adjust.title'), variant: 'secondary', block: true, onClick: () => adjustSheet(m, async () => { sh.close(); await afterLeaderAction(); }) }),
-        button({ label: t('crew.gift.title'), variant: 'secondary', block: true, onClick: () => giftSheet(m, async () => { sh.close(); await afterLeaderAction(); }) }),
         button({ label: t('crew.leader.make'), variant: 'secondary', block: true, onClick: () => confirmSheet({ title: t('crew.leader.make'), body: t('crew.leader.make.body', { name: m.nickname }), label: t('crew.leader.make.go'), onGo: async (announce) => { await makeLeader(m.id, announce); sh.close(); await afterLeaderAction(); } }) }),
         button({ label: t('crew.kick'), variant: 'danger', block: true, onClick: () => confirmSheet({ title: t('crew.kick'), body: t('crew.kick.body', { name: m.nickname }), label: t('crew.kick.go'), danger: true, onGo: async (announce) => { await kickMember(m.id, announce); sh.close(); await afterLeaderAction(); } }) })) : null) });
   }
@@ -324,8 +216,6 @@ export function crewScreen() {
       try { await sendMessage(k, text); input.value = ''; await refreshFeed(true); } catch (e) { showToast({ message: errText(e) }); }
     };
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') send(input.value); });
-    const suspended = view?.me?.suspended_until;
-    if (suspended) return [h('div', { class: 'crew-feed', id: 'crew-feed', 'aria-live': 'polite' }, bubbles), h('p', { class: 'card crew-suspended', role: 'status', text: t('crew.suspended.you', { time: formatDateTime(Date.parse(suspended)) }) })];
     const statusSheet = () => {
       const sh = openSheet({ title: t('crew.status'), content: h('div', { class: 'stack' }, ['going', 'done', 'rest'].map((q) =>
         button({ label: t(`crew.q.${q}`), variant: 'secondary', block: true, onClick: () => { sh.close(); send(t(`crew.q.${q}`), 'status'); } }))) });

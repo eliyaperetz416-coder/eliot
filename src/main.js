@@ -10,7 +10,7 @@ import { initRestTimer, refreshRestTimer } from './ui/rest-timer.js';
 import { keepAwake } from './ui/wakelock.js';
 import { initCrew, onCrew, crew, startCrewWatcher } from './ui/crew-state.js';
 import { retireLink } from './ui/link-state.js';
-import { installLock } from './ui/lock.js';
+import { syncMorning } from './ui/push.js';
 import { h } from './ui/dom.js';
 import { completeSignIn, getSession, onAuth, startGoogleSignIn } from './ui/auth.js';
 import { startSync } from './ui/sync.js';
@@ -129,6 +129,10 @@ async function boot() {
   signInFailed = back === 'error' && !session; // a stray ?error= in the address while signed in is not a failed sign-in
   onboarded = !!(await dbGet('kv', 'onboarded').catch(() => null));
   onAuth((s) => { const was = !!session; session = s; if (was !== !!s) render(); });
+  // the morning reminder follows the week plan, the saved workouts' names, its time and the language (sent only when changed)
+  let morningTimer = null;
+  const morningSoon = () => { clearTimeout(morningTimer); morningTimer = setTimeout(syncMorning, 2000); };
+  subscribe(morningSoon); onSettings(morningSoon); morningSoon();
   const lang = settings.lang ?? store.profile?.lang ?? detectLanguage(navigator.language);
   setLanguage(lang);
   document.documentElement.lang = lang;
@@ -151,7 +155,6 @@ async function boot() {
   });
   onCrew(drawNav);
   startCrewWatcher();
-  installLock();
   window.addEventListener('hashchange', render);
   document.documentElement.dataset.ready = '1';
   requestPersistence();

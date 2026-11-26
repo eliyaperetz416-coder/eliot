@@ -4,6 +4,33 @@ import { authFetch, getSession } from './auth.js';
 import { vapidKey } from './crew-api.js';
 import { getSettings } from './storage.js';
 import { base64UrlToBytes } from '../core/crew.mjs';
+import { t } from '../core/i18n.mjs';
+import { morningMessages, minuteOf } from '../core/morning.mjs';
+import { store } from './store.js';
+import { planText } from './schedule.js';
+
+/** What the server needs for the morning reminder: on/off, the minute of the day, this phone's time zone, and the seven
+ *  messages (today's plan, in the app's language). Written next to the push address. */
+export function morningFields() {
+  const s = getSettings();
+  let tz = 'Asia/Jerusalem';
+  try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || tz; } catch { /* old browser: Israel */ }
+  return { morning_on: s.morningReminder !== false, morning_minute: minuteOf(s.morningTime), tz, morning_msgs: morningMessages(store.schedule?.days, { textOf: planText, t }) };
+}
+
+let lastMorning = null;
+/** Sends the morning reminder's settings and messages when they changed (the week plan, a saved workout's name, the time, the language). */
+export async function syncMorning() {
+  const s = await getSession().catch(() => null);
+  if (!s) return;
+  const f = morningFields();
+  const key = JSON.stringify(f);
+  if (key === lastMorning) return;
+  try {
+    const r = await authFetch(`/rest/v1/user_push?user_id=eq.${s.user.id}`, { method: 'PATCH', body: key });
+    if (r.ok) lastMorning = key;
+  } catch { /* offline: next change or next start */ }
+}
 
 export const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 
@@ -23,7 +50,7 @@ export async function enablePush() {
   const s = await getSession();
   if (!s) return 'offline';
   try {
-    const r = await authFetch('/rest/v1/user_push?on_conflict=user_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ user_id: s.user.id, sub: sub.toJSON(), rest_enabled: true, updated_at: new Date().toISOString() }) });
+    const r = await authFetch('/rest/v1/user_push?on_conflict=user_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ user_id: s.user.id, sub: sub.toJSON(), rest_enabled: true, updated_at: new Date().toISOString(), ...morningFields() }) });
     return r.ok ? 'on' : 'offline';
   } catch { return 'offline'; }
 }
@@ -41,7 +68,7 @@ async function claimPushRow(s) {
   if (!pushSupported() || Notification.permission !== 'granted') return;
   const sub = await (await navigator.serviceWorker.ready).pushManager.getSubscription();
   if (!sub) return;
-  await authFetch('/rest/v1/user_push?on_conflict=user_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ user_id: s.user.id, sub: sub.toJSON(), rest_enabled: true, updated_at: new Date().toISOString() }) });
+  await authFetch('/rest/v1/user_push?on_conflict=user_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ user_id: s.user.id, sub: sub.toJSON(), rest_enabled: true, updated_at: new Date().toISOString(), ...morningFields() }) });
 }
 
 // Reminder requests go out one after another, in the order they were made: a slow "schedule" must never land after the

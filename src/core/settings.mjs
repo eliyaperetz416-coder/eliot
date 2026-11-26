@@ -12,6 +12,8 @@ export const DEFAULT_SETTINGS = Object.freeze({
   restSound: true,         // OUR DESIGN (accounts): end-of-rest sound
   restVibrate: true,       // end-of-rest vibration (Android)
   restPush: true,          // end-of-rest notification when the phone is locked
+  morningReminder: true,   // OUR DESIGN (25.11): a morning notification with today's plan
+  morningTime: '08:00',    // when it comes (the phone's own time zone)
   lastExportAt: null,
   reminderSnoozedUntil: null, // export reminder hidden until this time
 });
