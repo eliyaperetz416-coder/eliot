@@ -959,3 +959,7 @@ button.chip:active, .seg button:active, .tab:active { opacity: .65; }
 [data-theme="marble"] .empty-art::before { border-color: rgb(28 26 23 / .28); }
 @media (prefers-contrast: more) { [data-theme="marble"] .tabbar, [data-theme="marble"] .toast, [data-theme="marble"] .sheet { border-color: rgb(28 26 23 / .45); } }
 
+/* iPhone home-screen app with a short viewport (main.js marks it): the bar sits at the edge and its shadow goes up only,
+   so nothing is cut off at the strip iOS leaves below (it cannot be drawn into). */
+[data-shortvp="1"] { --island-gap: 6px; }
+[data-shortvp="1"] .tabbar { box-shadow: inset 0 1px 0 rgb(255 255 255 / .30), inset 0 -1px 0 rgb(255 255 255 / .07), 0 -10px 28px -14px rgb(0 0 0 / .45); }

@@ -139,6 +139,15 @@ async function boot() {
   screens = buildScreens({ onLanguage: changeLanguage });
   applyDocument();
   applyTheme();
+  // iPhone home-screen app: iOS can report the screen shorter by the status bar's height and draws nothing in the strip
+  // that is left at the bottom (only the page colour). Then the bar sits at the very edge and casts no shadow into it.
+  const markShort = () => {
+    const tall = Math.max(screen.width, screen.height);
+    const short = navigator.standalone === true && innerHeight > innerWidth && tall - innerHeight >= 30;
+    document.documentElement.dataset.shortvp = short ? '1' : '';
+  };
+  markShort();
+  addEventListener('resize', markShort); visualViewport?.addEventListener('resize', markShort);
   // iOS "increase contrast" / "reduce transparency" switched while the app is open take effect at once
   for (const q of ['(prefers-contrast: more)', '(prefers-reduced-transparency: reduce)']) matchMedia(q).addEventListener?.('change', applyTheme);
   render();

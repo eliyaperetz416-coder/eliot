@@ -2030,6 +2030,26 @@ await check('accounts: the morning reminder gets the seven messages from the wee
   await c.close();
 });
 
+await check('installed iPhone app with a short screen (iOS reports it shorter by the status bar): the bar drops to the edge and casts no shadow into the strip', async () => {
+  const c = await phone({ viewport: { width: 393, height: 793 }, screen: { width: 393, height: 852 } });
+  await installFakeSupabase(c);
+  const p = await c.newPage();
+  await onboard(p, 'he');
+  await c.addInitScript(() => { Object.defineProperty(navigator, 'standalone', { get: () => true }); }); // opened from the home screen from now on
+  await p.reload(); await p.waitForSelector('.tabbar');
+  await p.waitForTimeout(300);
+  assert.equal(await p.evaluate(() => document.documentElement.dataset.shortvp), '1', 'the short screen is noticed');
+  const r = await p.evaluate(() => { const b = document.querySelector('.tabbar').getBoundingClientRect(); return { gap: innerHeight - b.bottom, shadow: getComputedStyle(document.querySelector('.tabbar')).boxShadow }; });
+  assert.ok(r.gap <= 8, `the bar sits at the edge (gap ${r.gap})`);
+  assert.ok(!/0px 18px 44px/.test(r.shadow), 'no shadow falling into the strip');
+  await c.close();
+  // a normal screen (or a normal browser tab) keeps the usual gap
+  const c2 = await phone(); await installFakeSupabase(c2);
+  const p2 = await c2.newPage(); await onboard(p2, 'he'); await p2.waitForTimeout(300);
+  assert.equal(await p2.evaluate(() => document.documentElement.dataset.shortvp ?? ''), '');
+  await c2.close();
+});
+
 await check('start-up: a failed first request is retried; if it keeps failing there is a message and a button, not a black page', async () => {
   const c1 = await browser.newContext({ serviceWorkers: 'block' });
   const p1 = await c1.newPage(); let n = 0;
