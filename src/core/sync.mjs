@@ -4,7 +4,7 @@
 // When both sides changed, the two are merged (mergeData), so a stale copy never overwrites newer data.
 import { checksum } from './backup.mjs';
 
-export const MAX_SYNC_BYTES = 7_000_000; // the server allows 8 MB of jsonb text, which is wider than compact JSON
+export const MAX_SYNC_BYTES = 800_000; // the server allows 1 MB of jsonb text (migration 020), which is wider than compact JSON
 export const SYNC_DEBOUNCE_MS = 3000;
 
 /** JSON with object keys sorted at every level, so the same data always gives the same text (jsonb re-sorts keys). */

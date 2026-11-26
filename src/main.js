@@ -125,6 +125,8 @@ async function boot() {
   await initCrew();
   retireLink(); // Habit Coach is gone: close an old link in the background
   const back = await completeSignIn();
+  // back from signing in again to delete the account: straight to Settings, where the delete sheet opens again
+  if (back === 'ok' && (await dbGet('kv', 'reauth-delete').catch(() => null))) location.hash = '#/settings';
   session = await getSession();
   signInFailed = back === 'error' && !session; // a stray ?error= in the address while signed in is not a failed sign-in
   onboarded = !!(await dbGet('kv', 'onboarded').catch(() => null));

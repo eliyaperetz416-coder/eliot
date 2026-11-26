@@ -4,8 +4,8 @@ import { decideSync, tooBig, hasLocalData, snapshotHash, stableStringify, MAX_SY
 
 const D = (o) => decideSync({ remoteVersion: null, syncedVersion: null, localDirty: false, localHasData: false, ...o });
 
-test('constants: the app stays under the server limit (8 MB of jsonb text)', () => {
-  assert.equal(MAX_SYNC_BYTES, 7_000_000);
+test('constants: the app stays under the server limit (1 MB of jsonb text)', () => {
+  assert.equal(MAX_SYNC_BYTES, 800_000); // the server allows 1 MB of jsonb text (migration 020), which is wider than compact JSON
   assert.equal(SYNC_DEBOUNCE_MS, 3000);
 });
 
@@ -45,9 +45,10 @@ test('the snapshot hash ignores key order (jsonb re-sorts keys) but not content'
 });
 
 test('tooBig counts UTF-8 bytes', () => {
-  assert.equal(tooBig('x'.repeat(7_000_001)), true);
+  assert.equal(tooBig('x'.repeat(800_001)), true);
+  assert.equal(tooBig('x'.repeat(800_000)), false);
   assert.equal(tooBig('{}'), false);
-  assert.equal(tooBig('א'.repeat(3_500_001)), true);
+  assert.equal(tooBig('א'.repeat(400_001)), true);
 });
 
 test('validData: what comes down from the account must look like our data before it replaces the phone (M-1)', async () => {

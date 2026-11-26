@@ -1381,11 +1381,28 @@ for (const lang of ['he', 'en']) {
     await page.evaluate(async () => (await import('./src/ui/sync.js')).syncNow());
     const saved = account.remote;
     assert.equal(saved.data.workouts.length, before);
-    // delete account: needs the typed word, calls the server, wipes the phone, back to sign-in
+    // delete account: the last Google sign-in is an hour old, so it first asks to sign in again (and deletes nothing)
+    await page.evaluate(async () => {
+      const { dbGet, dbPut } = await import('./src/ui/db.js');
+      const s = await dbGet('kv', 'session');
+      const old = Math.floor(Date.now() / 1000) - 3600;
+      s.accessToken = `e30.${btoa(JSON.stringify({ amr: [{ method: 'oauth', timestamp: old }] })).replace(/=+$/, '')}.sig`;
+      await dbPut('kv', s, 'session');
+    });
     await page.goto(`${base}#/settings`);
+    await page.reload();
     await page.locator('.row', { hasText: T('מחיקת החשבון וכל הנתונים', 'Delete account and all data') }).click();
     await page.waitForSelector('.sheet input');
     assert.ok(await page.locator('.sheet .btn-danger').isDisabled());
+    await page.fill('.sheet input', T('מחיקה', 'DELETE'));
+    await page.locator('.sheet .btn-danger').click();
+    await page.waitForSelector('.sheet .reauth-go', { timeout: 5000 });
+    assert.equal(account.deletes, 0, 'nothing deleted before signing in again');
+    await page.screenshot({ path: `${shots}${lang}-delete-reauth.png` });
+    // sign in again: back in Settings with the delete sheet open; the typed word and the server finish it
+    await page.locator('.sheet .reauth-go').click();
+    await page.waitForSelector('.sheet input', { timeout: 10000 });
+    assert.match(page.url(), /#\/settings/);
     await page.fill('.sheet input', T('מחיקה', 'DELETE'));
     await page.screenshot({ path: `${shots}${lang}-delete-account.png` });
     await page.locator('.sheet .btn-danger').click();

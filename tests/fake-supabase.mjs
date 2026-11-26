@@ -9,9 +9,12 @@ const jsonbOrder = (v) => {
 };
 
 export async function installFakeSupabase(ctx, { remote = null, failUploads = false, failReads = 0 } = {}) {
-  const state = { remote: remote ? { version: 1, ...remote } : null, uploads: [], alarms: [], pushes: [], deletes: 0, failReads, refreshes: 0 };
+  const state = { remote: remote ? { version: 1, ...remote } : null, uploads: [], alarms: [], pushes: [], deletes: 0, failReads, refreshes: 0, signedInAt: Math.floor(Date.now() / 1000) };
   const user = { id: '00000000-0000-4000-8000-000000000001', email: 'tester@example.com', user_metadata: { full_name: 'Test User' } };
-  const token = () => ({ access_token: 'fake-access', refresh_token: 'fake-refresh', expires_in: 3600, user });
+  // the access token is a JWT like the real one: amr keeps the moment of the last Google sign-in (a refresh keeps it)
+  const jwt = (payload) => `e30.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.sig`;
+  const token = () => ({ access_token: jwt({ sub: user.id, amr: [{ method: 'oauth', timestamp: state.signedInAt }] }), refresh_token: 'fake-refresh', expires_in: 3600, user });
+  const amrOf = (route) => { try { return JSON.parse(Buffer.from((route.request().headers().authorization ?? '').split('.')[1], 'base64url').toString()).amr?.[0]?.timestamp ?? 0; } catch { return 0; } };
   const json = (route, body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 
   await ctx.route(/supabase\.co\/auth\/v1\/authorize/, (route) => {
@@ -24,7 +27,7 @@ export async function installFakeSupabase(ctx, { remote = null, failUploads = fa
       await new Promise((r) => setTimeout(r, 300));
       if (state.refreshes > 1 && state.usedRefresh) return json(route, { error: 'invalid_grant' }, 400);
       state.usedRefresh = true;
-    }
+    } else state.signedInAt = Math.floor(Date.now() / 1000); // a real sign-in (the PKCE code exchange)
     return json(route, token());
   });
   await ctx.route(/supabase\.co\/auth\/v1\/logout/, (route) => route.fulfill({ status: 204 }));
@@ -56,6 +59,10 @@ export async function installFakeSupabase(ctx, { remote = null, failUploads = fa
     return json(route, [], req.method() === 'DELETE' ? 204 : 201);
   });
   await ctx.route(/supabase\.co\/rest\/v1\/user_push/, (route) => { state.pushes.push(JSON.parse(route.request().postData() ?? 'null')); return json(route, [], 201); });
-  await ctx.route(/supabase\.co\/rest\/v1\/rpc\/delete_my_account/, (route) => { state.deletes++; state.remote = null; return route.fulfill({ status: 204 }); });
+  await ctx.route(/supabase\.co\/rest\/v1\/rpc\/delete_my_account/, (route) => {
+    // like migration 020: the last Google sign-in must be from the last 15 minutes
+    if (Date.now() / 1000 - amrOf(route) > 900) return json(route, { code: 'P0001', message: 'reauth' }, 400);
+    state.deletes++; state.remote = null; return route.fulfill({ status: 204 });
+  });
   return state;
 }

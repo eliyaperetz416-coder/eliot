@@ -7,11 +7,31 @@ import { exportBackup, resetAll } from './backup.js';
 import { recompute } from './store.js';
 import { APP_VERSION } from '../version.js';
 import { retireLink } from './link-state.js';
-import { getSession, signOut, authFetch } from './auth.js';
+import { getSession, signOut, authFetch, startGoogleSignIn } from './auth.js';
+import { signedInWithin, REAUTH_S } from '../core/pkce.mjs';
 import { syncNow, syncState, onSync } from './sync.js';
-import { dbPut } from './db.js';
+import { dbGet, dbPut, dbDelete } from './db.js';
 import { enablePush, setRestPush } from './push.js';
 import { crew, leaveCrew, enablePush as enableCrewPush } from './crew-state.js';
+
+// Deleting needs a Google sign-in from the last 15 minutes (the server checks the same, migration 020): a phone left open
+// on a table cannot be used to erase the account. Before signing in again we note it, so the app comes back to this sheet.
+const REAUTH_KEY = 'reauth-delete';
+function reauthSheet() {
+  const sh = openSheet({ title: t('set.delete'), content: h('div', { class: 'stack' },
+    h('p', { text: t('set.delete.reauth') }),
+    h('div', { class: 'reauth-go' }, button({ label: t('set.delete.reauth.go'), block: true, onClick: async () => { await dbPut('kv', Date.now(), REAUTH_KEY); startGoogleSignIn(); } })),
+    button({ label: t('common.cancel'), variant: 'ghost', block: true, onClick: () => sh.close() })) });
+}
+
+/** Back from that sign-in: open the delete sheet again (once, and only within the 15 minutes). */
+async function resumeDelete() {
+  const at = await dbGet('kv', REAUTH_KEY).catch(() => null);
+  if (!at) return;
+  await dbDelete('kv', REAUTH_KEY).catch(() => {});
+  const s = await getSession().catch(() => null);
+  if (Date.now() - at < REAUTH_S * 1000 && s && signedInWithin(s.accessToken, Date.now())) deleteFlow();
+}
 
 /** Deletes the account (server: delete_my_account, which cascades to every account table) and then this phone's data. */
 function deleteFlow() {
@@ -19,11 +39,17 @@ function deleteFlow() {
   const input = h('input', { class: 'text-input', type: 'text', autocomplete: 'off', autocapitalize: 'off', 'aria-label': t('set.delete.type', { word }) });
   const go = button({ label: t('set.delete.go'), variant: 'danger', block: true, disabled: true, onClick: async () => {
     go.disabled = true;
+    const s = await getSession().catch(() => null);
+    if (!s || !signedInWithin(s.accessToken, Date.now())) { sh.close(); reauthSheet(); return; }
     // the crew spot first: it lives outside the account, so once the account is gone nothing could remove it any more
     if (crew.local) { try { await leaveCrew(); } catch { showToast({ message: t('set.delete.failed'), duration: 6000 }); go.disabled = false; return; } }
     try {
       const r = await authFetch('/rest/v1/rpc/delete_my_account', { method: 'POST', body: '{}' });
-      if (!r.ok) throw new Error(`http_${r.status}`);
+      if (!r.ok) {
+        const why = await r.json().catch(() => null);
+        if (why?.message === 'reauth') { sh.close(); reauthSheet(); return; }
+        throw new Error(`http_${r.status}`);
+      }
     } catch { showToast({ message: t('set.delete.failed'), duration: 6000 }); go.disabled = false; return; }
     await retireLink();
     await resetAll();
@@ -122,7 +148,7 @@ export function settingsScreen({ onLanguage }) {
       h('div', { style: 'padding-block-start:16px' }, list([listRow({ title: t('set.delete'), sub: t('set.delete.sub'), icon: 'trash', onClick: deleteFlow })])));
   }
   draw();
-  getSession().then((x) => { session = x; draw(); });
+  getSession().then((x) => { session = x; draw(); resumeDelete(); });
   const off = onSync(() => { if (root.isConnected) draw(); else off(); });
   return root;
 }
