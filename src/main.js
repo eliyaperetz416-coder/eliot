@@ -1,3 +1,4 @@
+import { bottomDrift } from './core/viewport.mjs';
 import { DIR, LANGS, detectLanguage, setDictionaries, setLanguage, t } from './core/i18n.mjs';
 import { THEMES, inkFor, hexToRgb, readableOn } from './core/themes.mjs';
 import { buildScreens } from './ui/screens.js';
@@ -154,6 +155,15 @@ async function boot() {
   };
   markShort();
   addEventListener('resize', markShort); visualViewport?.addEventListener('resize', markShort);
+  // the floating bar riding up with the scroll after a call / the keyboard (iOS): put the bottom layers back on the edge
+  let driftFrame = 0;
+  const fixDrift = () => { cancelAnimationFrame(driftFrame); driftFrame = requestAnimationFrame(() => {
+    const d = bottomDrift(window.visualViewport, innerHeight);
+    document.documentElement.style.setProperty('--vv-drift', `${d}px`);
+  }); };
+  fixDrift();
+  for (const ev of ['resize', 'scroll']) { visualViewport?.addEventListener(ev, fixDrift); addEventListener(ev, fixDrift, { passive: true }); }
+  document.addEventListener('visibilitychange', fixDrift);
   // iOS "increase contrast" / "reduce transparency" switched while the app is open take effect at once
   for (const q of ['(prefers-contrast: more)', '(prefers-reduced-transparency: reduce)']) matchMedia(q).addEventListener?.('change', applyTheme);
   render();
