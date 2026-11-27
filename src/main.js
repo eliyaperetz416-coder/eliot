@@ -17,6 +17,7 @@ import { startSync } from './ui/sync.js';
 import { dbGet } from './ui/db.js';
 import { LOCKED } from './core/maintenance.mjs';
 import { maintenanceScreen, keepEager } from './ui/maintenance.js';
+import { loadNews } from './ui/whats-new.js';
 
 const TABS = [
   { id: 'workout', icon: 'bolt' }, { id: 'workouts', icon: 'workout' }, { id: 'ranks', icon: 'progress' }, { id: 'crew', icon: 'chat' }, { id: 'profile', icon: 'profile' },
@@ -125,6 +126,7 @@ async function boot() {
   await loadData();
   await initStore();
   await initCrew();
+  await loadNews();
   retireLink(); // Habit Coach is gone: close an old link in the background
   const back = await completeSignIn();
   // back from signing in again to delete the account: straight to Settings, where the delete sheet opens again

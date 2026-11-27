@@ -1,5 +1,5 @@
 // The two sheets behind the Today screen (OUR DESIGN, redesign Today / artboard E5): the bell (what is waiting for you:
-// crew messages, a make-up workout, today's planned rest/activities/benchmarks) and the trophy (quests and streak).
+// what is new in the app (first while unseen), crew messages, a make-up workout, today's planned rest/activities/benchmarks) and the trophy (quests and streak).
 import { h } from './dom.js';
 import { t, getLanguage } from '../core/i18n.mjs';
 import { button, openSheet } from './components.js';
@@ -10,6 +10,7 @@ import { startMakeup } from './routines.js';
 import { planFor, markDone, isDone } from '../core/schedule.mjs';
 import { planText } from './schedule.js';
 import { questsCard, streakCard } from './game-ui.js';
+import { newsCard, newsUnseen } from './whats-new.js';
 
 const rerender = () => window.dispatchEvent(new HashChangeEvent('hashchange'));
 
@@ -59,14 +60,14 @@ function crewCard(close) {
 /** How many things wait behind the bell (the dot on it). */
 export function bellCount() {
   const key = todayKey();
-  return (crew.local && crew.unread ? 1 : 0) + (activeMakeup() ? 1 : 0)
+  return (newsUnseen() ? 1 : 0) + (crew.local && crew.unread ? 1 : 0) + (activeMakeup() ? 1 : 0)
     + planFor(store.schedule, key).filter((e) => e.kind !== 'workout' && e.kind !== 'rest' && !isDone(store.schedule, key, e.id)).length;
 }
 
 export function openBellSheet() {
   let sh = null;
   const close = () => sh?.close();
-  const items = [crewCard(close), makeupCard(close), scheduleCard(close)].filter(Boolean);
+  const items = [newsUnseen() ? newsCard(close) : null, crewCard(close), makeupCard(close), scheduleCard(close), newsUnseen() ? null : newsCard(close)].filter(Boolean);
   sh = openSheet({ title: t('today.bell'), content: h('div', { class: 'stack bell-list' },
     items.length ? items : h('p', { class: 'row-sub center', text: t('today.bell.empty') })) });
   return sh;
