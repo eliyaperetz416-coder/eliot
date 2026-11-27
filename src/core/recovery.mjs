@@ -1,5 +1,6 @@
 // Recovery mode of the muscle map. OUR DESIGN, a rough guide, not medical advice. Pure.
-import { GROUP_OF_MUSCLE } from './muscles.mjs';
+import { GROUP_OF_MUSCLE, expandIds } from './muscles.mjs';
+import { wodSets } from './wods.mjs';
 
 const H = 3600 * 1000;
 export const RECOVERY_WINDOW_DAYS = 14;
@@ -19,26 +20,31 @@ export function recoveryHoursFor(muscleId) {
  * sets needs 1.25x the base time; a muscle that was only a helper needs half the base time.
  * Muscles with no session in the last 14 days are fully fresh (freshness 1).
  */
-export function freshnessByMuscle(workouts, byId, nowMs, muscleIds) {
+export function freshnessByMuscle(workouts, byId, nowMs, muscleIds, wodById = {}) {
   const out = {};
   for (const id of muscleIds) out[id] = { freshness: 1, hoursLeft: 0, trainedAt: null };
   const since = nowMs - RECOVERY_WINDOW_DAYS * 24 * H;
   for (const w of workouts) {
     const sessions = new Map(); // muscle -> {sets, primary, lastAt}
-    for (const e of w.entries) {
+    const add = (ex, n, at) => {
+      for (const [list, weight, primary] of [[expandIds(ex.primaryMuscles ?? []), 1, true], [expandIds(ex.secondaryMuscles ?? []), 0.5, false]]) {
+        for (const m of list) {
+          const cur = sessions.get(m) ?? { sets: 0, primary: false, lastAt: 0 };
+          cur.sets += weight * n; cur.primary ||= primary; cur.lastAt = Math.max(cur.lastAt, at);
+          sessions.set(m, cur);
+        }
+      }
+    };
+    for (const e of w.entries ?? []) {
       const ex = byId[e.exerciseId];
       if (!ex) continue;
       for (const s of e.sets) {
         if (!s.done || s.type === 'warmup') continue;
-        const at = s.doneAt ?? w.endedMs ?? w.startedMs;
-        for (const [list, weight, primary] of [[ex.primaryMuscles, 1, true], [ex.secondaryMuscles, 0.5, false]]) {
-          for (const m of list) {
-            const cur = sessions.get(m) ?? { sets: 0, primary: false, lastAt: 0 };
-            cur.sets += weight; cur.primary ||= primary; cur.lastAt = Math.max(cur.lastAt, at);
-            sessions.set(m, cur);
-          }
-        }
+        add(ex, 1, s.doneAt ?? w.endedMs ?? w.startedMs);
       }
+    }
+    if (w.wod && !(w.entries?.length)) { // a benchmark result stores no sets: count its movements (wodSets)
+      for (const x of wodSets(wodById[w.wod.id], w.wod.score)) if (byId[x.exerciseId]) add(byId[x.exerciseId], x.sets, w.endedMs ?? w.startedMs);
     }
     for (const [m, s] of sessions) {
       if (!out[m] || s.lastAt < since) continue;

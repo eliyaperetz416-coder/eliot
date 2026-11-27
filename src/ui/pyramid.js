@@ -1,11 +1,12 @@
 // The rank pyramid on Progress (OUR DESIGN, redesign): ten steps, Greek God on top (46 % wide) down to Wood (100 %).
 // The step you are on is filled with its tier colour and shows the division and your rating, with a thin bar to the
-// next division; tiers below you are filled with their own colour too, tiers above are outlines. Tap your step for the full path.
+// next division; tiers below you are metal bars in their own colour with their crest symbol, tiers above are outlines. Tap your step for the full path.
 import { h } from './dom.js';
 import { t } from '../core/i18n.mjs';
 import { rankLadder, TIER_COLORS, GREEK_GOD_GRADIENT } from '../core/ranks.mjs';
 import { inkFor } from '../core/themes.mjs';
 import { formatNum } from './format.js';
+import { tierGlyph } from './emblem.js';
 
 /** pyramid({ rating }) -> <ol class="pyramid">. rating 0 / pending: no step is yours yet. */
 export function pyramid({ rating = 0 } = {}) {
@@ -15,7 +16,9 @@ export function pyramid({ rating = 0 } = {}) {
     const width = `${46 + i * 6}%`;
     const name = t(`tier.${x.id}`);
     if (x.status === 'done') { // reached: in its own colour, like your step, just without the rating (Elia 27.11)
-      return h('li', { class: 'pyr-step done', style: `width:${width};--pyr-bg:${TIER_COLORS[x.id]};--pyr-ink:${inkFor(TIER_COLORS[x.id])}`, 'aria-label': `${name}, ${t('pyr.reached')}` }, h('span', { text: name }));
+      const li = h('li', { class: 'pyr-step done', style: `width:${width};--pyr-bg:${TIER_COLORS[x.id]};--pyr-ink:${inkFor(TIER_COLORS[x.id])}`, 'aria-label': `${name}, ${t('pyr.reached')}` }, h('span', { text: name }));
+      li.insertAdjacentHTML('afterbegin', tierGlyph(x.id)); // its crest symbol (Elia 27.11: metal + symbol, option B)
+      return li;
     }
     if (x.status !== 'current') {
       return h('li', { class: `pyr-step ${x.status}`, style: `width:${width}`, 'aria-label': `${name}${x.status === 'done' ? `, ${t('pyr.reached')}` : ''}` }, h('span', { text: name }));

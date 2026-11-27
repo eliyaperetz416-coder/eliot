@@ -1188,5 +1188,7 @@
   "morning.none.title": "You haven't planned today yet",
   "morning.none.body": "One minute in the week plan and you are set.",
   "set.morning": "Morning reminder",
-  "set.morning.time": "Time"
+  "set.morning.time": "Time",
+  "shop.activeNow": "Active ✓",
+  "shop.oneAtATime": "One at a time. You can turn on the next one after your next workout uses this one."
 }

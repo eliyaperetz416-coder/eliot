@@ -4,9 +4,9 @@ import { icon } from './icons.js';
 import { t, getLanguage } from '../core/i18n.mjs';
 import { TIER_COLORS, RANK_GROUPS, muscleRatings, tierFor } from '../core/ranks.mjs';
 import { ratingsOf } from '../core/post.mjs';
-import { MAP_COLORS, GROUP_OF_MUSCLE } from '../core/muscles.mjs';
+import { MAP_COLORS, GROUP_OF_MUSCLE, expandIds } from '../core/muscles.mjs';
 import { freshnessByMuscle, freshColor } from '../core/recovery.mjs';
-import { exerciseRankTable, muscleBestExercises } from '../core/views.mjs';
+import { exerciseRankTable, muscleBestExercises, polygonRating, polygonBestExercises } from '../core/views.mjs';
 import { list, listRow, segmented, openSheet } from './components.js';
 import { data } from './data.js';
 import { store, shownOverall } from './store.js';
@@ -107,19 +107,21 @@ export function ranksScreen() {
     const panel = h('div', { class: 'mmap-panel' });
     const muscleName = (id) => t(`muscle.${id.replace(/^(left|right)-soleus$/, 'calves')}`);
     let paint, onSelect;
+    const trainable = (id) => d.exercises.some((e) => e.ranked !== false && expandIds(e.primaryMuscles ?? []).includes(id)); // has its own exercises
     if (view.mode === 'rank') {
       paint = (id) => {
         const g = GROUP_OF_MUSCLE[id];
-        const r = g ? groups[g] : 0;
-        if (!r) return { fill: MAP_COLORS.dim, label: `${muscleName(id)} · ${g ? t('rank.unranked') : t('ranks.notRanked')}` };
+        const own = g ? 0 : polygonRating(id, store.bests, d.byId); // outside the groups (inner thigh, forearm): its own exercises
+        const r = g ? groups[g] : own;
+        if (!r) return { fill: MAP_COLORS.dim, label: `${muscleName(id)} · ${g || trainable(id) ? t('rank.unranked') : t('ranks.notRanked')}` };
         const tr = tierFor(r);
         return { fill: TIER_COLORS[tr.tier], glow: true, label: `${muscleName(id)} · ${tierText(tr)} · ${formatNum(r, 0)}` };
       };
       onSelect = (id) => {
         const g = GROUP_OF_MUSCLE[id];
-        if (!g) { panel.replaceChildren(h('p', { class: 'row-sub', text: t('ranks.notRankedHint') })); return; }
-        const best = muscleBestExercises(g, store.bests, d.byId, 3);
-        panel.replaceChildren(h('div', { class: 'section-label', text: `${t(`group.${g}`)} · ${t('ranks.bestExercises')}` }),
+        if (!g && !trainable(id)) { panel.replaceChildren(h('p', { class: 'row-sub', text: t('ranks.notRankedHint') })); return; }
+        const best = g ? muscleBestExercises(g, store.bests, d.byId, 3) : polygonBestExercises(id, store.bests, d.byId, 3);
+        panel.replaceChildren(h('div', { class: 'section-label', text: `${g ? t(`group.${g}`) : muscleName(id)} · ${t('ranks.bestExercises')}` }),
           best.length ? h('div', { class: 'list' }, best.map((b) => h('button', { class: 'row', type: 'button', onclick: () => openNeedSheet(b.ex) },
             h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: nameOf(b.ex) }), h('span', { class: 'row-sub num' }, h('bdi', { text: setText(b.ex, b) }))),
             h('span', { class: 'row-end num', text: formatNum(b.rating, 0) }))))
@@ -127,7 +129,8 @@ export function ranksScreen() {
       };
     } else {
       const ids = [...d.muscles.anterior, ...d.muscles.posterior].map((m) => m.id);
-      const fresh = freshnessByMuscle(store.workouts, d.byId, Date.now(), ids);
+      const wodById = Object.fromEntries((d.wods?.wods ?? []).map((w) => [w.id, w])); // WOD results store no sets (Elia 27.11)
+      const fresh = freshnessByMuscle(store.workouts, d.byId, Date.now(), ids, wodById);
       paint = (id) => {
         const f = fresh[id]; const pct = Math.round((f?.freshness ?? 1) * 100);
         return { fill: freshColor(f?.freshness ?? 1), label: f?.trainedAt == null ? `${muscleName(id)} · ${t('recovery.fresh')}` : `${muscleName(id)} · ${t('recovery.pct', { n: pct })}${f.hoursLeft >= 1 ? ` · ${t('recovery.hoursLeft', { n: Math.round(f.hoursLeft) })}` : ''}` };

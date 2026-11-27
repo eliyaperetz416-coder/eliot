@@ -1,5 +1,6 @@
 // Pure builders for the Ranks tab: exercise table, "what do I need?", muscle best lists.
-import { loadForRating, secondsForRating, isDuration, nextDivisionFloor, nextTierFloor, tierFor } from './ranks.mjs';
+import { loadForRating, secondsForRating, isDuration, nextDivisionFloor, nextTierFloor, tierFor, aggregate } from './ranks.mjs';
+import { expandIds } from './muscles.mjs';
 
 /** rows for ranked exercises with a best; sortBy 'rating' | 'name' | 'oneRM' | 'recent'. */
 export function exerciseRankTable(bests, byId, sortBy = 'rating', nameOf = (e) => e.nameEn) {
@@ -14,6 +15,17 @@ export function exerciseRankTable(bests, byId, sortBy = 'rating', nameOf = (e) =
 }
 
 /** Up to n best exercises of a ranking group, strongest first. */
+/** Ranked exercises whose main muscles include this map area (for areas outside the rank groups, e.g. the inner thigh). */
+const trains = (ex, id) => !!ex && ex.ranked !== false && expandIds(ex.primaryMuscles ?? []).includes(id);
+export function polygonBestExercises(id, bests, byId, n = 3) {
+  return Object.entries(bests).filter(([x, b]) => trains(byId[x], id) && b.rating > 0)
+    .map(([x, b]) => ({ id: x, ex: byId[x], ...b })).sort((a, b) => b.rating - a.rating).slice(0, n);
+}
+/** The map colour of such an area: the same aggregate as a group, over the exercises that train it. 0 = none yet. */
+export function polygonRating(id, bests, byId) {
+  return aggregate(Object.entries(bests).filter(([x, b]) => trains(byId[x], id) && b.rating > 0).map(([, b]) => b.rating));
+}
+
 export function muscleBestExercises(group, bests, byId, n = 3) {
   return Object.entries(bests).filter(([id, b]) => byId[id]?.muscleGroup === group && byId[id].ranked !== false && b.rating > 0)
     .map(([id, b]) => ({ id, ex: byId[id], ...b })).sort((a, b) => b.rating - a.rating).slice(0, n);

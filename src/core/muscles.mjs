@@ -10,7 +10,9 @@ export const GROUP_OF_MUSCLE = Object.freeze({
 });
 
 /** Some muscles are drawn as several polygon ids. */
-const ALIASES = { calves: ['calves', 'left-soleus', 'right-soleus'] };
+// The two inner-thigh areas (drawn as `abductors` in front and `adductor` behind) work together in both hip machines
+// (Elia 27.11): either one lights both.
+const ALIASES = { calves: ['calves', 'left-soleus', 'right-soleus'], adductor: ['adductor', 'abductors'], abductors: ['abductors', 'adductor'] };
 export const expandIds = (ids) => [...new Set(ids.flatMap((i) => ALIASES[i] ?? [i]))];
 
 /** Which polygon ids to colour, and how, for an exercise. */

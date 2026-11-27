@@ -39,10 +39,13 @@ export function shopScreen() {
       const boostActive = c.id === 'dboost' && inv.boostActive;
       return h('div', { class: 'row shop-row' },
         h('span', { class: 'row-main' }, h('span', { class: 'row-title', text: itemName(c) }), h('span', { class: 'row-sub', text: itemDesc(c) }),
-          h('span', { class: 'row-sub num', text: t('shop.owned', { n: owned }) + (shakeActive ? ` · ${t('shop.shakeActive')}` : '') + (boostActive ? ` · ${t('shop.boostActive')}` : '') })),
+          h('span', { class: 'row-sub num', text: t('shop.owned', { n: owned }) + (shakeActive ? ` · ${t('shop.shakeActive')}` : '') + (boostActive ? ` · ${t('shop.boostActive')}` : '') }),
+          shakeActive || boostActive ? h('span', { class: 'row-sub', text: t('shop.oneAtATime') }) : null),
         h('div', { class: 'shop-actions' },
           c.id === 'dboost' && owned > 0 && !inv.boostActive ? button({ label: t('shop.activate'), variant: 'secondary', onClick: () => act(activateBoost, () => t('shop.boostOn')) }) : null,
           c.id === 'xpshake' && owned > 0 && !inv.shakeActive ? button({ label: t('shop.activate'), variant: 'secondary', onClick: () => act(activateShake, () => t('shop.shakeOn')) }) : null,
+          // already on (Elia 27.11: with no button to press he kept buying more): say so where the button would be
+          shakeActive || boostActive ? h('span', { class: 'shop-on', text: t('shop.activeNow') }) : null,
           button({ label: `${c.price}`, icon: 'coin', variant: g.drachmas >= c.price ? 'primary' : 'secondary', disabled: g.drachmas < c.price, onClick: () => act((gm) => purchase(gm, shop, c.id), () => t('shop.bought', { name: itemName(c) })) })));
     });
     const tiles = (kind) => h('div', { class: 'cosmetic-grid' }, shop.cosmetics.filter((c) => c.kind === kind).map((c) => {
