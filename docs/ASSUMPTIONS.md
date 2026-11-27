@@ -93,7 +93,7 @@ seasons and leaderboards exist (server features, not built here), about 600 exer
 
 ## Crew (friends group): the first feature that uses a server
 **OUR DESIGN. This changes an early rule of the project** ("no server, no accounts, no leaderboards"). Elia asked for it, for 4 to 6 friends.
-- **What it is:** a group of up to 8 people with a code. A leaderboard (overall rank, level, weekly volume, streak), a feed for chat and short statuses ("going to train"), WhatsApp invite, optional notifications.
+- **What it is:** a group of up to 20 people with a code. A leaderboard (overall rank, level, weekly volume, streak), a feed for chat and short statuses ("going to train"), WhatsApp invite, optional notifications.
 - **Where it runs:** a free Supabase project named `demigod` (Europe, Frankfurt). It also holds the tables of two other apps (`hc_`, `agenda_`), each behind its own functions and secrets. Source of the database in `supabase/migrations/001_crew.sql`, the notification function in `supabase/functions/notify/`.
 - **No accounts.** On the phone the app makes a random secret token. The server keeps only its hash. Every call needs the token. The tables are closed to the public (row level security with no policies); the app can only call the listed functions.
 - **What is shared:** nickname, overall rank (tier, division, rating), level, streak, weekly volume, workouts this month and total, and the messages you write. **Never** bodyweight, workouts, sets, exercises or photos. Numbers are sent when you finish a workout and when you open the crew.
