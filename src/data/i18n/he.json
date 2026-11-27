@@ -1202,5 +1202,7 @@
   "morning.none.title": "עוד לא תכננת את היום",
   "morning.none.body": "דקה אחת בתכנון השבוע, ויוצאים לדרך.",
   "set.morning": "תזכורת בוקר",
-  "set.morning.time": "שעה"
+  "set.morning.time": "שעה",
+  "shop.activeNow": "פעיל ✓",
+  "shop.oneAtATime": "אחד פעיל בכל פעם. את הבא אפשר להפעיל אחרי שהאימון הבא ישתמש בו."
 }

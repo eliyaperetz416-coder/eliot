@@ -859,10 +859,15 @@ button.chip:active, .seg button:active, .tab:active { opacity: .65; }
 .prog-tabs { padding-block: var(--s-2) var(--s-3); }
 .prog-share { margin-inline-start: auto; }
 .pyramid { list-style: none; margin: 0; padding: var(--s-4) 0 0; display: flex; flex-direction: column; align-items: center; gap: 5px; font-family: var(--font-display); letter-spacing: .16em; text-transform: uppercase; }
+.shop-on { display: inline-flex; align-items: center; min-height: var(--tap); padding-inline: var(--s-3); border-radius: var(--r-pill); border: 1px solid rgb(var(--accent-rgb) / .5); color: var(--accent); font-weight: 700; font-size: 14px; white-space: nowrap; }
 .pyr-step { height: 44px; display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--text-mute); border: 1px solid var(--line); box-sizing: border-box; }
-.pyr-step.done { background: var(--surface-2); border-color: var(--line); color: var(--text); } /* reached: filled and framed */
-[data-theme="marble"] .pyr-step.done { background: rgb(255 255 255 / .6); border-color: rgb(28 26 23 / .16); box-shadow: 0 1px 2px rgb(28 26 23 / .06); } /* the stone's own colour swallowed the old fill (Elia 27.11) */
-.pyr-step.current { height: 66px; border: 0; background: var(--pyr-bg); color: var(--pyr-ink); position: relative; overflow: hidden; box-shadow: 0 0 40px color-mix(in srgb, var(--pyr-glow) 30%, transparent); }
+/* reached and current: a metal bar in the tier's colour (Elia 27.11, option B): light along the top edge, darker below, a soft
+   shadow in its own colour; passed steps carry their crest symbol. The overlay is a layer over --pyr-bg, so gradients work too. */
+.pyr-step.done, .pyr-step.current { background: linear-gradient(180deg, rgb(255 255 255 / .42), rgb(255 255 255 / 0) 46%, rgb(0 0 0 / .16)), var(--pyr-bg); }
+.pyr-step.done { border: 0; color: var(--pyr-ink); font-weight: 700; gap: 8px; position: relative;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .55), inset 0 -2px 0 rgb(0 0 0 / .14), 0 6px 14px -8px rgb(0 0 0 / .45); text-shadow: 0 1px 0 rgb(255 255 255 / .25); }
+.pyr-step .tier-glyph { flex: none; width: 18px; height: 18px; opacity: .8; }
+.pyr-step.current { height: 66px; border: 0; color: var(--pyr-ink); position: relative; overflow: hidden; box-shadow: inset 0 1px 0 rgb(255 255 255 / .55), inset 0 -2px 0 rgb(0 0 0 / .14), 0 0 40px color-mix(in srgb, var(--pyr-glow) 30%, transparent); }
 .pyr-step.current a { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; padding-inline: 18px; color: inherit; text-decoration: none; }
 .pyr-name { font-size: 17px; font-weight: 700; }
 .pyr-rating { font-size: 24px; font-weight: 700; letter-spacing: 0; }

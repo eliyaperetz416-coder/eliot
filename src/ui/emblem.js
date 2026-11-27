@@ -129,3 +129,9 @@ export function emblem({ tier = 'unranked', divisionIndex = 0, size = 96, label 
   wrap.innerHTML = `<svg viewBox="0 0 260 230" width="${size}" height="${Math.round(size * 230 / 260)}" role="img" aria-label="${String(label ?? tier).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)}">${body}</svg>`;
   return wrap;
 }
+
+/** The tier's symbol alone, as a small inline <svg> (the rank pyramid's passed steps). */
+export function tierGlyph(tier, paint = 'currentColor', size = 18) {
+  const name = GLYPH_OF[tier] ?? 'bolt';
+  return `<svg class="tier-glyph" viewBox="84 72 92 92" width="${size}" height="${size}" aria-hidden="true" focusable="false">${glyph(name, paint, `pg-${tier}`)}</svg>`;
+}

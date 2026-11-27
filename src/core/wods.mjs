@@ -85,6 +85,28 @@ export function isPr(workouts, wodId, division, score) {
   return !prev.length || prev.every((w) => scoreValue(score) > scoreValue(w.wod.score));
 }
 
+/**
+ * What a result did to the body, for the recovery map (Elia 27.11: a WOD showed nothing there). A result stores no sets,
+ * so the movements are counted from the workout itself: total reps of each movement / 10 = "sets" (1..10). Runs and
+ * max-effort movements count 10 reps a round. OUR DESIGN, a rough guide like the rest of recovery.
+ * Returns [{ exerciseId, sets }], one per movement.
+ */
+export function wodSets(def, score) {
+  if (!def?.movements?.length || !score) return [];
+  const rounds = roundCount(def), perRound = repsPerRound(def);
+  let done; // full rounds done (may be a fraction)
+  if (score.type === 'rounds') done = score.rounds + (perRound ? (score.reps ?? 0) / perRound : 0);
+  else if (score.type === 'time' && !score.capped) done = def.format === 'emom' ? def.minutes ?? rounds : rounds;
+  else done = perRound ? (score.reps ?? 0) / perRound : 1;
+  const repsOf = (m) => {
+    if (Array.isArray(m.reps)) { const full = Math.floor(done), part = done - full; return m.reps.slice(0, full).reduce((a, b) => a + b, 0) + (m.reps[full] ?? 0) * part; }
+    return (typeof m.reps === 'number' ? m.reps : 10) * done;
+  };
+  const total = new Map();
+  for (const m of def.movements) total.set(m.ex, (total.get(m.ex) ?? 0) + repsOf(m));
+  return [...total].filter(([, r]) => r > 0).map(([exerciseId, r]) => ({ exerciseId, sets: Math.min(10, Math.max(1, Math.round(r / 10))) }));
+}
+
 /** The workout record that stores a result. */
 export function buildWodWorkout({ id, wod, division, score, startedMs, endedMs, notes = '', workouts = [] }) {
   return {
