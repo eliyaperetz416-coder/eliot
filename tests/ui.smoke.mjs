@@ -2055,7 +2055,7 @@ await check('accounts: the morning reminder gets the seven messages from the wee
   await c.close();
 });
 
-await check('maintenance lock: only "Updating." with the return time, no button or link, in he / en / other languages; it stays (no reload)', async () => {
+await check('maintenance lock: only "Updating." with the return time and a language switch (no other button, no link), in he / en / other languages; it stays (no reload)', async () => {
   const lockServer = await serve(0, { locked: true });
   const lockBase = `http://localhost:${lockServer.address().port}/`;
   try {
@@ -2066,7 +2066,15 @@ await check('maintenance lock: only "Updating." with the return time, no button 
       await page.waitForSelector('html[data-ready="1"]');
       assert.equal((await page.textContent('main.maint h1')).trim(), title, locale);
       assert.match(await page.textContent('.maint-back'), /\d\d:\d\d/, `${locale}: the time`);
-      assert.equal(await page.locator('#app button, #app a').count(), 0, `${locale}: no button or link`);
+      assert.equal(await page.locator('#app a').count(), 0, `${locale}: no link`);
+      assert.equal(await page.locator('#app button').count(), 1, `${locale}: one button only, the language switch`);
+      // Elia 27.11: people who read only English (or only Hebrew) can switch; nothing else on the screen does anything
+      const other = title === 'מתעדכנים.' ? 'Updating.' : 'מתעדכנים.';
+      await page.click('#app .maint-lang');
+      assert.equal((await page.textContent('main.maint h1')).trim(), other, `${locale}: switched`);
+      assert.equal(await page.evaluate(() => document.documentElement.dir), other === 'Updating.' ? 'ltr' : 'rtl');
+      await page.click('#app .maint-lang');
+      assert.equal((await page.textContent('main.maint h1')).trim(), title, `${locale}: and back`);
       assert.equal(await page.evaluate(() => document.getElementById('nav-root').childElementCount + document.getElementById('rest-root').childElementCount), 0);
       if (locale !== 'ru-RU') await page.screenshot({ path: `${shots}lock-${locale.slice(0, 2)}.png` });
       if (locale === 'he-IL') {

@@ -2,7 +2,7 @@
 // While LOCKED, every phone shows only the lock screen: no button, no code, no address trick. Only the next release
 // (LOCKED = false) removes it, and the lock screen takes that release in by itself.
 // Tests serve the app with LOCKED = false (tests/serve.mjs); users always get this file as it is.
-export const LOCKED = false; // launch day: locked in v1.49.0 and v1.49.2, open again from v1.49.3
+export const LOCKED = true; // launch day: locked (v1.49.0, v1.49.2, v1.49.4 with a language switch); false in the unlock release
 /** The time shown on the lock screen ("back today around 09:45"), Israel time. */
 export const BACK_AT = '09:45';
 

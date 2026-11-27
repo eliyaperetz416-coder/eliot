@@ -330,3 +330,4 @@ Plan: `docs/superpowers/plans/2026-11-23-redesign.md`; spec: `docs/superpowers/s
 - **Unlock (v1.49.1):** `LOCKED` and `ACTIVATE_NOW` are false again; the lock screen takes this release in by itself and every phone opens on the sign-in screen (an old phone then moves its data to the account).
 - **Lock text in the morning (v1.49.2, 27.11):** still locked; the screen says "back today around 09:45" instead of "tomorrow" (Elia). The unlock follows as the next release.
 - **Unlock (v1.49.3):** `LOCKED` and `ACTIVATE_NOW` false again (v1.49.1 was prepared the same way but never shipped: v1.49.2 changed the lock text first).
+- **Lock with a language switch (v1.49.4, 27.11):** still locked; one button switches the lock screen between Hebrew and English (Elia: someone who reads only one of them must understand it). v1.49.3 (an unlock) was never shipped.
