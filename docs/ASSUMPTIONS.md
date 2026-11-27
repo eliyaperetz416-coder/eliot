@@ -331,3 +331,5 @@ Plan: `docs/superpowers/plans/2026-11-23-redesign.md`; spec: `docs/superpowers/s
 - **Lock text in the morning (v1.49.2, 27.11):** still locked; the screen says "back today around 09:45" instead of "tomorrow" (Elia). The unlock follows as the next release.
 - **Unlock (v1.49.3):** `LOCKED` and `ACTIVATE_NOW` false again (v1.49.1 was prepared the same way but never shipped: v1.49.2 changed the lock text first).
 - **Lock with a language switch (v1.49.4, 27.11):** still locked; one button switches the lock screen between Hebrew and English (Elia: someone who reads only one of them must understand it). v1.49.3 (an unlock) was never shipped.
+- **Unlock (v1.49.5):** `LOCKED` and `ACTIVATE_NOW` false again; the lock screen takes it in by itself.
+- **Lock until 10:30 (v1.49.6, 27.11):** still locked while the "what's new" notice and the catch-up questions are added (Elia).
