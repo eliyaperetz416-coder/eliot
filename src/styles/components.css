@@ -975,3 +975,4 @@ button.chip:active, .seg button:active, .tab:active { opacity: .65; }
 @keyframes maint-glow { 0%, 100% { opacity: .75; transform: scale(.96); } 50% { opacity: 1; transform: scale(1.04); } }
 [data-motion="reduce"] .maint-mark { animation: none; }
 @media (prefers-reduced-motion: reduce) { .maint-mark { animation: none; } }
+.maint .maint-lang { margin-block-start: var(--s-4); }

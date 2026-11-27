@@ -206,12 +206,14 @@ function registerServiceWorker() {
 async function bootLocked() {
   const [he, en] = await Promise.all(LANGS.map((l) => fetch(`src/data/i18n/${l}.json`).then((r) => r.json())));
   setDictionaries({ he, en });
-  const lang = detectLanguage(navigator.language);
-  setLanguage(lang);
-  document.documentElement.lang = lang;
-  document.documentElement.dir = DIR[lang];
-  document.title = t('app.name');
-  app.replaceChildren(maintenanceScreen());
+  const draw = (lang) => {
+    setLanguage(lang);
+    document.documentElement.lang = lang;
+    document.documentElement.dir = DIR[lang];
+    document.title = t('app.name');
+    app.replaceChildren(maintenanceScreen({ onSwitch: () => draw(lang === 'he' ? 'en' : 'he') }));
+  };
+  draw(detectLanguage(navigator.language));
   nav.replaceChildren();
   document.getElementById('rest-root').replaceChildren();
   document.documentElement.dataset.ready = '1';
