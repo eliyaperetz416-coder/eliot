@@ -5,6 +5,7 @@ import { h } from './dom.js';
 import { icon } from './icons.js';
 import { t, getLanguage } from '../core/i18n.mjs';
 import { button, numberField, segmented } from './components.js';
+import { newsList, markNewsSeen } from './whats-new.js';
 import { emblem } from './emblem.js';
 import { validateProfile, makeProfile } from '../core/profile.mjs';
 import { nextStep, platformOf } from '../core/onboarding-flow.mjs';
@@ -38,7 +39,7 @@ export function onboarding({ onLanguage, onDone, installPrompt = () => null, sig
       installed: isStandalone(), installSkipped: !!st.installSkipped, signedIn: !!session,
       localData: !!store.profile || hasData(), migrated: st.migrated,
       profile: { name: p?.name, sex: p?.sex, weight: store.profile ? bodyweightKg() : Number(st.form.weight) || null, age: p?.age === '' ? null : (p?.age ?? null) },
-      ageSkipped: !!st.ageSkipped, goalSet: !!st.goalSet, pushAsked: !!st.pushAsked, toured: !!st.toured,
+      ageSkipped: !!st.ageSkipped, goalSet: !!st.goalSet, pushAsked: !!st.pushAsked, toured: !!st.toured, newsSeen: !!st.newsSeen,
     };
   };
 
@@ -64,7 +65,9 @@ export function onboarding({ onLanguage, onDone, installPrompt = () => null, sig
     }
     const id = nextStep(flowState());
     if (id === 'done') { await finish(); return; }
-    root.replaceChildren(screens[id]());
+    const el = screens[id]();
+    el.dataset.step = id; // which question this is (tests, and styles if one ever needs it)
+    root.replaceChildren(el);
     root.scrollTo?.(0, 0); window.scrollTo(0, 0);
   }
 
@@ -177,6 +180,9 @@ export function onboarding({ onLanguage, onDone, installPrompt = () => null, sig
         if (crew.local) { try { await enableCrewPush(); } catch { /* the crew switch stays in the crew settings */ } }
         go({ pushAsked: true });
       } }), button({ label: t('ob.notify.later'), variant: 'ghost', block: true, onClick: () => go({ pushAsked: true }) }))),
+
+    news: () => step(t('news.title'), newsList(),
+      actions(button({ label: t('ob.news.go'), block: true, onClick: () => { markNewsSeen(); go({ newsSeen: true }); } }))),
 
     tour: () => step(t('ob.tour.title'),
       h('div', { class: 'tour-emblems' }, emblem({ tier: 'bronze', divisionIndex: 2, size: 70 }), emblem({ tier: 'gold', divisionIndex: 4, size: 84 }), emblem({ tier: 'greekgod', size: 70 })),

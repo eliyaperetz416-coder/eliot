@@ -17,7 +17,13 @@ export function nextStep(s) {
   if (offerInstall && !s.localData) return 'install-first';
   if (!s.signedIn) return 'signin';
   if (s.localData && !s.migrated) return 'migrate';
-  if (s.migrated && profileComplete(p)) return offerInstall ? 'install-first' : 'done';
+  // a phone that moved its data (or got it from the account) skips the questions it answered long ago, but is asked what
+  // it never was: notifications (now also the morning reminder), then what is new (Elia 27.11, launch day)
+  if (s.migrated && profileComplete(p)) {
+    if (offerInstall) return 'install-first';
+    if (!s.pushAsked) return 'notify';
+    return s.newsSeen ? 'done' : 'news';
+  }
   // "About you": name, curve, body weight and age (optional) on one screen (Elia, 23.11: fewer, fuller screens).
   if (!profileComplete(p) || (p.age == null && !s.ageSkipped)) return 'about';
   if (!s.goalSet) return 'goal';

@@ -25,9 +25,13 @@ test('the questions come in order; an unanswered age counts as skipped once the 
   assert.equal(nextStep(S({ signedIn: true, profile: full, goalSet: true, installed: true, pushAsked: true, toured: true })), 'done');
 });
 
-test('local data moves first; a full profile after moving goes straight in', () => {
+test('local data moves first; then only what this phone never answered: notifications, then what is new (Elia 27.11)', () => {
   assert.equal(nextStep(S({ signedIn: true, localData: true })), 'migrate');
-  assert.equal(nextStep(S({ signedIn: true, localData: true, migrated: true, profile: full })), 'done');
+  const moved = { signedIn: true, localData: true, migrated: true, profile: full };
+  assert.equal(nextStep(S(moved)), 'notify');
+  assert.equal(nextStep(S({ ...moved, pushAsked: true })), 'news');
+  assert.equal(nextStep(S({ ...moved, pushAsked: true, newsSeen: true })), 'done');
+  assert.equal(nextStep(S({ ...moved, goalSet: false, toured: false, pushAsked: true, newsSeen: true })), 'done', 'never the goal or the tour again');
 });
 
 test('an installed iPhone app never sees an install step', () => {
@@ -49,7 +53,8 @@ test('iPhone in Safari with data already on it: sign in and move the data first,
   assert.equal(nextStep(S({ platform: 'ios-safari', localData: true })), 'signin');
   assert.equal(nextStep(S({ platform: 'ios-safari', localData: true, signedIn: true })), 'migrate');
   assert.equal(nextStep(S({ platform: 'ios-safari', localData: true, signedIn: true, migrated: true, profile: full })), 'install-first');
-  assert.equal(nextStep(S({ platform: 'ios-safari', localData: true, signedIn: true, migrated: true, profile: full, installSkipped: true })), 'done');
+  assert.equal(nextStep(S({ platform: 'ios-safari', localData: true, signedIn: true, migrated: true, profile: full, installSkipped: true })), 'notify');
+  assert.equal(nextStep(S({ platform: 'ios-safari', localData: true, signedIn: true, migrated: true, profile: full, installSkipped: true, pushAsked: true, newsSeen: true })), 'done');
 });
 
 test('an iPad in Safari says "Macintosh": a touch screen tells it apart from a Mac (M-8)', () => {

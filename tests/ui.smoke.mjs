@@ -150,10 +150,20 @@ for (const lang of ['he', 'en']) {
     assert.equal(await page.locator('.today-week .day').count(), 7);
     assert.equal(await page.locator('.today-week .day.today').count(), 1);
     assert.equal(await page.locator('.today-next').count(), 0, 'nothing planned yet: no next-workout row');
-    assert.equal(await page.locator('.today-bell .bell-dot').count(), 0, 'nothing new: no dot on the bell');
     assert.ok(await page.locator('.today-start.choose-other').count() === 1, 'start opens the chooser while nothing is planned');
+    // what is new (Elia 27.11): a card behind the bell for everyone, with a dot until its details were seen once
+    assert.equal(await page.locator('.today-bell .bell-dot').count(), 1, 'the update notice puts a dot on the bell');
     await page.click('.today-bell');
-    await page.waitForSelector('.sheet .bell-list');
+    await page.waitForSelector('.sheet .bell-list .news-card.card-accent');
+    await page.click('.sheet .news-card .btn');
+    await page.waitForSelector('.sheet .news-list');
+    assert.equal(await page.locator('.sheet .news-list li').count(), 8);
+    await page.screenshot({ path: `${shots}${lang}-whats-new.png` });
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !document.querySelector('.sheet'));
+    assert.equal(await page.locator('.today-bell .bell-dot').count(), 0, 'seen: no dot');
+    await page.click('.today-bell');
+    await page.waitForSelector('.sheet .bell-list .news-card:not(.card-accent)');
     await page.keyboard.press('Escape');
     await page.click('.today-quests');
     await page.waitForSelector('.sheet .quests');
@@ -1412,7 +1422,7 @@ for (const lang of ['he', 'en']) {
     // sign back in: the (fake) account still has the data, so the next checks keep their workouts
     account.remote = saved; account.deletes = 0;
     await page.check('#consent'); await page.click('#google');
-    await page.waitForSelector('.tabbar', { timeout: 10000 });
+    await throughCatchUp(page);
     assert.equal(await page.evaluate(async () => { const { dbAll } = await import('./src/ui/db.js'); return (await dbAll('workouts')).length; }), before);
   });
 
@@ -1803,6 +1813,19 @@ for (const lang of ['he', 'en']) {
 const phone = (over = {}) => browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'he-IL', serviceWorkers: 'block', ...over });
 const IPHONE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
 /** A phone that already has data from before accounts: profile, 2 workouts, a crew spot. */
+/** After signing in on a phone that already had (or pulled) data: answer "not now" to notifications and close what is new,
+ * the only catch-up questions such a phone gets (Elia 27.11), until the app opens. */
+async function throughCatchUp(pg) {
+  for (let i = 0; i < 4; i++) {
+    const el = await pg.waitForSelector('.tabbar, .ob-step[data-step="notify"], .ob-step[data-step="news"]', { timeout: 15000 });
+    if (await el.evaluate((n) => n.classList.contains('tabbar'))) return;
+    const step = await el.getAttribute('data-step');
+    await pg.click(step === 'notify' ? '.ob-step[data-step="notify"] .btn-ghost' : '.ob-step[data-step="news"] .btn-primary');
+    await pg.waitForFunction((st) => !document.querySelector(`.ob-step[data-step="${st}"]`), step);
+  }
+  await pg.waitForSelector('.tabbar', { timeout: 5000 });
+}
+
 async function seedOldPhone(page) {
   await page.goto(base); await page.waitForSelector('html[data-ready="1"]');
   await page.evaluate(async () => {
@@ -1825,12 +1848,19 @@ await check('accounts: iPhone in Safari sees the install screen before sign-in',
   await c.close();
 });
 
-await check('accounts: an old phone moves its data (and crew spot) to the account, then opens the app', async () => {
+await check('accounts: an old phone moves its data (and crew spot) to the account, is asked only about notifications and shown what is new, then opens the app', async () => {
   const c = await phone(); const acct = await installFakeSupabase(c);
   const p = await c.newPage(); p.on('pageerror', (e) => errors.push(`old phone: ${e.message}`));
   await seedOldPhone(p);
   await p.check('#consent'); await p.click('#google');
+  // then only what this phone was never asked: notifications, then what is new (no profile, goal or tour again)
+  await p.waitForSelector('.ob-step .ob-actions .btn-ghost', { timeout: 10000 });
+  await p.click('.ob-step .ob-actions .btn-ghost'); // notifications: not now
+  await p.waitForSelector('.ob-step .news-list');
+  assert.equal(await p.locator('.ob-step .news-list li').count(), 8);
+  await p.click('.ob-step .ob-actions .btn');
   await p.waitForSelector('.tabbar', { timeout: 10000 });
+  assert.equal(await p.locator('.today-bell .bell-dot').count(), 0, 'what is new was seen in the questions: no dot');
   assert.ok(acct.uploads.length >= 1);
   const up = acct.uploads[0];
   assert.deepEqual(up.data.workouts.map((w) => w.id).sort(), ['old-1', 'old-2']);
@@ -1858,7 +1888,7 @@ await check('accounts: a new phone signs in and gets the account data', async ()
   const c = await phone(); await installFakeSupabase(c, { remote });
   const p = await c.newPage(); await p.goto(base); await p.waitForSelector('#google');
   await p.check('#consent'); await p.click('#google');
-  await p.waitForSelector('.tabbar', { timeout: 10000 });
+  await throughCatchUp(p);
   const got = await p.evaluate(async () => { const { dbGet, dbAll } = await import('./src/ui/db.js'); return { name: (await dbGet('profile', 'me'))?.name, w: (await dbAll('workouts')).length }; });
   assert.deepEqual(got, { name: 'Cloud', w: 1 });
   await c.close();
@@ -1872,7 +1902,7 @@ await check('accounts: two phones — an old phone pulls newer data (never pushe
   const c = await phone(); const acct = await installFakeSupabase(c, { remote: { data: cloudData(['a-1']), version: 1 } });
   const p = await c.newPage(); p.on('pageerror', (e) => errors.push(`two phones: ${e.message}`));
   await p.goto(base); await p.waitForSelector('#google'); await p.check('#consent'); await p.click('#google');
-  await p.waitForSelector('.tabbar', { timeout: 10000 });
+  await throughCatchUp(p);
   await p.waitForTimeout(1500); // the start-up sync after the pull
   assert.deepEqual(await localIds(p), ['a-1']);
   const uploads0 = acct.uploads.length;
@@ -1904,7 +1934,7 @@ await check('accounts: a new phone whose first account check fails waits and ret
   await p.waitForSelector('.ob-title:text-is("לא הצלחנו לבדוק את החשבון. בדוק חיבור ונסה שוב.")', { timeout: 10000 });
   assert.equal(await p.locator('#ob-name').count(), 0, 'no new-person questions');
   await p.click('.onboarding .ob-actions .btn-primary');
-  await p.waitForSelector('.tabbar', { timeout: 10000 });
+  await throughCatchUp(p);
   assert.deepEqual(await localIds(p), ['a-1']);
   await c.close();
 });
