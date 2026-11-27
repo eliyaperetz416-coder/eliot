@@ -5,6 +5,8 @@ export const XP_PER_SET = 10, XP_SET_CAP = 40, XP_PER_PR = 25, XP_WORKOUT = 50;
 export const DRACHMA_WORKOUT = 20, DRACHMA_PER_SET = 3, DRACHMA_SET_PART_CAP = 60, DRACHMA_PER_PR = 15;
 export const DRACHMA_DAILY_QUEST = 15, DRACHMA_WEEKLY_QUEST = 60;
 export const XP_SHAKE_MULTIPLIER = 2;
+// A benchmark workout (WOD) stores a score, not sets (Elia 27.11: it earns like a workout of about 10 sets and uses the shake/boost)
+export const WOD_XP = 100, WOD_DRACHMAS = 30;
 
 /** XP needed to go from level n to n+1 (level 1 is the start). */
 export const xpToNext = (n) => 100 + 25 * (n - 1);
@@ -17,12 +19,17 @@ export const xpForLevel = (level) => { let t = 0; for (let n = 1; n < level; n++
 
 export const workingSetsOf = (w) => w.entries.reduce((n, e) => n + e.sets.filter((s) => s.done && s.type !== 'warmup').length, 0);
 export const prSetsOf = (w) => w.entries.reduce((n, e) => n + e.sets.filter((s) => s.done && s.type !== 'warmup' && (s.prWeekly || s.prAllTime)).length, 0);
-export const isValidWorkout = (w) => workingSetsOf(w) >= MIN_VALID_SETS;
+export const isValidWorkout = (w) => (w.wod ? !!w.wod.score : workingSetsOf(w) >= MIN_VALID_SETS);
 /** Valid as stored (rewards decided when it was posted), or computed for older workouts. */
 export const isValid = (w) => (w.rewards ? w.rewards.valid : isValidWorkout(w));
 
 /** Base rewards of one rewarded workout (before XP Shake). */
 export function workoutRewards(w) {
+  if (w.wod) {
+    const pr = w.wod.pr ? 1 : 0, prXp = XP_PER_PR * pr, prDr = DRACHMA_PER_PR * pr;
+    return { sets: 0, prs: pr, xp: XP_WORKOUT + WOD_XP + prXp, drachmas: DRACHMA_WORKOUT + WOD_DRACHMAS + prDr,
+      breakdown: { setXp: 0, wodXp: WOD_XP, prXp, completionXp: XP_WORKOUT, baseDrachmas: DRACHMA_WORKOUT, setDrachmas: 0, wodDrachmas: WOD_DRACHMAS, prDrachmas: prDr } };
+  }
   const sets = workingSetsOf(w), prs = prSetsOf(w);
   const setXp = XP_PER_SET * Math.min(sets, XP_SET_CAP), prXp = XP_PER_PR * prs;
   const setDr = Math.min(DRACHMA_PER_SET * sets, DRACHMA_SET_PART_CAP), prDr = DRACHMA_PER_PR * prs;
