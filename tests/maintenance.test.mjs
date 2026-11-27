@@ -24,8 +24,8 @@ test('the lock screen hands over to the next release by itself (there is no butt
 test('the copy, in both languages', () => {
   assert.equal(dict('he')['maint.title'], 'מתעדכנים.');
   assert.equal(dict('he')['maint.body'], 'משהו חדש בדרך. האימונים שלך שמורים.');
-  assert.equal(dict('he')['maint.back'], 'חוזרים מחר בבוקר בערך ב־{time}'); // Elia 26.11: lock overnight, back at 09:45
+  assert.equal(dict('he')['maint.back'], 'חוזרים היום בערך ב־{time}'); // Elia 27.11 morning: it is today now
   assert.equal(dict('en')['maint.title'], 'Updating.');
   assert.equal(dict('en')['maint.body'], 'Something new is on the way. Your workouts are safe.');
-  assert.equal(dict('en')['maint.back'], 'Back tomorrow morning around {time}');
+  assert.equal(dict('en')['maint.back'], 'Back today around {time}');
 });
