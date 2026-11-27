@@ -1190,5 +1190,7 @@
   "set.morning": "Morning reminder",
   "set.morning.time": "Time",
   "shop.activeNow": "Active ✓",
-  "shop.oneAtATime": "One at a time. You can turn on the next one after your next workout uses this one."
+  "shop.oneAtATime": "One at a time. You can turn on the next one after your next workout uses this one.",
+  "wod.earned": "+{xp} XP · +{d} drachmas",
+  "wod.earned.shake": "doubled by the shake"
 }

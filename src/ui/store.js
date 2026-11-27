@@ -1,7 +1,7 @@
 // App state: profile, bodyweight log, posted workouts, draft, bests. Loaded once, persisted to IndexedDB.
 import { dbAll, dbGet, dbPut, dbBatch, dbDelete } from './db.js';
 import { migrateWorkout, newestDraft } from '../core/draft.mjs';
-import { bestsFrom, ratingsOf, afterEdit } from '../core/post.mjs';
+import { bestsFrom, ratingsOf, afterEdit, rankIndex } from '../core/post.mjs';
 import { overallRating } from '../core/ranks.mjs';
 import { rankBonus, setWeeklyGoal, setQuestClaims } from '../core/bonus.mjs';
 import { getSettings } from './storage.js';
@@ -9,7 +9,7 @@ import { cleanSchedule } from '../core/schedule.mjs';
 import { latestBodyweight, bodyweightEntry } from '../core/profile.mjs';
 import { data, registerCustom, unregisterCustom, setRenames, renameExercise } from './data.js';
 import { markPlanDone } from '../core/generator.mjs';
-import { newGame, migrateGame, evaluateAchievements } from '../core/gamestate.mjs';
+import { newGame, migrateGame, evaluateAchievements, applyPost } from '../core/gamestate.mjs';
 import { dateKey } from '../core/workout.mjs';
 
 export const store = { profile: null, bwLog: [], workouts: [], draft: null, bests: {}, overall: { pending: true, remaining: 3, rating: 0 }, routines: [], folders: [], plans: [], custom: [], game: newGame(), requests: [], bases: {}, makeup: null, schedule: { days: {}, done: {} } };
@@ -151,9 +151,15 @@ export async function saveWodResult(w) {
   const before = store.overall?.rating ?? 0;
   store.workouts = [...store.workouts.filter((x) => x.id !== w.id), w].sort((a, b) => a.startedMs - b.startedMs);
   recompute();
-  await dbPut('workouts', w);
+  // a WOD earns XP and drachmas like any workout and uses an active XP Shake / Drachma Boost (Elia 27.11); applyPost writes w.rewards
+  const after = store.overall;
+  const g = applyPost({ game: store.game, workout: w, workouts: store.workouts, byId: data().byId, now: Date.now(), overallRankIndex: after.pending ? -1 : rankIndex(after.rating),
+    customCount: store.custom.length, plansCount: store.plans.length, achievements: data().achievements, pool: data().quests });
+  store.game = g.game;
+  recompute(); // quest LP counts toward the overall rank
+  await dbBatch([['put', 'workouts', w], ['put', 'game', g.game, 'me']]);
   emit();
-  return { before, after: store.overall?.rating ?? 0 };
+  return { before, after: store.overall?.rating ?? 0, rewards: g.rewards };
 }
 export async function deleteWodResult(id) {
   store.workouts = store.workouts.filter((x) => x.id !== id);

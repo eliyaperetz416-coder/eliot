@@ -221,6 +221,7 @@ export function wodScreen(id) {
       h('p', { class: 'row-sub', text: divisionName(w.wod.division) }),
       w.wod.pr ? h('p', { class: 'pr-badge pr-all', text: t('wod.pr') }) : null,
       h('p', { text: gained > 0 ? t('wod.lp', { n: gained }) : t('wod.lp.none') }),
+      res.rewards?.rewarded ? h('p', { class: 'wod-earned num', text: t('wod.earned', { xp: formatNum(res.rewards.xp, 0), d: formatNum(res.rewards.drachmas, 0) }) + (res.rewards.shake ? ` · ${t('wod.earned.shake')}` : '') }) : null,
       button({ label: t('common.done'), block: true, onClick: () => { sh.close(); go('#/wods'); } })) });
   }
 
