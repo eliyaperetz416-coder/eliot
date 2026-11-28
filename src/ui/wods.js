@@ -11,6 +11,7 @@ import { keepAwake } from './wakelock.js';
 import { unlockAudio, beep } from './rest-timer.js';
 import { uid } from '../core/workout.mjs';
 import * as W from '../core/wods.mjs';
+import { lineChart, chartCard } from './charts.js';
 
 const RUN_KEY = 'dg.wodRun';
 const he = () => getLanguage() === 'he';
@@ -44,7 +45,7 @@ function loadText(m, division = 'rx', both = false) {
 }
 export function formatScore(score) {
   if (!score) return '–';
-  if (score.type === 'time') return score.capped ? t('wod.score.capped', { reps: score.reps }) : W.clock(score.seconds);
+  if (score.type === 'time') return score.capped ? (score.seconds ? t('wod.score.cappedAt', { reps: score.reps, cap: Math.round(score.seconds / 60) }) : t('wod.score.capped', { reps: score.reps })) : W.clock(score.seconds);
   if (score.type === 'rounds') return score.reps ? t('wod.score.roundsReps', { r: score.rounds, n: score.reps }) : t('wod.score.rounds', { r: score.rounds });
   return t('wod.score.reps', { n: score.reps });
 }
@@ -115,7 +116,7 @@ const readRun = () => { // a saved clock is only trusted when it has the right s
     const num = (v) => typeof v === 'number' && Number.isFinite(v);
     if (!r || typeof r.id !== 'string' || !num(r.startedMs) || !num(r.pausedTotal ?? 0) || !(r.pausedAt == null || num(r.pausedAt))) return null;
     if (Math.abs(Date.now() - r.startedMs) > 2 * 86400000) return null; // a clock from days ago is stale
-    return { ...r, division: r.division === 'scaled' ? 'scaled' : 'rx', rounds: Math.max(0, Math.min(999, Math.round(Number(r.rounds) || 0))) };
+    return { ...r, division: r.division === 'scaled' ? 'scaled' : 'rx', rounds: Math.max(0, Math.min(999, Math.round(Number(r.rounds) || 0))), capMin: W.CAP_CHOICES.includes(r.capMin) ? r.capMin : null };
   } catch { return null; }
 };
 const writeRun = (r) => { try { if (r) localStorage.setItem(RUN_KEY, JSON.stringify(r)); else localStorage.removeItem(RUN_KEY); } catch { /* private mode */ } };
@@ -129,6 +130,8 @@ export function wodScreen(id) {
   let run = readRun();
   if (run && run.id !== id) run = null; // another workout's clock: leave it alone
   let division = run?.division ?? 'rx';
+  let capMin = run?.capMin ?? null; // optional time cap for a "for time" workout (v1.51)
+  const canCap = wod.format === 'fortime' && wod.score === 'time';
   let timer = null, lastMinute = 0, lastSecond = null, announced = '';
   const clockEl = h('div', { class: 'wod-clock display num', dir: 'ltr', role: 'timer', 'aria-label': t('wod.clock') });
   const subEl = h('div', { class: 'wod-sub num' });
@@ -141,13 +144,15 @@ export function wodScreen(id) {
     if (ms < 0) { clockEl.textContent = String(Math.ceil(-ms / 1000)); subEl.textContent = t('wod.getReady'); return; }
     if (lastSecond != null && lastSecond < 0) beep(); // go!
     lastSecond = ms;
-    const s = W.clockState(wod, ms);
-    clockEl.textContent = W.clock(s.remaining ?? s.elapsed);
+    const s = W.clockState(wod, ms, run.capMin);
+    clockEl.textContent = W.clock(wod.format === 'fortime' ? s.elapsed : s.remaining ?? s.elapsed); // for time counts up, even with a cap
     if (wod.format === 'emom') {
       subEl.textContent = t('wod.emomMinute', { m: s.minute, of: wod.minutes, s: Math.ceil(s.secInMinute) });
       if (s.minute !== lastMinute) { if (lastMinute) beep(); lastMinute = s.minute; say(t('wod.emomMinute.say', { m: s.minute, of: wod.minutes })); }
     } else {
-      subEl.textContent = wod.format === 'amrap' || wod.format === 'rounds' || wod.rounds > 1 ? t('wod.roundsDone', { n: run.rounds ?? 0 }) : '';
+      const rounds = wod.format === 'amrap' || wod.format === 'rounds' || wod.rounds > 1 ? t('wod.roundsDone', { n: run.rounds ?? 0 }) : '';
+      const cap = run.capMin ? t('wod.cap.left', { left: W.clock(s.remaining ?? 0), cap: run.capMin }) : '';
+      subEl.textContent = [rounds, cap].filter(Boolean).join(' · ');
       const min = Math.floor(s.elapsed / 60);
       if (min !== lastMinute) { lastMinute = min; say(t('wod.minutes.say', { n: min })); }
     }
@@ -155,7 +160,7 @@ export function wodScreen(id) {
   }
   const start = () => {
     unlockAudio(); keepAwake(true);
-    run = { id, division, startedMs: Date.now() + 3000, pausedTotal: 0, pausedAt: null, rounds: 0 };
+    run = { id, division, startedMs: Date.now() + 3000, pausedTotal: 0, pausedAt: null, rounds: 0, capMin: canCap ? capMin : null };
     lastSecond = -1; writeRun(run); draw();
   };
   const togglePause = () => {
@@ -175,14 +180,19 @@ export function wodScreen(id) {
 
   function scoreSheet() {
     const ms = Math.max(0, elapsedMs(run));
-    const s = W.clockState(wod, ms);
+    const s = W.clockState(wod, ms, run.capMin);
+    const capped = wod.score === 'time' && run.capMin && s.elapsed >= run.capMin * 60 - 1; // the cap ended it: score the reps done
     const num = (idv, label, value) => {
       const input = h('input', { id: idv, class: 'set-input', type: 'text', inputmode: 'numeric', pattern: '[0-9]*', maxlength: 5, dir: 'ltr', value: String(value ?? ''), 'aria-label': label });
       return { input, el: h('label', { class: 'wod-num' }, h('span', { class: 'row-sub', text: label }), input) };
     };
     const fields = [];
     let read;
-    if (wod.score === 'time') {
+    if (capped) {
+      const r = num('wod-capreps', t('wod.f.capReps'), '');
+      fields.push(h('p', { class: 'wod-note', text: t('wod.cap.reached', { cap: run.capMin }) }), r.el);
+      read = () => ({ capped: true, reps: r.input.value, seconds: run.capMin * 60 });
+    } else if (wod.score === 'time') {
       const mm = num('wod-min', t('wod.f.min'), Math.floor(s.elapsed / 60)), ss = num('wod-sec', t('wod.f.sec'), Math.floor(s.elapsed % 60));
       fields.push(h('div', { class: 'wod-nums' }, mm.el, ss.el));
       read = () => ({ seconds: Number(mm.input.value) * 60 + Number(ss.input.value) });
@@ -217,7 +227,7 @@ export function wodScreen(id) {
   function resultSheet(w, res) {
     const gained = Math.round((res.after ?? 0) - (res.before ?? 0));
     const sh = openSheet({ title: wod.name, content: h('div', { class: 'stack wod-result' },
-      h('div', { class: 'wod-clock display num', dir: 'ltr', text: formatScore(w.wod.score) }),
+      h('div', { class: `wod-clock display num${formatScore(w.wod.score).length > 9 ? ' wod-clock-long' : ''}`, dir: 'auto', text: formatScore(w.wod.score) }),
       h('p', { class: 'row-sub', text: divisionName(w.wod.division) }),
       w.wod.pr ? h('p', { class: 'pr-badge pr-all', text: t('wod.pr') }) : null,
       h('p', { text: gained > 0 ? t('wod.lp', { n: gained }) : t('wod.lp.none') }),
@@ -233,8 +243,12 @@ export function wodScreen(id) {
       h('button', { class: 'btn btn-ghost wod-info-btn', type: 'button', onclick: () => infoSheet(wod) }, icon('info'), t('wod.info'))];
     const pick = running ? h('p', { class: 'row-sub', text: divisionName(run.division) })
       : segmented({ label: t('wod.division'), value: division, options: [{ value: 'rx', label: t('wod.rx') }, { value: 'scaled', label: t('wod.scaled') }], onChange: (v) => { division = v; draw(); } });
+    const capRow = !running && canCap ? h('div', { class: 'wod-cap' },
+      h('div', { class: 'section-label', id: 'wod-cap-label', text: t('wod.cap.title') }),
+      h('div', { class: 'chips-wrap', role: 'group', 'aria-labelledby': 'wod-cap-label' }, [null, ...W.CAP_CHOICES].map((m) => h('button', { class: 'chip chip-select', type: 'button', 'aria-pressed': String(capMin === m), onclick: () => { capMin = m; draw(); } }, m ? t('wod.cap.min', { n: m }) : t('wod.cap.none')))),
+      h('p', { class: 'row-sub', text: t('wod.cap.hint') })) : null;
     const controls = !running
-      ? [button({ label: t('wod.go'), icon: 'bolt', block: true, onClick: start })]
+      ? [capRow, button({ label: t('wod.go'), icon: 'bolt', block: true, onClick: start })]
       : [h('div', { class: 'btn-pair' },
           button({ label: run.pausedAt ? t('wod.resume') : t('wod.pause'), variant: 'secondary', onClick: togglePause }),
           button({ label: t('wod.finish'), onClick: finish })),
@@ -244,13 +258,34 @@ export function wodScreen(id) {
       h('section', { class: 'card wod-clock-card' }, clockEl, subEl, live),
       h('div', { class: 'stack' }, ...controls),
       h('div', { class: 'section-label', text: t('wod.movements') }),
-      movementRows(wod, { division: running ? run.division : division, links: !running }));
+      movementRows(wod, { division: running ? run.division : division, links: !running }),
+      running ? null : progressSection(wod));
     if (running) { tick(); if (!run.pausedAt) timer = setInterval(tick, 250); }
-    else { clockEl.textContent = wod.format === 'amrap' || wod.format === 'emom' ? W.clock(wod.minutes * 60) : '0:00'; subEl.textContent = t('wod.ready'); }
+    else { clockEl.textContent = wod.format === 'amrap' || wod.format === 'emom' ? W.clock(wod.minutes * 60) : '0:00'; subEl.textContent = capMin && canCap ? t('wod.cap.set', { cap: capMin }) : t('wod.ready'); }
   }
   draw();
   root._dispose = () => clearInterval(timer);
   return root;
+}
+
+/* ---------- your progress on one workout (v1.51) ---------- */
+function progressSection(wod) {
+  const all = W.resultsOf(store.workouts, wod.id);
+  if (!all.length) return h('section', { class: 'wod-progress' }, h('div', { class: 'section-label', text: t('wod.progress') }), h('p', { class: 'row-sub', text: t('wod.progress.none') }));
+  const unit = wod.score === 'time' ? t('wod.progress.unit.time') : wod.score === 'rounds' ? t('wod.progress.unit.rounds') : t('wod.progress.unit.reps');
+  const charts = ['rx', 'scaled'].map((d) => {
+    const series = W.progressSeries(store.workouts, wod, d);
+    if (series.length < 2) return null; // one point is not a line: the list below shows it
+    return chartCard({ title: `${divisionName(d)} · ${unit}`, subtitle: wod.score === 'time' ? t('wod.progress.lower') : t('wod.progress.higher'), chart: lineChart({ series, title: `${wod.name} ${divisionName(d)}` }) });
+  }).filter(Boolean);
+  const best = W.bestsByWod(store.workouts)[wod.id] ?? {};
+  return h('section', { class: 'wod-progress' },
+    h('div', { class: 'section-label', text: t('wod.progress') }),
+    ...charts,
+    h('div', { class: 'list' }, [...all].reverse().slice(0, 10).map((w) => h('a', { class: 'row', href: `#/history/${w.id}` },
+      h('span', { class: 'row-main' }, h('span', { class: 'row-title num', dir: 'auto', text: formatScore(w.wod.score) }), h('span', { class: 'row-sub', text: `${formatDate(w.endedMs)} · ${divisionName(w.wod.division)}` })),
+      best[w.wod.division]?.id === w.id ? h('span', { class: 'pr-badge pr-all', text: t('wod.best') }) : null,
+      icon('chevron', 'chev')))));
 }
 
 /* ---------- a saved result in the history ---------- */
@@ -260,7 +295,7 @@ export function wodHistoryDetail(w) {
     h('a', { class: 'back-link', href: '#/history' }, icon('chevron', 'chev back-chev'), t('hist.title')),
     h('header', { class: 'screen-head' }, h('h1', { class: 'display', text: w.wod.name })),
     h('p', { class: 'row-sub num', text: `${formatDate(w.endedMs)} · ${divisionName(w.wod.division)}` }),
-    h('section', { class: 'card wod-clock-card' }, h('div', { class: 'wod-clock display num', dir: 'ltr', text: formatScore(w.wod.score) }), w.wod.pr ? h('span', { class: 'pr-badge pr-all', text: t('wod.pr') }) : null),
+    h('section', { class: 'card wod-clock-card' }, h('div', { class: `wod-clock display num${formatScore(w.wod.score).length > 9 ? ' wod-clock-long' : ''}`, dir: 'auto', text: formatScore(w.wod.score) }), w.wod.pr ? h('span', { class: 'pr-badge pr-all', text: t('wod.pr') }) : null),
     w.notes ? h('p', { text: w.notes }) : null,
     wod ? movementRows(wod, { division: w.wod.division }) : null,
     h('div', { class: 'stack', style: 'padding-block-start:16px' },

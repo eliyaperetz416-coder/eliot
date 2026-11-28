@@ -1192,5 +1192,22 @@
   "shop.activeNow": "Active ✓",
   "shop.oneAtATime": "One at a time. You can turn on the next one after your next workout uses this one.",
   "wod.earned": "+{xp} XP · +{d} drachmas",
-  "wod.earned.shake": "doubled by the shake"
+  "wod.earned.shake": "doubled by the shake",
+  "wod.cap.title": "Time cap (optional)",
+  "wod.cap.none": "None",
+  "wod.cap.min": "{n} min",
+  "wod.cap.hint": "If you are not done by the cap, the timer stops and you log the reps you finished.",
+  "wod.cap.set": "Cap: {cap} minutes",
+  "wod.cap.left": "{left} left ({cap} min cap)",
+  "wod.cap.reached": "You reached the {cap}-minute cap. Enter the total reps you finished, full rounds included.",
+  "wod.f.capReps": "Reps finished",
+  "wod.score.cappedAt": "{cap} min cap · {reps} reps",
+  "wod.progress": "Your progress",
+  "wod.progress.none": "No scores yet. Save one and it shows here; from two scores on there is a chart.",
+  "wod.progress.unit.time": "time in minutes",
+  "wod.progress.unit.rounds": "rounds",
+  "wod.progress.unit.reps": "reps",
+  "wod.progress.lower": "lower is better",
+  "wod.progress.higher": "higher is better",
+  "wod.best": "Best"
 }

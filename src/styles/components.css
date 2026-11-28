@@ -984,3 +984,8 @@ button.chip:active, .seg button:active, .tab:active { opacity: .65; }
 [data-motion="reduce"] .maint-mark { animation: none; }
 @media (prefers-reduced-motion: reduce) { .maint-mark { animation: none; } }
 .maint .maint-lang { margin-block-start: var(--s-4); }
+/* WOD time cap + progress (v1.51, OUR DESIGN) */
+.wod-cap { display: grid; gap: var(--s-2); }
+.wod-progress { display: grid; gap: var(--s-3); padding-block-start: var(--s-2); }
+.wod-clock-long { font-size: 34px; line-height: 1.2; text-align: center; } /* a capped score is words, not a clock */
+.wod-progress a.row { text-decoration: none; color: inherit; } /* the rows are links to the result, not underlined text */

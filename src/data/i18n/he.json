@@ -1206,5 +1206,22 @@
   "shop.activeNow": "פעיל ✓",
   "shop.oneAtATime": "אחד פעיל בכל פעם. את הבא אפשר להפעיל אחרי שהאימון הבא ישתמש בו.",
   "wod.earned": "‎+{xp} XP · ‎+{d} דרכמות",
-  "wod.earned.shake": "השייק הכפיל"
+  "wod.earned.shake": "השייק הכפיל",
+  "wod.cap.title": "מכסת זמן (רשות)",
+  "wod.cap.none": "בלי",
+  "wod.cap.min": "{n} דק׳",
+  "wod.cap.hint": "אם לא סיימת עד המכסה, הטיימר עוצר ורושמים כמה חזרות הספקת.",
+  "wod.cap.set": "מכסה: {cap} דקות",
+  "wod.cap.left": "נשארו {left} (מכסה {cap} דק׳)",
+  "wod.cap.reached": "הגעת למכסה של {cap} דקות. רשום כמה חזרות הספקת בסך הכל, כולל סבבים מלאים.",
+  "wod.f.capReps": "חזרות שהספקת",
+  "wod.score.cappedAt": "מכסה {cap} דק׳ · {reps} חזרות",
+  "wod.progress": "ההתקדמות שלך",
+  "wod.progress.none": "עוד אין תוצאות. אחרי שתשמור תוצאה היא תופיע כאן, ומשתי תוצאות יופיע גם גרף.",
+  "wod.progress.unit.time": "זמן בדקות",
+  "wod.progress.unit.rounds": "סבבים",
+  "wod.progress.unit.reps": "חזרות",
+  "wod.progress.lower": "פחות זה טוב יותר",
+  "wod.progress.higher": "יותר זה טוב יותר",
+  "wod.best": "שיא"
 }

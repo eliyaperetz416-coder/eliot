@@ -929,6 +929,47 @@ for (const lang of ['he', 'en']) {
     await page.waitForFunction(() => location.hash === '#/history');
   });
 
+  await check(`${lang}: WOD time cap (the clock stops, reps are scored) and a progress chart per workout`, async () => {
+    const T = (he, en) => L(lang, he, en);
+    await page.goto(`${base}#/wod/murph`);
+    await page.waitForSelector('.wod-cap');
+    await page.locator('.wod-cap .chip', { hasText: '20' }).click();
+    assert.match(await page.textContent('.wod-sub'), /20/);
+    assert.equal(await page.locator('.wod-cap .chip[aria-pressed="true"]').count(), 1);
+    await page.getByRole('button', { name: T('התחל טיימר', 'Start the timer') }).click();
+    await page.waitForFunction(() => /^0:0/.test(document.querySelector('.wod-clock')?.textContent ?? '') && /20/.test(document.querySelector('.wod-sub')?.textContent ?? ''), null, { timeout: 8000 });
+    // jump past the cap (the clock lives on timestamps): it stops by itself and asks for the reps
+    await page.evaluate(() => { const r = JSON.parse(localStorage.getItem('dg.wodRun')); r.startedMs = Date.now() - 20 * 60000 - 2000; localStorage.setItem('dg.wodRun', JSON.stringify(r)); });
+    await page.reload();
+    await page.waitForSelector('#wod-capreps');
+    await page.fill('#wod-capreps', '250');
+    await page.getByRole('button', { name: T('שמירת התוצאה', 'Save the score') }).click();
+    await page.waitForSelector('.wod-result');
+    assert.match(await page.textContent('.wod-result .wod-clock'), /20.*250|250.*20/);
+    await page.locator('.wod-result .btn').click();
+    await page.waitForFunction(() => !document.querySelector('.sheet'));
+    // two Fran times -> a chart and a list with the best marked
+    await page.evaluate(async () => {
+      const W = await import('./src/core/wods.mjs'); const { store, saveWodResult } = await import('./src/ui/store.js'); const { data } = await import('./src/ui/data.js');
+      const wod = data().wods.wods.find((w) => w.id === 'fran');
+      for (const [id, sec, days] of [['t-fran-1', 420, 7], ['t-fran-2', 365, 1]]) {
+        const end = Date.now() - days * 86400000;
+        await saveWodResult(W.buildWodWorkout({ id, wod, division: 'rx', score: { type: 'time', seconds: sec }, startedMs: end - sec * 1000, endedMs: end, workouts: store.workouts }));
+      }
+    });
+    await page.goto(`${base}#/wod/fran`);
+    await page.waitForSelector('.wod-progress svg.chart');
+    assert.equal(await page.locator('.wod-progress .list .row').count(), 2);
+    assert.match(await page.locator('.wod-progress .list .row').first().textContent(), /6:05/);
+    await page.waitForFunction(() => !document.querySelector('.sheet-exit'));
+    await page.screenshot({ path: `${shots}${lang}-wod-progress.png`, fullPage: true });
+    // clean up: the three results of this check
+    await page.evaluate(async () => {
+      const { store, deleteWodResult } = await import('./src/ui/store.js');
+      for (const w of store.workouts.filter((x) => x.wod && ['murph', 'fran'].includes(x.wod.id))) await deleteWodResult(w.id);
+    });
+  });
+
   await check(`${lang}: saved workout with a planned weight starts with that weight`, async () => {
     await page.goto(`${base}#/workout`);
     const entryId = 'e-weight-test', rid = 'r-weight-test';

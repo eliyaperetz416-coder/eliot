@@ -131,3 +131,21 @@ export function clockState(wod, elapsedMs, capMin = null) {
   const minute = wod.format === 'emom' ? Math.min(wod.minutes, Math.floor(elapsed / 60) + 1) : null;
   return { elapsed, remaining, minute, secInMinute: wod.format === 'emom' ? 60 - (elapsed % 60) : null, done: total != null && elapsed >= total };
 }
+
+export const CAP_CHOICES = Object.freeze([10, 15, 20, 30, 45, 60]); // minutes offered as a time cap for "for time" workouts (v1.51)
+
+/**
+ * Progress of one workout at one level, oldest first, for a chart: [{ t, v, w }]. v is minutes for a time score (capped results are
+ * left out: they are not a time), rounds as a decimal for rounds + reps (12 rounds + 15 of a 30-rep round = 12.5), or total reps.
+ */
+export function progressSeries(workouts, wod, division) {
+  const per = repsPerRound(wod);
+  return resultsOf(workouts, wod.id, division).map((w) => {
+    const s = w.wod.score;
+    let v = null;
+    if (s?.type === 'time' && !s.capped && s.seconds > 0) v = Math.round((s.seconds / 60) * 10) / 10;
+    else if (s?.type === 'rounds') v = Math.round((s.rounds + (per ? (s.reps ?? 0) / per : 0)) * 10) / 10;
+    else if (s?.type === 'reps') v = s.reps;
+    return v == null ? null : { t: w.endedMs, v, w };
+  }).filter(Boolean);
+}

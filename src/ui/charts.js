@@ -13,9 +13,11 @@ function frame({ title, series, rtl, bars, zeroBase, unit, integer, height = 200
   const lay = layoutSeries(series, { width: W, height: H, rtl, bars, zeroBase, integer });
   const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, class: 'chart', role: 'img', 'aria-label': title });
   svg.append(el('title', {}, title));
+  // whole numbers, unless two ticks would read the same (a small range like 6.1 to 7.0 minutes): then one decimal
+  const dec = new Set(lay.yTicks.map((tk) => formatNum(tk.v, 0))).size < lay.yTicks.length ? 1 : 0;
   for (const tk of lay.yTicks) {
     svg.append(el('line', { x1: lay.plot.x0, x2: lay.plot.x1, y1: tk.y, y2: tk.y, class: 'chart-grid' }));
-    svg.append(el('text', { x: rtl ? lay.plot.x1 + 5 : lay.plot.x0 - 5, y: tk.y + 3.5, class: 'chart-tick', 'text-anchor': rtl ? 'start' : 'end' }, formatNum(tk.v, 0)));
+    svg.append(el('text', { x: rtl ? lay.plot.x1 + 5 : lay.plot.x0 - 5, y: tk.y + 3.5, class: 'chart-tick', 'text-anchor': rtl ? 'start' : 'end' }, formatNum(tk.v, dec)));
   }
   for (const tk of lay.xTicks) svg.append(el('text', { x: tk.x, y: H - 8, class: 'chart-tick', 'text-anchor': 'middle' }, formatDate(tk.t, { day: 'numeric', month: 'short' })));
   return { svg, lay, W, H };

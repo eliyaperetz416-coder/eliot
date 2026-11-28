@@ -97,3 +97,17 @@ test('a WOD result has a date key (calendar, "done today") and a WOD can be plan
   const p = planPayload({ schedule: s, routines: [], workouts: [], todayKey: '2026-11-18' });
   assert.deepEqual(p.days[2][0], { k: 'activity', n: 'Fran' }, 'friends see only the name');
 });
+
+test('time cap and progress series', async () => {
+  const { progressSeries, CAP_CHOICES } = await import('../src/core/wods.mjs');
+  assert.ok(CAP_CHOICES.includes(20));
+  assert.deepEqual(cleanScore('time', { capped: true, reps: 180, seconds: 1200 }), { type: 'time', capped: true, reps: 180, seconds: 1200 });
+  assert.equal(clockState(byId.murph, 1200000, 20).done, true, 'the cap ends a for-time workout');
+  const mk = (id, ms, score) => buildWodWorkout({ id, wod: byId.cindy, division: 'rx', score, startedMs: ms - 1, endedMs: ms });
+  const a = mk('a', 1000, { type: 'rounds', rounds: 12, reps: 15 }), b = mk('b', 2000, { type: 'rounds', rounds: 14, reps: 0 });
+  assert.deepEqual(progressSeries([b, a], byId.cindy, 'rx').map((p) => p.v), [12.5, 14]);
+  const f1 = buildWodWorkout({ id: 'f1', wod: byId.fran, division: 'rx', score: { type: 'time', seconds: 330 }, startedMs: 0, endedMs: 5 });
+  const f2 = buildWodWorkout({ id: 'f2', wod: byId.fran, division: 'rx', score: { type: 'time', capped: true, reps: 70, seconds: 600 }, startedMs: 0, endedMs: 6 });
+  assert.deepEqual(progressSeries([f1, f2], byId.fran, 'rx').map((p) => p.v), [5.5], 'a capped result is not a time');
+  assert.equal(progressSeries([f1], byId.fran, 'scaled').length, 0);
+});
