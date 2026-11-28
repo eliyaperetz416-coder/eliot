@@ -16,7 +16,45 @@ const ROUTES = ['ladder', 'wods', 'wod/fran', 'weakest', 'workout', 'workouts', 
 const errors = [];
 let failed = 0;
 const ONLY = process.env.ONLY;
-const check = (name, fn) => (ONLY && !name.includes(ONLY) && !name.includes('onboarding') ? Promise.resolve() : fn()).then(() => console.log('ok  ', name), (e) => { failed++; console.error('FAIL', name, '-', e.message.split('\n')[0], (e.stack.match(/ui\.smoke\.mjs:\d+/) ?? [''])[0]); });
+// A check that never settles (an await without a timeout, e.g. page.evaluate or locator.count() while the page sits in a
+// navigation that never commits) used to stop the whole run silently. Now it fails after CHECK_LIMIT_MS and says what each
+// open page was doing. The longest check (crew) takes about 80 s here.
+const CHECK_LIMIT_MS = Number(process.env.CHECK_LIMIT_MS) || 240000;
+const pending = new Map(); // request -> start ms, per page (for the stuck-check report)
+const watch = (pg) => {
+  pg.on('request', (r) => pending.set(r, Date.now()));
+  for (const ev of ['requestfinished', 'requestfailed']) pg.on(ev, (r) => pending.delete(r));
+  return pg;
+};
+async function stuckReport() {
+  const lines = [];
+  for (const ctx of browser.contexts()) for (const pg of ctx.pages()) {
+    const open = [...pending].filter(([r]) => { try { return r.frame().page() === pg; } catch { return false; } }).map(([r, t0]) => `${r.method()} ${r.url().replace(base, '/')} (${Math.round((Date.now() - t0) / 1000)} s)`);
+    let state = 'no answer in 3 s';
+    try {
+      const cdp = await ctx.newCDPSession(pg);
+      const ev = cdp.send('Runtime.evaluate', { expression: 'JSON.stringify({ hash: location.hash, ready: document.documentElement.dataset.ready, state: document.readyState, sheets: document.querySelectorAll(".sheet, .rankup").length, sw: !!navigator.serviceWorker?.controller })', returnByValue: true });
+      state = await Promise.race([ev.then((r) => r.result.value), new Promise((res) => setTimeout(() => res(state), 3000))]);
+      await cdp.send('Profiler.enable'); await cdp.send('Profiler.start');
+      await new Promise((res) => setTimeout(res, 2000));
+      const prof = await Promise.race([cdp.send('Profiler.stop'), new Promise((res) => setTimeout(() => res(null), 3000))]);
+      if (prof) {
+        const byId = new Map(prof.profile.nodes.map((n) => [n.id, n.callFrame])), self = new Map();
+        prof.profile.samples.forEach((id, i) => { const f = byId.get(id); const k = `${f.functionName || '(anon)'} ${f.url.replace(base, '/')}:${f.lineNumber + 1}`; self.set(k, (self.get(k) ?? 0) + (prof.profile.timeDeltas[i] ?? 0)); });
+        state += ` | cpu 2 s: ${[...self].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v]) => `${Math.round(v / 1000)} ms ${k}`).join('; ')}`;
+      }
+      cdp.detach().catch(() => {});
+    } catch (e) { state += ` (${e.message.split('\n')[0]})`; }
+    lines.push(`${pg.url().replace(base, '/')} ${state}${open.length ? ` | open requests: ${open.slice(0, 6).join(', ')}` : ''}`);
+  }
+  return lines.join('\n     ');
+}
+const withLimit = (name, p) => {
+  let timer;
+  const limit = new Promise((_, rej) => { timer = setTimeout(async () => rej(new Error(`no result after ${CHECK_LIMIT_MS / 1000} s (stuck)\n     ${await stuckReport()}`)), CHECK_LIMIT_MS); });
+  return Promise.race([p, limit]).finally(() => clearTimeout(timer));
+};
+const check = (name, fn) => (ONLY && !name.includes(ONLY) && !name.includes('onboarding') ? Promise.resolve() : withLimit(name, fn())).then(() => console.log('ok  ', name), (e) => { failed++; console.error('FAIL', name, '-', (/\(stuck\)/.test(e.message) ? e.message : e.message.split('\n')[0]), (e.stack.match(/ui\.smoke\.mjs:\d+/) ?? [''])[0]); });
 const L = (lang, he, en) => (lang === 'he' ? he : en);
 
 async function onboard(page, lang, shotPrefix) {
@@ -113,8 +151,10 @@ async function postThree(page) {
   await page.waitForSelector('.sheet .btn-primary');
   await page.click('.sheet .btn-primary');
   await page.waitForSelector('main .stats-grid');
-  await page.waitForTimeout(800);
-  if (await page.locator('.rankup').count()) await page.click('.rankup button');
+  // the rank-up opens 350 ms after the result screen (post-ui.js). On a busy machine that can be later than a fixed wait,
+  // and a rank-up left open makes the app inert under the next checks.
+  if (await page.waitForSelector('.rankup', { timeout: 2000 }).then(() => true, () => false)) await page.click('.rankup button');
+  await page.waitForTimeout(300);
 }
 
 for (const lang of ['he', 'en']) {
@@ -122,7 +162,7 @@ for (const lang of ['he', 'en']) {
   const reqFake = createFakeCrew(); // the exercise-request inbox never reaches the real server in tests
   const account = await installFakeSupabase(ctx);
   await ctx.route(/supabase\.co\/rest\/v1\/rpc\/(submit_exercise_request|my_exercise_requests)/, reqFake.handle);
-  const page = await ctx.newPage();
+  const page = watch(await ctx.newPage());
   page.on('console', (m) => m.type() === 'error' && errors.push(`${lang}: ${m.text()}`));
   page.on('pageerror', (e) => errors.push(`${lang}: ${e.message}`));
 
@@ -1591,13 +1631,23 @@ for (const lang of ['he', 'en']) {
     await page.locator('.sheet .btn-ghost').click();
     await page.goto(`${base}#/workout`); await page.reload();
     await page.waitForSelector('.today-bell');
-    assert.equal(await page.locator('.today-bell .bell-dot').count(), 0, 'a cleared day leaves nothing behind the bell');
+    // the bell may still carry the "what is new" dot (unseen when the Today check was skipped, e.g. with ONLY): only the
+    // plan is asked about here, so the dot is allowed exactly when the news card is still unseen
+    await page.click('.today-bell');
+    await page.waitForSelector('.sheet .bell-list');
+    assert.equal(await page.locator('.sheet .sched-card').count(), 0, 'a cleared day leaves nothing behind the bell');
+    const newsUnseen = await page.locator('.sheet .news-card.card-accent').count();
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !document.querySelector('.sheet'));
+    assert.equal(await page.locator('.today-bell .bell-dot').count(), newsUnseen, 'no dot for a cleared day');
     await page.evaluate(async () => { const { dbDelete } = await import('./src/ui/db.js'); await dbDelete('routines', 'r-sched'); });
-    await page.reload();
+    await page.reload(); await page.waitForSelector('html[data-ready="1"]');
   });
 
   await check(`${lang}: shop: app colour, title on the profile, rest sound preview, drachma boost`, async () => {
     const T = (he, en) => L(lang, he, en);
+    // the wallet is set in the running app: wait until it has started (a store written during boot is read over by initStore)
+    await page.waitForSelector('html[data-ready="1"]');
     await page.evaluate(async () => { const { store, saveGame } = await import('./src/ui/store.js'); await saveGame({ ...store.game, drachmas: 3000 }); });
     await page.goto(`${base}#/shop`);
     await page.waitForSelector('.shop-row');
@@ -1666,7 +1716,7 @@ for (const lang of ['he', 'en']) {
     assert.ok((await page.textContent('.today-next-when')).match(/למחר|tomorrow/i));
     await page.screenshot({ path: `${shots}${lang}-next-planned.png` });
     await page.evaluate(async () => { const db = await import('./src/ui/db.js'); await db.dbDelete('routines', 'r-upper'); await db.dbDelete('routines', 'r-full'); await db.dbPut('kv', { days: {}, done: {} }, 'schedule'); });
-    await page.reload();
+    await page.reload(); await page.waitForSelector('html[data-ready="1"]');
   });
 
   await check(`${lang}: rank path: pyramid on Progress, full ladder with you marked`, async () => {
