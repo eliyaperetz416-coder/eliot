@@ -1,5 +1,6 @@
 // The player's game state and the orchestration of what happens when a workout is posted. Pure (explicit `now`).
-import { newStreak, recordWorkout, view } from './streak.mjs';
+import { newStreak, recordWorkout, view, settle, diffDays, addDays, STREAK_MAX_GAP_DAYS } from './streak.mjs';
+import { dateKey as keyOf } from './workout.mjs';
 import { newInventory } from './shop.mjs';
 import { isValidWorkout, workoutRewards, levelFromXp, MAX_REWARDED_PER_DAY, XP_SHAKE_MULTIPLIER } from './game.mjs';
 import { computeStats, newlyUnlocked, unlock } from './achievements.mjs';
@@ -24,6 +25,43 @@ export function evaluateAchievements({ game, achievements, workouts, customCount
   if (!fresh.length) return { game, unlocked: [], reward: 0 };
   const r = unlock(game, fresh, dayKey);
   return { game: r.game, unlocked: fresh, reward: r.reward };
+}
+
+/**
+ * The streak the workout history itself shows: the run of training days (valid workouts, WODs included) with gaps of at most
+ * 3 days, ending on the latest one. -> { current, lastWorkoutDate, firstDate, days } (current 0 when there is none). Pure.
+ */
+export function historyStreak(workouts, todayKey) {
+  const keyOfW = (w) => w.dateKey ?? (w.startedMs ? keyOf(w.startedMs) : null);
+  const days = [...new Set(workouts.filter((w) => isValidWorkout(w)).map(keyOfW).filter((k) => k && k <= todayKey))].sort();
+  if (!days.length) return { current: 0, lastWorkoutDate: null, firstDate: null, days: [] };
+  let i = days.length - 1;
+  while (i > 0 && diffDays(days[i - 1], days[i]) <= STREAK_MAX_GAP_DAYS) i--;
+  const run = days.slice(i);
+  return { current: run.length, lastWorkoutDate: run[run.length - 1], firstDate: run[0], days: run };
+}
+
+/**
+ * Before v1.50.4 a WOD result did not count for the streak (Elia 28.11: "the streak resets after a WOD"), so a streak could break
+ * on a day that had a WOD. Such a result is a WOD with no rewards stored. Only when the history's live run includes one of those
+ * and is longer than the game's streak, the game takes the history's run; a break is forgotten only when the run spans it.
+ * It never lowers a streak (a bought restore stays) and keeps milestones already paid. OUR DESIGN. -> the game, or the same object.
+ */
+export function healStreak(game, workouts, todayKey) {
+  const hist = historyStreak(workouts, todayKey);
+  if (!hist.current) return game;
+  const inRun = new Set(hist.days);
+  const missed = workouts.some((w) => w.wod && !w.rewards && isValidWorkout(w) && inRun.has(w.dateKey ?? (w.startedMs ? keyOf(w.startedMs) : null)));
+  if (!missed) return game;
+  const live = settle({ ...newStreak(), current: hist.current, lastWorkoutDate: hist.lastWorkoutDate }, todayKey).current; // 0 when the run is over
+  const now = settle(game.streak, todayKey);
+  if (live <= now.current) return game;
+  const spansBreak = now.broken && hist.firstDate <= addDays(now.broken.brokenOn, -(STREAK_MAX_GAP_DAYS + 1));
+  const streak = { ...now, current: live, best: Math.max(now.best ?? 0, live),
+    lastWorkoutDate: now.lastWorkoutDate && now.lastWorkoutDate > hist.lastWorkoutDate ? now.lastWorkoutDate : hist.lastWorkoutDate,
+    broken: spansBreak ? null : now.broken,
+    milestonesPaid: [...new Set([...(spansBreak ? now.broken.milestonesPaid ?? [] : []), ...now.milestonesPaid])] }; // never paid twice
+  return { ...game, streak };
 }
 
 /**

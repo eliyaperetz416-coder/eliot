@@ -12,6 +12,7 @@ import { unlockAudio, beep } from './rest-timer.js';
 import { uid } from '../core/workout.mjs';
 import * as W from '../core/wods.mjs';
 import { lineChart, chartCard } from './charts.js';
+import { syncStats } from './crew-state.js';
 
 const RUN_KEY = 'dg.wodRun';
 const he = () => getLanguage() === 'he';
@@ -218,6 +219,7 @@ export function wodScreen(id) {
         const now = Date.now();
         const w = W.buildWodWorkout({ id: `wod-${uid()}`, wod, division: div, score, startedMs: Math.min(run.startedMs, now), endedMs: now, notes: notes.value, workouts: store.workouts });
         const res = await saveWodResult(w);
+        syncStats(true); // the crew sees the new streak / level right away, like after a regular workout
         run = null; writeRun(null); keepAwake(false); sh.close();
         resultSheet(w, res);
       } }),

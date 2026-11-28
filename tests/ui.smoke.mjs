@@ -970,6 +970,43 @@ for (const lang of ['he', 'en']) {
     });
   });
 
+  await check(`${lang}: a WOD extends the streak on Today like a regular workout, and it stays after a reload (v1.51.1)`, async () => {
+    const flame = () => page.locator('.today-top a.today-stat[href="#/calendar"] .display').textContent();
+    const saved = await page.evaluate(async () => {
+      const { store } = await import('./src/ui/store.js'); const { dbPut } = await import('./src/ui/db.js'); const { addDays } = await import('./src/core/streak.mjs');
+      const before = structuredClone(store.game);
+      const today = (await import('./src/core/workout.mjs')).dateKey(Date.now());
+      // yesterday ended a 5-day streak; nothing posted today yet in this check
+      await dbPut('game', { ...store.game, streak: { ...store.game.streak, current: 5, best: Math.max(5, store.game.streak.best), lastWorkoutDate: addDays(today, -1), broken: null } }, 'me');
+      return { before, todayDone: store.workouts.some((w) => w.dateKey === today) };
+    });
+    await page.goto(`${base}#/workout`); await page.reload();
+    await page.waitForSelector('.today-top .today-stat');
+    const start = Number(await flame());
+    await page.evaluate(async () => {
+      const W = await import('./src/core/wods.mjs'); const { store, saveWodResult } = await import('./src/ui/store.js'); const { data } = await import('./src/ui/data.js');
+      const wod = data().wods.wods.find((w) => w.id === 'grace'); const end = Date.now();
+      await saveWodResult(W.buildWodWorkout({ id: 't-streak-wod', wod, division: 'rx', score: { type: 'time', seconds: 300 }, startedMs: end - 300000, endedMs: end, workouts: store.workouts }));
+    });
+    await page.goto(`${base}#/wods`); await page.waitForSelector('.wod-card'); // back to Today the way a person does
+    await page.goto(`${base}#/workout`);
+    await page.waitForFunction((n) => document.querySelector('.today-top a.today-stat[href="#/calendar"] .display')?.textContent === String(n), saved.todayDone ? start : start + 1);
+    await page.reload(); await page.waitForSelector('.today-top .today-stat');
+    assert.equal(Number(await flame()), saved.todayDone ? start : start + 1, 'kept after a reload');
+    // a streak lost on a WOD day (before WODs counted) comes back from the history on start
+    await page.evaluate(async () => {
+      const { store } = await import('./src/ui/store.js'); const { dbPut } = await import('./src/ui/db.js');
+      const old = structuredClone(store.workouts.find((w) => w.id === 't-streak-wod')); delete old.rewards; // saved like before v1.50.4
+      await dbPut('workouts', old);
+      await dbPut('game', { ...store.game, streak: { ...store.game.streak, current: 0, lastWorkoutDate: null } }, 'me');
+    });
+    await page.reload(); await page.waitForSelector('.today-top .today-stat');
+    assert.ok(Number(await flame()) >= 1, 'healed from the history');
+    // clean up: the WOD and the game as they were
+    await page.evaluate(async (before) => { const { dbPut, dbDelete } = await import('./src/ui/db.js'); await dbDelete('workouts', 't-streak-wod'); await dbPut('game', before, 'me'); }, saved.before);
+    await page.reload(); await page.waitForSelector('.today-top .today-stat');
+  });
+
   await check(`${lang}: saved workout with a planned weight starts with that weight`, async () => {
     await page.goto(`${base}#/workout`);
     const entryId = 'e-weight-test', rid = 'r-weight-test';

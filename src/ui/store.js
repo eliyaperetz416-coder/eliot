@@ -9,7 +9,7 @@ import { cleanSchedule } from '../core/schedule.mjs';
 import { latestBodyweight, bodyweightEntry } from '../core/profile.mjs';
 import { data, registerCustom, unregisterCustom, setRenames, renameExercise } from './data.js';
 import { markPlanDone } from '../core/generator.mjs';
-import { newGame, migrateGame, evaluateAchievements, applyPost } from '../core/gamestate.mjs';
+import { newGame, migrateGame, evaluateAchievements, applyPost, healStreak } from '../core/gamestate.mjs';
 import { dateKey } from '../core/workout.mjs';
 
 export const store = { profile: null, bwLog: [], workouts: [], draft: null, bests: {}, overall: { pending: true, remaining: 3, rating: 0 }, routines: [], folders: [], plans: [], custom: [], game: newGame(), requests: [], bases: {}, makeup: null, schedule: { days: {}, done: {} } };
@@ -70,6 +70,9 @@ export async function initStore() {
   store.bwLog = bw.sort((a, b) => a.ms - b.ms);
   store.workouts = workouts.map(migrateWorkout).filter(Boolean).sort((a, b) => a.startedMs - b.startedMs);
   store.draft = newestDraft(draftDb, lsDraft());
+  // v1.51.1: WOD days from before v1.50.4 never counted for the streak; the history puts them back (never lowers it)
+  const healed = healStreak(store.game, store.workouts, todayKey());
+  if (healed !== store.game) { store.game = healed; await dbPut('game', healed, 'me').catch(() => {}); }
   recompute();
 }
 
